@@ -1,3 +1,3 @@
 Personal Website 
 
-Test Minima
+Test Minima Theme
