@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+    <title>MDS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <p>Placeholder Page</p>
+    <ol type="1">
+        <li><p>Create a folder to store your Shapefiles there.</p></li>
+        <li><p>In QGIS, open the QGIS Python console.</p></li>
+        <li><p>Write the following line, editing the right hand side to match the full path to your folder (make sure you include the trailing slash/backslash):</p></li>
+        </ol>
+        <p><code>myDir = 'C:\\Users\\msmith\\Downloads\\TestExport\\'</code></p>
+        <ol start="4" type="1">
+        <li><p>Press Enter.</p></li>
+        <li><p>Copy the following lines to the QGIS Python console:</p></li>
+        </ol>
+        <pre><code>for vLayer in iface.mapCanvas().layers():
+            QgsVectorFileWriter.writeAsVectorFormat( vLayer, 
+                myDir + vLayer.name() + &quot;.shp&quot;, &quot;utf-8&quot;, 
+                vLayer.crs(), &quot;ESRI Shapefile&quot; )</code></pre>
+        <ol start="6" type="1">
+        <li>Press Enter a couple of times.</li>
+        </ol>
+    </body>
+    </html>
