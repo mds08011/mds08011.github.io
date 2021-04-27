@@ -63,9 +63,55 @@ For example (line-break solely for display purposes):
 <meta property="og:video" content="https://example.com/bond/trailer.swf" />
 
 
+Line by line explanation
+General
+<!DOCTYPE html>
+For the old-schoolers among you, you don’t need any of the other doc types you’ve learned by heart. This is the one and only. Even though today there are no other real options, it has to be present for compatibility reasons.
 
+<html lang="en" class="no-js">
+The lang attribute is one of the most important attributes in HTML, because it’s powerful and responsible for many things. You can read more about it in On Use of the Lang Attribute and The lang attribute: browsers telling lies, telling sweet little lies. Applied to the html element, it defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.
 
+lang Language tag syntax MDN
+I use the no-js class in case I want to apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript.
 
+<meta charset="UTF-8">
+This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers.
+
+Here’s how Safari displays my name with and without the charset meta tag.
+
+Manuel Matuzović - Manuel MatuzoviÄ‡
+
+It must come before the <title> element to avoid faulty characters in the page title.
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+The viewport meta tag allows us to change the width of the viewport, which is necessary for responsive web design. width=device-width sets the viewport width to the width of the screen. initial-scale controls the zoom level when the page is first loaded.
+
+I’m not sure if setting initial-scale=1 is still necessary. I believe I read somewhere that it was only needed for Safari on < iOS 9, but I can’t find the article anymore.
+
+The viewport meta tag should come as early as possible in the document to ensure proper document rendering.
+
+We dont need the shrink-to-fit=no option anymore since iOS 9.3.
+
+Time to remove the shrink-to-fit=no band aid?
+Using the viewport meta tag to control layout on mobile browsers
+Title, description, and social media
+<title>Unique page title - My Site</title>
+The unique title of the page. It’s displayed in many places, for example, on the browser tab, in search engine results, when you save a page as a bookmark, etc.
+
+Provide informative, unique page titles
+Accessible page titles in a Single Page App
+<script type="module">
+  document.documentElement.classList.remove('no-js');
+  document.documentElement.classList.add('js');
+</script>
+I’m cutting the mustard at JS module support. If a browser supports JavaScript modules, it means that it’s a browser that supports modern JavaScript, such as modules, ES 6 syntax, fetch, etc. I ship most JS only to these browsers and I use the js class in CSS, if the styling of a component is different, when JS is active.
+
+caniuse showing that all modern browser support JS modules
+<link rel="stylesheet" href="/assets/css/styles.css">
+CSS for the site.
+
+<link rel="stylesheet" href="/assets/css/print.css" media="print">
+Print CSS for the site.
 
 <meta name="description" content="Page description">
 The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.
@@ -106,3 +152,52 @@ The 180×180px icon Apple devices will use if you add the page to your home scre
 
 <link rel="manifest" href="/my.webmanifest">
 For Android devices we need a .webmanifest file, which provides browsers with the information where the icons needed for the home screen and the splash screen for PWAs are located.
+
+<link rel="canonical" href="https://www.mywebsite.com/page">
+Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.
+
+<link type="application/atom+xml" rel="alternate" href="/feed.xml" title="My Blog - Manuel Matuzovic">
+RSS Feed for your site.
+
+<meta name="format-detection" content="telephone=no">
+Disable automatic detection and formatting of phone numbers.
+
+<meta name="twitter:dnt" content="on">
+Disallow Twitter from using your site’s info for personalization purposes.
+
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width">
+
+  <title>Unique page title - My Site</title>
+  
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="/assets/css/print.css" media="print">
+
+  <meta name="description" content="Page description">
+  <meta property="og:title" content="Unique page title - My Site">
+  <meta property="og:description" content="Page description">
+  <meta property="og:image" content="https://www.mywebsite.com/image.jpg">
+  <meta property="og:image:alt" content="Image description">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:url" content="https://www.mywebsite.com/page">
+  <link rel="canonical" href="https://www.mywebsite.com/page">
+
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/my.webmanifest">
+  <meta name="theme-color" content="#FF00FF">
+</head>
+
+<body>
+  <!-- Content -->
+  <script src="/assets/js/xy-polyfill.js" nomodule></script>
+  <script src="/assets/js/script.js" type="module"></script>
+</body>
+</html>
