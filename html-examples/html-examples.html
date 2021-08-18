@@ -44,17 +44,6 @@
     <meta name="geo.region" content="US-CA"><!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
     <meta name="geo.placename" content="San Diego, CA"><!-- eg. content="New York City" -->
 
-    <!-- <link rel="license" href="LICENSE.html">Refers to a copyright statement that applies to the link's context -->
-
-    <!-- Provides a self reference - useful when the document has multiple possible references -->
-    <!-- <link rel="self" type="application/atom+xml" href="https://example.com/atom.xml"> -->
-
-    <!-- The first, last, previous, and next documents in a series of documents, respectively -->
-    <!-- <link rel="first" href="https://example.com/article/"> -->
-    <!-- <link rel="last" href="https://example.com/article/?page=42"> -->
-    <!-- <link rel="prev" href="https://example.com/article/?page=1"> -->
-    <!-- <link rel="next" href="https://example.com/article/?page=3"> -->
-
 </head>
 <body>
   <nav>
@@ -74,11 +63,24 @@
     <h6>Hello Kimberly.  This is a header-6</h6>
     <p>Hello Kimberly.  This is a paragraph.</p>
     <p>Hello Kimberly.  <a href="https://www.google.com">This is a link</a>.</p>
-    <p>Hello Kimberly.  This is an image. <a title="Von.grzanka / CC BY-SA (https://creativecommons.org/licenses/by-sa/3.0)" href="https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg"><img width="256" alt="Felis catus-cat on snow" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Felis_catus-cat_on_snow.jpg/512px-Felis_catus-cat_on_snow.jpg"></a>
+    <p>Hello Kimberly.  This is an image. </p>
+    <a title="Von.grzanka / CC BY-SA (https://creativecommons.org/licenses/by-sa/3.0)" href="https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg"><img width="256" alt="Felis catus-cat on snow" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Felis_catus-cat_on_snow.jpg/512px-Felis_catus-cat_on_snow.jpg"></a>
       <figure>
-        <img alt="Felis catus-cat on snow" src="/" style="width:50%">
-        <figcaption>Felis catus-cat on snow.</figcaption>
+        <img alt="Felis catus-cat on snow" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Felis_catus-cat_on_snow.jpg/512px-Felis_catus-cat_on_snow.jpg" style="width:50%">
+        <figcaption style="text-align:center">Felis catus-cat on snow.</figcaption>
       </figure>
+        <figure>
+          <img style="display: block; margin-left: auto; margin-right: auto;" src='http://placehold.it/200x200' alt='missing' />
+          <figcaption style="text-align:center">200x200 Placeholder image.
+              <br>Centered Image.
+          </figcaption>
+      </figure>
+    <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:50%" src='https://via.placeholder.com/300.png?text=50pctWidth' alt='missing' />
+        <figcaption style="text-align:center">
+            Placeholder image.
+        </figcaption>
+    </figure>
     <p>Hello Kimberly.  <button>This is a button</button>
     <p>Hello Kimberly.  This is an unordered list</p>
     <ul>
