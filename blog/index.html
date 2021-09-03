@@ -35,10 +35,13 @@
     <!-- <meta name="author" content="Malcolm Smith">  --><!-- <> -->
 
 
-    <!-- <link rel="icon" href="/favicon.ico"> --><!-- <> -->
-    <!-- <link rel="icon" href="/favicon.svg" type="image/svg+xml"> --><!-- <> -->
-    <!-- <link rel="apple-touch-icon" href="/apple-touch-icon.png"> --><!-- <The 180×180px icon Apple devices will use if you add the page to your home screen.> -->
-    <!-- <link rel="manifest" href="/my.webmanifest"> --><!-- <For Android devices we need a .webmanifest file, which provides browsers with the information where the icons needed for the home screen and the splash screen for PWAs are located.> -->
+    <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+    <link rel="manifest" href="../site.webmanifest">
+    <link rel="mask-icon" href="../safari-pinned-tab.svg" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
 
     <!-- Control the behavior of search engine crawling and indexing -->
     <meta name="robots" content="index,follow"><!-- All Search Engines, else "noindex, nofollow"-->
@@ -51,60 +54,44 @@
     <meta name="geo.region" content="US-CA"><!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
     <meta name="geo.placename" content="San Diego, CA"><!-- eg. content="New York City" -->
 
-    <!-- <link rel="license" href="LICENSE.html">Refers to a copyright statement that applies to the link's context -->
-
-    <!-- Provides a self reference - useful when the document has multiple possible references -->
-    <!-- <link rel="self" type="application/atom+xml" href="https://example.com/atom.xml"> -->
-
-    <!-- The first, last, previous, and next documents in a series of documents, respectively -->
-    <!-- <link rel="first" href="https://example.com/article/"> -->
-    <!-- <link rel="last" href="https://example.com/article/?page=42"> -->
-    <!-- <link rel="prev" href="https://example.com/article/?page=1"> -->
-    <!-- <link rel="next" href="https://example.com/article/?page=3"> -->
-
 </head>
 
 <body>
     <nav>
         <a href="/blog/">Blog</a> |
         <a href="/online/">Online Resources</a> |
-        <a href="/html-examples/html-examples.html">HTML Examples</a> |
-        <a href="/osm/openstreetmap.html">OpenStreetMap (OSM)</a>
+        <a href="/osm/openstreetmap.html">OpenStreetMap (OSM)</a> |
+        <a href="/contact.html">Contact</a>
+        <hr>
     </nav>
-    <hr>
-    <ul>
-        <li><strong>2021</strong></li>
+    <h1>Blog</h1>
+        <h4><strong>2021</strong></h4>
             <!-- <ul>
                 <li><p><a href="/blog/2015-11-07/PSA.html">2015-11-07 PSA</a></p></li>
             </ul> -->
-        <li><strong>2015 - Peace Corps Mali</strong><br>
-            <em>Disclaimer: This is the personal website of Malcolm Smith, a Peace Corps Volunteer in Mali from June 2015-August 2017. The purpose is to maintain communication with family and friends while abroad.  The contents of this website are mine personally and do not reflect any position of the U.S. Government or the Peace Corps.</em>
+        <h4><strong>2015 - Peace Corps Mali</strong></h4>
+            <p><em>Disclaimer: This is the personal website of Malcolm Smith, a Peace Corps Volunteer in Mali from June 2015-August 2017. The purpose is to maintain communication with family and friends while abroad.  The contents of this website are mine personally and do not reflect any position of the U.S. Government or the Peace Corps.</em></p>
           <ul>
+            <li><p><a href="/blog/2015-05-11/overview.html">2015-05-11 Overview</a></p></li>
+            <li><p><a href="/blog/2015-06-05/staging.html">2015-06-05 Staging</a></p></li>
+            <li><p><a href="/blog/2015-06-07/tubaniso.html">2015-06-07 Tubaniso</a></p></li>
+            <li><p><a href="/blog/2015-07-08/tubabu.html">2015-07-08 Tubabu</a></p></li>
+            <li><p><a href="/blog/2015-08-13/photos-1-homestay.txt">2015-08-13 Photos 1: Homestay</a></p></li>
+            <li><p><a href="/blog/2015-08-14/photos-2-swearing-in-na.html">2015-08-14 Photos 2: Swearing-in-na</a></p></li>
+            <li><p><a href="/blog/2015-08-21/going.html">2015-08-21 Going</a></p></li>
+            <li><p><a href="/blog/2015-08-25/address-change.html">2015-08-25 Address Change</a></p></li>
             <li><p><a href="/blog/2015-08-31/where-the-sahel-am-i.html">2015-08-31 Where the Sahel am I?</a></p></li>
+            <li><p><a href="/blog/2015-09-04/injury.html">2015-09-04 Injury</a></p></li>
+            <li><p><a href="/blog/2015-09-26/seliba.html">2015-09-26 Seliba</a></p></li>
             <li><p><a href="/blog/2015-11-20/radisson-incident.html">2015-11-20 Radisson Incident</a></p></li>
+            <li><p><a href="/blog/2015-11-26/paca-training.html">2015-11-26 PACA Training</a></p></li>
+            <li><p><a href="/blog/2015-11-27/house.html">2015-11-27 House</a></p></li>
+            <li><p><a href="/blog/2015-11-28/in-service-training.html">2015-11-28 In-service Training</a></p></li>
+            <li><p><a href="/blog/2016-01-24/false-crack-evac.html">2016-01-24 False-crack Evac</a></p></li>
         </ul>
-        <li><strong>2015 - UMN</strong></li>
+        <h4><strong>2015 - UMN</strong></h4>
           <ul>
             <li><p><a href="/blog/2015-06-04/bangalore.html">2015-06-04 Bangalore</a></p></li>
-<!--             2015-05-11  
-            2015-06-07  
-            2015-08-14  
-            2015-08-31  
-            2015-11-20  
-            2015-11-28  
-            2015-06-04  
-            2015-07-08  
-            2015-08-21  
-            2015-09-04  
-            2015-11-26  
-            2015-06-05  
-            2015-08-13  
-            2015-08-25  
-            2015-09-26  
-            2015-11-27
-            2016-01-24 -->
         </ul>
-    </ul>
 </body>
-
 </html>
