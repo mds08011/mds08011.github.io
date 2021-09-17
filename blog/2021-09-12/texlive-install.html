@@ -1,36 +1,52 @@
 <!DOCTYPE html><!-- Has to be present for compatibility reasons. -->
+
 <head>
-<meta charset="UTF-8"><!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<html lang="en" class="no-js"><!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
+    <meta charset="UTF-8">
+    <!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <html lang="en" class="no-js">
+    <!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
 
-<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css"><!-- <CSS for the site.> -->
-<!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> --><!-- <Print CSS for the site.> -->
-<!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">--><!--<RSS Feed for your site.> -->
-<script defer data-domain="malcolmdsmith.com" src="https://plausible.io/js/plausible.js"></script>
-    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <!-- <CSS for the site.> -->
+    <!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> -->
+    <!-- <Print CSS for the site.> -->
+    <!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">-->
+    <!--<RSS Feed for your site.> -->
+    <script defer data-domain="malcolmdsmith.com" src="https://plausible.io/js/plausible.js"></script>
 
-<script type="module">
-    document.documentElement.classList.remove('no-js');
-    document.documentElement.classList.add('js');
-</script>
 
-    <!-- <meta name="description" content="Page description"> --><!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
-    <!-- <meta property="og:title" content="Unique page title - My Site"> --><!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    <!-- <meta property="og:description" content="Page description"> --><!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+
+    <!-- <meta name="description" content="Page description"> -->
+    <!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
+    <!-- <meta property="og:title" content="Unique page title - My Site"> -->
+    <!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+    <!-- <meta property="og:description" content="Page description"> -->
+    <!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+
     <!-- <meta property="og:image" content="https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg"> -->
     <!-- <The image displayed when you share the link to a page on social media, chat applications, or other sites that scrape URLs.> -->
     <!-- <Ideally, it should be a square image with the important content placed in the middle of the square in a rectangle with a 2:1 ratio. This will make sure that the image will look good in cards with rectangle and square shaped images.> -->
     <!-- <Rules for Twitter: Images for this Card support an aspect ratio of 2:1 with minimum dimensions of 300x157 or maximum of 4096x4096 pixels. Images must be less than 5MB in size. JPG, PNG, WEBP and GIF formats are supported.> -->
-    
-    <!-- <meta property="og:type" content="website"> --><!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
-    <!-- <meta property="og:image:alt" content="Image description"> --><!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
-    <!-- <meta name="twitter:card" content="summary"> --><!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
-    <!-- <meta name="twitter:dnt" content="on"> --><!-- Disallow Twitter from using your site’s info for personalization purposes.-->
-    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> --><!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
-    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> --><!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
-    <!-- <meta name="author" content="Malcolm Smith">  --><!-- <> -->
+
+    <!-- <meta property="og:type" content="website"> -->
+    <!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
+    <!-- <meta property="og:image:alt" content="Image description"> -->
+    <!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
+    <!-- <meta name="twitter:card" content="summary"> -->
+    <!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
+    <!-- <meta name="twitter:dnt" content="on"> -->
+    <!-- Disallow Twitter from using your site’s info for personalization purposes.-->
+    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> -->
+    <!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
+    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> -->
+    <!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
+    <!-- <meta name="author" content="Malcolm Smith">  -->
+    <!-- <> -->
 
     <link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="../../favicon-32x32.png">
@@ -48,89 +64,113 @@
     <!-- Geo tags -->
     <meta name="ICBM" content="32.7152752,-117.1572166">
     <meta name="geo.position" content="32.7152752,-117.1572166"><!-- Downtown San Diego -->
-    <meta name="geo.region" content="US-CA"><!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
+    <meta name="geo.region" content="US-CA">
+    <!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
     <meta name="geo.placename" content="San Diego, CA"><!-- eg. content="New York City" -->
 
-<title>Install TexLive</title>
+    <title>Install TexLive</title>
 
 </head>
 
 <body>
-    
-<h1>Installing TexLive</h1>
-<h5>September 12, 2021</h5>
 
-<p>This post details installing TexLive on PopOS (and likely also matches installation on Ubuntu/Debian).</p>
+    <h1>Installing TexLive</h1>
+    <h5>September 12, 2021</h5>
 
-<p>I followed the instructions on the official TeX User Group (TUG) pages.<sup><a href="#fn1" id="ref1">1</a></sup>  Installing via an apt (i.e. <code>sudo apt install texlive-base</code>) is easier but various sites recommend downloading TexLive directly from TUG. This is mostly due to precautions for those wanting the most up to date and lightest install without extra packages.</p> 
+    <p>This post details installing TexLive on PopOS (and likely also matches installation on Ubuntu/Debian).</p>
+
+    <p>I followed the instructions on the official TeX User Group (TUG) pages.<sup><a href="#fn1" id="ref1">1</a></sup>
+        Installing via an apt (i.e. <code>sudo apt install texlive-base</code>) is easier but various sites recommend
+        downloading TexLive directly from TUG. This is mostly due to precautions for those wanting the most up to date
+        and lightest install without extra packages.</p>
 
 
-<p>Following the official "Quick Install" Instructions,<sup><a href="#fn2" id="ref2">2</a></sup></p>
+    <p>Following the official "Quick Install" Instructions,<sup><a href="#fn2" id="ref2">2</a></sup></p>
 
-<p>Change directories to the install folder <code>cd Downloads/install-tl-20210911</code></p>
+    <p>Change directories to the install folder <code>cd Downloads/install-tl-20210911</code></p>
 
-<p><code>perl install-tl</code></p>
+    <p><code>perl install-tl</code></p>
 
-<figure>
-    <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='texlive-options.png' alt='Installation options for install-tl' />
-    <figcaption style="text-align:center">
-        Installation options for install-tl
-    </figcaption>
-</figure>
+    <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='texlive-options.png'
+            alt='Installation options for install-tl' />
+        <figcaption style="text-align:center">
+            Installation options for install-tl
+        </figcaption>
+    </figure>
 
-<p>Multiple options are available in the text installer.</p>
+    <p>Multiple options are available in the text installer.</p>
 
-<p>I selected the option to install with letter/8.5"x11" as the default paper size by choosing <code>o</code> and following the instructions later option <code>p</code>.</p>
+    <p>I selected the option to install with letter/8.5"x11" as the default paper size by choosing <code>o</code> and
+        following the instructions later option <code>p</code>.</p>
 
-<p>I also selected to create symlinks to standard directories. This will configure some of the background settings such as PATH which can be tricky to setup by hand.</p>
+    <p>I also selected to create symlinks to standard directories. This will configure some of the background settings
+        such as PATH which can be tricky to setup by hand.</p>
 
-<p> Navigate back out to the main screen (return with <code>r</code> ) and press <code>i</code> to install TexLive.  Note that this involves many packages and may take a while.</p>
+    <p> Navigate back out to the main screen (return with <code>r</code> ) and press <code>i</code> to install TexLive.
+        Note that this involves many packages and may take a while.</p>
 
-<p>Unfortunately, this resulted in errors around permissions to write to the proper directories to create the symlinks</p>
+    <p>Unfortunately, this resulted in errors around permissions to write to the proper directories to create the
+        symlinks</p>
 
 <pre>
-<code>
-add_link_dir_dir: destination /usr/local/bin not writable, no links from /usr/local/texlive/2021/bin/x86_64-linux.
-mkdir(/usr/local/info/) failed for tree /usr/local/info: Permission denied
-TLUtils::add_remove_symlinks: man symlink destination (/usr/local/man) not writable, cannot add symlinks.
-</code>
+<code>add_link_dir_dir: destination /usr/local/bin not writable, no links from /usr/local/texlive/2021/bin/x86_64-linux.</code><br>
+<code>mkdir(/usr/local/info/) failed for tree /usr/local/info: Permission denied</code><br>
+<code>TLUtils::add_remove_symlinks: man symlink destination (/usr/local/man) not writable, cannot add symlinks.</code><br>
 </pre>
 
-<p>From what I could tell, the main installation did not require root access but creating the appropriate links for setup did.  Since the under ans root users use different environment variables such as PATH, I wanted to be careful to not mix these - minimize the use of root/sudo</p>
+    <p>From what I could tell, the main installation did not require root access but creating the appropriate links for
+        setup did. Since the under ans root users use different environment variables such as PATH, I wanted to be
+        careful to not mix these - minimize the use of root/sudo</p>
 
-<p>I followed<sup><a href="#fn3" id="ref3">3</a></sup> steps to use the tlmgr gui installer as root rather than messing with ENV variables manually.  To do this, the command needs to be executed with the full path to TexLive binaries</p>
+    <p>I followed<sup><a href="#fn3" id="ref3">3</a></sup> steps to use the tlmgr gui installer as root rather than
+        messing with ENV variables manually. To do this, the command needs to be executed with the full path to TexLive
+        binaries</p>
 
-<ol>
-    <li><code>sudo /usr/local/texlive/2021/bin/x86_64-linux/tlmgr gui</code><</li>
-    <li>Select Actions->Handle symlinks in system dirs</li>
-    <li>Select Update symbolic links</li>
-</ol>
+    <ol>
+        <li><code>sudo /usr/local/texlive/2021/bin/x86_64-linux/tlmgr gui</code></li>
+        <li>Select Actions->Handle symlinks in system dirs</li>
+        <li>Select Update symbolic links</li>
+    </ol>
 
-<figure>
-    <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='tlmgr-gui.png' alt='GUI installation of tlmgr' />
-    <figcaption style="text-align:center">
-        GUI Installer for tlmgr
-    </figcaption>
-</figure>
+    <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='tlmgr-gui.png'
+            alt='GUI installation of tlmgr' />
+        <figcaption style="text-align:center">
+            GUI Installer for tlmgr
+        </figcaption>
+    </figure>
 
-<figure>
-    <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='sys-check.png' alt='Latextools system check status output' />
-    <figcaption style="text-align:center">
-        Running a check with LatexTools extension in Sublime Text.
-    </figcaption>
-</figure>
+    <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='sys-check.png'
+            alt='Latextools system check status output' />
+        <figcaption style="text-align:center">
+            Running a check with LatexTools extension in Sublime Text.
+        </figcaption>
+    </figure>
 
-<p>Things appear to be in working order and I successfully compiled a document to PDF to test.  In the future, when coming across new packages which were not included with the initial install, the command <code>tlmgr install [pkgname]</code> will be used<sup><a href="#fn4" id="ref4">4</a></sup>.  As well as <code>tlmgr update --all</code> to update installed packages</p>
+    <p>Things appear to be in working order and I successfully compiled a document to PDF to test. In the future, when
+        coming across new packages which were not included with the initial install, the command
+        <code>tlmgr install [pkgname]</code> will be used<sup><a href="#fn4" id="ref4">4</a></sup>. As well as
+        <code>tlmgr update --all</code> to update installed packages
+    </p>
 
-<footer>
-<hr>
-<sup id="fn1">1. <a href="https://www.tug.org/texlive/">https://www.tug.org/texlive/</a><a href="#ref1" title="Jump back to footnote 1 in the text.">↩</a></sup><br>
-<sup id="fn2">2. <a href="https://www.tug.org/texlive/quickinstall.html">https://www.tug.org/texlive/quickinstall.html</a><a href="#ref2" title="Jump back to footnote 2 in the text.">↩</a></sup><br>
-<sup id="fn3">3. <a href="https://tex.stackexchange.com/questions/500300/after-a-completed-tex-live-installation-on-linux-how-can-i-run-just-the-create">https://tex.stackexchange.com/questions/500300/after-a-completed-tex-live-installation-on-linux-how-can-i-run-just-the-create</a><a href="#ref3" title="Jump back to footnote 3 in the text.">↩</a></sup><br>
-<sup id="fn4">4. <a href="https://www.tug.org/texlive/pkginstall.html">https://www.tug.org/texlive/pkginstall.html</a><a href="#ref4" title="Jump back to footnote 4 in the text.">↩</a></sup><br>
-<sup>5. <a href="https://www.tug.org/texlive/doc/texlive-en/texlive-en.html#installation
+    <footer>
+        <hr>
+        <sup id="fn1">1. <a href="https://www.tug.org/texlive/">https://www.tug.org/texlive/</a><a href="#ref1"
+                title="Jump back to footnote 1 in the text.">↩</a></sup><br>
+        <sup id="fn2">2. <a
+                href="https://www.tug.org/texlive/quickinstall.html">https://www.tug.org/texlive/quickinstall.html</a><a
+                href="#ref2" title="Jump back to footnote 2 in the text.">↩</a></sup><br>
+        <sup id="fn3">3. <a
+                href="https://tex.stackexchange.com/questions/500300/after-a-completed-tex-live-installation-on-linux-how-can-i-run-just-the-create">https://tex.stackexchange.com/questions/500300/after-a-completed-tex-live-installation-on-linux-how-can-i-run-just-the-create</a><a
+                href="#ref3" title="Jump back to footnote 3 in the text.">↩</a></sup><br>
+        <sup id="fn4">4. <a
+                href="https://www.tug.org/texlive/pkginstall.html">https://www.tug.org/texlive/pkginstall.html</a><a
+                href="#ref4" title="Jump back to footnote 4 in the text.">↩</a></sup><br>
+        <sup>5. <a href="https://www.tug.org/texlive/doc/texlive-en/texlive-en.html#installation
 ">https://www.tug.org/texlive/doc/texlive-en/texlive-en.html#installation</a></sup>
-</footer>
+    </footer>
 
 </body>
 

@@ -1,36 +1,52 @@
 <!DOCTYPE html><!-- Has to be present for compatibility reasons. -->
+
 <head>
-<meta charset="UTF-8"><!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<html lang="en" class="no-js"><!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
+    <meta charset="UTF-8">
+    <!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <html lang="en" class="no-js">
+    <!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
 
-<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css"><!-- <CSS for the site.> -->
-<!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> --><!-- <Print CSS for the site.> -->
-<!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">--><!--<RSS Feed for your site.> -->
-<script defer data-domain="malcolmdsmith.com" src="https://plausible.io/js/plausible.js"></script>
-    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <!-- <CSS for the site.> -->
+    <!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> -->
+    <!-- <Print CSS for the site.> -->
+    <!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">-->
+    <!--<RSS Feed for your site.> -->
+    <script defer data-domain="malcolmdsmith.com" src="https://plausible.io/js/plausible.js"></script>
 
-<script type="module">
-    document.documentElement.classList.remove('no-js');
-    document.documentElement.classList.add('js');
-</script>
 
-    <!-- <meta name="description" content="Page description"> --><!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
-    <!-- <meta property="og:title" content="Unique page title - My Site"> --><!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    <!-- <meta property="og:description" content="Page description"> --><!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+
+    <!-- <meta name="description" content="Page description"> -->
+    <!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
+    <!-- <meta property="og:title" content="Unique page title - My Site"> -->
+    <!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+    <!-- <meta property="og:description" content="Page description"> -->
+    <!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+
     <!-- <meta property="og:image" content="https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg"> -->
     <!-- <The image displayed when you share the link to a page on social media, chat applications, or other sites that scrape URLs.> -->
     <!-- <Ideally, it should be a square image with the important content placed in the middle of the square in a rectangle with a 2:1 ratio. This will make sure that the image will look good in cards with rectangle and square shaped images.> -->
     <!-- <Rules for Twitter: Images for this Card support an aspect ratio of 2:1 with minimum dimensions of 300x157 or maximum of 4096x4096 pixels. Images must be less than 5MB in size. JPG, PNG, WEBP and GIF formats are supported.> -->
-    
-    <!-- <meta property="og:type" content="website"> --><!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
-    <!-- <meta property="og:image:alt" content="Image description"> --><!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
-    <!-- <meta name="twitter:card" content="summary"> --><!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
-    <!-- <meta name="twitter:dnt" content="on"> --><!-- Disallow Twitter from using your site’s info for personalization purposes.-->
-    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> --><!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
-    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> --><!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
-    <!-- <meta name="author" content="Malcolm Smith">  --><!-- <> -->
+
+    <!-- <meta property="og:type" content="website"> -->
+    <!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
+    <!-- <meta property="og:image:alt" content="Image description"> -->
+    <!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
+    <!-- <meta name="twitter:card" content="summary"> -->
+    <!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
+    <!-- <meta name="twitter:dnt" content="on"> -->
+    <!-- Disallow Twitter from using your site’s info for personalization purposes.-->
+    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> -->
+    <!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
+    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> -->
+    <!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
+    <!-- <meta name="author" content="Malcolm Smith">  -->
+    <!-- <> -->
 
     <link rel="apple-touch-icon" sizes="180x180" href="../../apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="../../favicon-32x32.png">
@@ -48,44 +64,96 @@
     <!-- Geo tags -->
     <meta name="ICBM" content="32.7152752,-117.1572166">
     <meta name="geo.position" content="32.7152752,-117.1572166"><!-- Downtown San Diego -->
-    <meta name="geo.region" content="US-CA"><!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
+    <meta name="geo.region" content="US-CA">
+    <!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
     <meta name="geo.placename" content="San Diego, CA"><!-- eg. content="New York City" -->
 
-<title>Mali Overview</title>
+    <title>Mali Overview</title>
 
 </head>
 
 <body>
-    
-<h1>Mali Overview</h1>
-<h5>May 2015</h5>
-Mali_map_africa.pngalt=""Mali's location in Africa."" width=""300"" height=""300"" /></a><p class=""wp-caption-text"">Mali’s location in Africa.</p></div>
-<figure>
-    <img style="display: block; margin-left: auto; margin-right: auto; width:70%" src='Mali_map_africa.png' alt='Malis location in Africa.' />
-    <figcaption style="text-align:center">
-        Mali's location in Africa.
-    </figcaption>
-</figure>
-<p><strong>History</strong><br />
-Mali is the heir to the succession of ancient African empires—Ghana, Mande (Malinke) and Songhai—that occupied the West African savannah. These empires controlled Saharan trade and were in touch with Mediterranean and Middle Eastern centers of civilization.<br />
-The Ghana empire, dominated by the Soninke or Sarakole people, was centered in the area along the modern-day Mali- Mauritania border. It was a powerful trading state from 700 to 1075 A.D.<br />
-In 1235, the Malinke people of the small state of Kangaba became involved in a struggle for independence. Their leader, a young man named Sundiata Keita, fielded an impressive army to meet the intruding Tekrur forces. The decisive battle was fought on a plain just north of present-day Bamako, and Sundiata emerged victorious. Building on this success, Sundiata established the Mali Empire, one of the great empires of that era. After his death, his successors continued the expansion of the empire in both wealth and territory.<br />
-The zenith of Mali’s power and prestige occurred during the reign of Mansa Kankan Musa from 1307 to 1332. Covering more than 3 million square kilometers, the empire centered around the great bend of the Niger River and dominated the profitable trade between North and sub-Saharan Africa.<br />
-The rulers of Mali and their followers were converts to Islam, and Mansa Musa became one of the legendary leaders of that faith. Timbuktu, the empire’s capital, became a center of Muslim scholarship, with a university containing libraries unequaled anywhere in Africa or Europe at that time. The Mali Empire began a slow decline after Mansa Musa’s reign but remained powerful into the middle of the 16th century.</p>
-<p>The Songhai Empire, with its capital in Gao, predominated throughout the 16th century. Its great builders, Sunni Ali and Askia Mohamed, were equal in historical importance to Sundiata and Mansa Musa. At its peak, under Askia Mohamed, the Songhai Empire encompassed the Hausa States as faras Kano (in modern-day Nigeria) and northern Cameroon. Timbuktu remained a center of commerce and Islamic faith throughout the period. The Songhai Empire was destroyed in 1591 by a Moroccan invasion directed by Djoudder.<br />
-French intrusions into present-day Mali began in about 1854. It took approximately 50 years of battles and broken treaties for the French to finally subjugate the Malian people. The campaign ended with the capture of the Malinke leader Samory in 1898. Colonialism broke up traditional African patterns, replacing egalitarian relationships with those of dependence on European powers. It also set in motion some negative forces, such as one-crop economics, and established unrealistic political boundaries that have created significant challenges for today’s independent African governments.<br />
-Following Mali’s independence from France in 1960, the new government, under the leadership of Modibo Keita, moved quickly to place Malians in charge of all public institutions.<br />
-In November 1968, a military coup put Lieutenant Moussa Traoré in power, a position he held until 1991. At that point, a democratic revolution led to the creation of a new Constitution, and the first democratically-elected president (Alpha Oumar Konaré), in 1992 and again in 1997.</p>
-<p><strong>Government</strong><br />
-Since the democratic revolution of 1991, the Malian government has become a model of democracy and peace in an otherwise troubled area of West Africa. The current president, Amadou Toumani Touré, was elected in 2002 and re-elected in April 2007.<br />
-The government of Mali has struggled to address many problems, most notably the prolonged Tuareg rebellion. Despite a 1992 peace treaty, clashes continued in the northern provinces of Timbuktu and Gao. Since 1995, however, there has been a marked decrease in Tuareg-related violence, thanks in part to former Prime Minister Ibrahim Boubacar Keita’s efforts to establish a lasting peace. The 1994 devaluation of the Malian currency, the CFA franc, coincided with a series of droughts, floods, and student strikes to lower the standard of living of many Malians, putting pressure on the government to address the country’s development needs.</p>
-<p><strong>Economy</strong></p>
-Mali is among the poorest countries in the world, and is heavily dependent on foreign aid. Roughly 75 percent of the population is earning less than $1 per day. Nearly 80 percent of the labor force is engaged in subsistence agriculture, including farming and fishing, mostly along the Niger River Delta. Industrial activities include gold extraction, cash crop production (cotton and rice), and processing of farm commodities. The economy is expected to grow 5 percent per year for the next several years. In 2010 the per capita gross domestic product stood at $380. The composition of GDP by sector is 36 percent agriculture, 22 percent industry, and 33 percent services.</p>
-<p><strong>People and Culture</strong><br />
-There are more than 20 major ethnic groups in Mali, each with a distinct language, geographic region, and social infrastructure. Approximately 50 percent of the population belongs to the Mandé group, which include the Bambara, Malinké, and Sarakolé. Other groups include the Peul (17 percent), Voltaic (12 percent), Songhai (6 percent), and Tuareg and Moor (10 percent). Ninety percent of the population is Muslim, with about 9 percent following traditional African beliefs and 1 percent practicing Christianity. Though the country’s official language is French, the most widely spoken languages belong to the Mande group, with 60 percent of the population speaking Bambara. Other languages, such as Fulani and Songhai, are also widely spoken in certain geographical areas.</p>
-<p><strong>Environment</strong><br />
-Mali covers an area greater than New Mexico, Oklahoma, and Texas combined. It is landlocked, bounded by Algeria and Mauritania to the north, Senegal to the west, Guinea, Côte d’Ivoire, and Burkina Faso to the south, and Niger to the east. The country is mostly flat, except in the south where the Manding Mountains rise; and in the east, featuring the<br/>
-Bandiagara plateau and the Hombori Mountains. Central Mali consists of flood plains of the Niger Delta, while the northern part of the country lies within the Sahara Desert. Mali has two major rivers, the Niger and the Senegal.</p>
+
+    <h1>Mali Overview</h1>
+    <h5>May 2015</h5>
+    Mali_map_africa.pngalt=""Mali's location in Africa."" width=""300"" height=""300"" /></a>
+    <p class="" wp-caption-text"">Mali’s location in Africa.</p>
+    </div>
+    <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:70%" src='Mali_map_africa.png'
+            alt='Malis location in Africa.' />
+        <figcaption style="text-align:center">
+            Mali's location in Africa.
+        </figcaption>
+    </figure>
+    <p><strong>History</strong><br />
+        Mali is the heir to the succession of ancient African empires—Ghana, Mande (Malinke) and Songhai—that occupied
+        the West African savannah. These empires controlled Saharan trade and were in touch with Mediterranean and
+        Middle Eastern centers of civilization.<br />
+        The Ghana empire, dominated by the Soninke or Sarakole people, was centered in the area along the modern-day
+        Mali- Mauritania border. It was a powerful trading state from 700 to 1075 A.D.<br />
+        In 1235, the Malinke people of the small state of Kangaba became involved in a struggle for independence. Their
+        leader, a young man named Sundiata Keita, fielded an impressive army to meet the intruding Tekrur forces. The
+        decisive battle was fought on a plain just north of present-day Bamako, and Sundiata emerged victorious.
+        Building on this success, Sundiata established the Mali Empire, one of the great empires of that era. After his
+        death, his successors continued the expansion of the empire in both wealth and territory.<br />
+        The zenith of Mali’s power and prestige occurred during the reign of Mansa Kankan Musa from 1307 to 1332.
+        Covering more than 3 million square kilometers, the empire centered around the great bend of the Niger River and
+        dominated the profitable trade between North and sub-Saharan Africa.<br />
+        The rulers of Mali and their followers were converts to Islam, and Mansa Musa became one of the legendary
+        leaders of that faith. Timbuktu, the empire’s capital, became a center of Muslim scholarship, with a university
+        containing libraries unequaled anywhere in Africa or Europe at that time. The Mali Empire began a slow decline
+        after Mansa Musa’s reign but remained powerful into the middle of the 16th century.</p>
+    <p>The Songhai Empire, with its capital in Gao, predominated throughout the 16th century. Its great builders, Sunni
+        Ali and Askia Mohamed, were equal in historical importance to Sundiata and Mansa Musa. At its peak, under Askia
+        Mohamed, the Songhai Empire encompassed the Hausa States as faras Kano (in modern-day Nigeria) and northern
+        Cameroon. Timbuktu remained a center of commerce and Islamic faith throughout the period. The Songhai Empire was
+        destroyed in 1591 by a Moroccan invasion directed by Djoudder.<br />
+        French intrusions into present-day Mali began in about 1854. It took approximately 50 years of battles and
+        broken treaties for the French to finally subjugate the Malian people. The campaign ended with the capture of
+        the Malinke leader Samory in 1898. Colonialism broke up traditional African patterns, replacing egalitarian
+        relationships with those of dependence on European powers. It also set in motion some negative forces, such as
+        one-crop economics, and established unrealistic political boundaries that have created significant challenges
+        for today’s independent African governments.<br />
+        Following Mali’s independence from France in 1960, the new government, under the leadership of Modibo Keita,
+        moved quickly to place Malians in charge of all public institutions.<br />
+        In November 1968, a military coup put Lieutenant Moussa Traoré in power, a position he held until 1991. At that
+        point, a democratic revolution led to the creation of a new Constitution, and the first democratically-elected
+        president (Alpha Oumar Konaré), in 1992 and again in 1997.</p>
+    <p><strong>Government</strong><br />
+        Since the democratic revolution of 1991, the Malian government has become a model of democracy and peace in an
+        otherwise troubled area of West Africa. The current president, Amadou Toumani Touré, was elected in 2002 and
+        re-elected in April 2007.<br />
+        The government of Mali has struggled to address many problems, most notably the prolonged Tuareg rebellion.
+        Despite a 1992 peace treaty, clashes continued in the northern provinces of Timbuktu and Gao. Since 1995,
+        however, there has been a marked decrease in Tuareg-related violence, thanks in part to former Prime Minister
+        Ibrahim Boubacar Keita’s efforts to establish a lasting peace. The 1994 devaluation of the Malian currency, the
+        CFA franc, coincided with a series of droughts, floods, and student strikes to lower the standard of living of
+        many Malians, putting pressure on the government to address the country’s development needs.</p>
+    <p><strong>Economy</strong></p>
+    Mali is among the poorest countries in the world, and is heavily dependent on foreign aid. Roughly 75 percent of the
+    population is earning less than $1 per day. Nearly 80 percent of the labor force is engaged in subsistence
+    agriculture, including farming and fishing, mostly along the Niger River Delta. Industrial activities include gold
+    extraction, cash crop production (cotton and rice), and processing of farm commodities. The economy is expected to
+    grow 5 percent per year for the next several years. In 2010 the per capita gross domestic product stood at $380. The
+    composition of GDP by sector is 36 percent agriculture, 22 percent industry, and 33 percent services.</p>
+    <p><strong>People and Culture</strong><br />
+        There are more than 20 major ethnic groups in Mali, each with a distinct language, geographic region, and social
+        infrastructure. Approximately 50 percent of the population belongs to the Mandé group, which include the
+        Bambara, Malinké, and Sarakolé. Other groups include the Peul (17 percent), Voltaic (12 percent), Songhai (6
+        percent), and Tuareg and Moor (10 percent). Ninety percent of the population is Muslim, with about 9 percent
+        following traditional African beliefs and 1 percent practicing Christianity. Though the country’s official
+        language is French, the most widely spoken languages belong to the Mande group, with 60 percent of the
+        population speaking Bambara. Other languages, such as Fulani and Songhai, are also widely spoken in certain
+        geographical areas.</p>
+    <p><strong>Environment</strong><br />
+        Mali covers an area greater than New Mexico, Oklahoma, and Texas combined. It is landlocked, bounded by Algeria
+        and Mauritania to the north, Senegal to the west, Guinea, Côte d’Ivoire, and Burkina Faso to the south, and
+        Niger to the east. The country is mostly flat, except in the south where the Manding Mountains rise; and in the
+        east, featuring the<br />
+        Bandiagara plateau and the Hombori Mountains. Central Mali consists of flood plains of the Niger Delta, while
+        the northern part of the country lies within the Sahara Desert. Mali has two major rivers, the Niger and the
+        Senegal.</p>
 
 </body>
 
