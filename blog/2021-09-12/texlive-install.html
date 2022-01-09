@@ -75,8 +75,7 @@
 <body>
 
     <h1>Installing TexLive</h1>
-    <h5>September 12, 2021</h5>
-    <h5>Updated January 08, 2022</h5>
+    <h5>September 12, 2021<br>Updated January 08, 2022</h5>
 
     <p>This post details installing TexLive on PopOS (and likely also matches installation on Ubuntu/Debian).</p>
 
@@ -85,18 +84,30 @@
         downloading TexLive directly from TUG. This is mostly due to precautions for those wanting the most up to date
         and lightest install without extra packages.</p>
 
-
-    <p>I chose to install following the official "Quick Install" Instructions, rather than an Ubuntu repository.<sup><a href="#fn2" id="ref2">2</a></sup></p>
+    <p>I chose to install following the official "Quick Install" Instructions, rather than an Ubuntu repository.<sup><a
+                href="#fn2" id="ref2">2</a></sup></p>
 
     <p>Change directories to the install folder <code>cd Downloads/install-tl-20210911</code></p>
 
-    <p><code>perl install-tl</code></p>
+    <p>I have read that should be possible to install without root access but I was having trouble and was getting errors telling me that I could not write to the default directories.  I caved and installed with root access, the downside is that I will need to use <code>sudo</code> for future tlmgr package installations.</p>
+
+    <p>I needed to install perl-tk to use the Graphical User Interface (GUI) installers <code>sudo apt install perl-tk</code></p>
+
+    <p><code>sudo perl install-tl</code></p>
 
     <figure>
         <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='texlive-options.png'
             alt='Installation options for install-tl' />
         <figcaption style="text-align:center">
             Installation options for install-tl
+        </figcaption>
+    </figure>
+
+      <figure>
+        <img style="display: block; margin-left: auto; margin-right: auto; width:100%" src='paths.png'
+            alt='Installation options for install-tl' />
+        <figcaption style="text-align:center">
+            Default directories and paths.
         </figcaption>
     </figure>
 
@@ -111,18 +122,6 @@
     <p> Navigate back out to the main screen (return with <code>r</code> ) and press <code>i</code> to install TexLive.
         Note that this involves many packages and may take a while.</p>
 
-    <p>Unfortunately, this resulted in errors around permissions to write to the proper directories to create the
-        symlinks</p>
-
-<pre>
-<code>add_link_dir_dir: destination /usr/local/bin not writable, no links from /usr/local/texlive/2021/bin/x86_64-linux.</code><br>
-<code>mkdir(/usr/local/info/) failed for tree /usr/local/info: Permission denied</code><br>
-<code>TLUtils::add_remove_symlinks: man symlink destination (/usr/local/man) not writable, cannot add symlinks.</code><br>
-</pre>
-
-    <p>From what I could tell, the main installation did not require root access but creating the appropriate links for
-        setup did. Since the under ans root users use different environment variables such as PATH, I wanted to be
-        careful to not mix these - minimize the use of root/sudo</p>
 
     <p>I followed<sup><a href="#fn3" id="ref3">3</a></sup> steps to use the tlmgr gui installer as root rather than
         messing with ENV variables manually. To do this, the command needs to be executed with the full path to TexLive
@@ -152,8 +151,8 @@
 
     <p>Things appear to be in working order and I successfully compiled a document to PDF to test. In the future, when
         coming across new packages which were not included with the initial install, the command
-        <code>tlmgr install [pkgname]</code> will be used<sup><a href="#fn4" id="ref4">4</a></sup>. As well as
-        <code>tlmgr update --all</code> to update installed packages
+        <code>sudo tlmgr install [pkgname]</code> will be used<sup><a href="#fn4" id="ref4">4</a></sup>. As well as
+        <code>sudo tlmgr update --all</code> to update installed packages
     </p>
 
     <footer>
@@ -171,6 +170,7 @@
                 href="#ref4" title="Jump back to footnote 4 in the text.">↩</a></sup><br>
         <sup>5. <a href="https://www.tug.org/texlive/doc/texlive-en/texlive-en.html#installation
 ">https://www.tug.org/texlive/doc/texlive-en/texlive-en.html#installation</a></sup>
+<sup>6. <a href="https://tex.stackexchange.com/questions/616647/gui-wizard-installer-on-texlive-2021-auto-defaulting-to-main-installer-in-linux">https://tex.stackexchange.com/questions/616647/gui-wizard-installer-on-texlive-2021-auto-defaulting-to-main-installer-in-linux</a></sup>
     </footer>
 
 </body>
