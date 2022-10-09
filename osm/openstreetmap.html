@@ -1,42 +1,56 @@
 <!DOCTYPE html><!-- Has to be present for compatibility reasons. -->
-<html lang="en" class="no-js"><!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
+<html lang="en" class="no-js">
+<!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
+
 <head>
-<meta charset="UTF-8"><!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <!-- This attribute declares the document’s character encoding. Leaving it off might cause specific characters to display incorrectly in some browsers. It must come before the <title> element to avoid faulty characters in the page title.-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 
-<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
-<!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> --><!-- <Print CSS for the site.> -->
-<!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">--><!--<RSS Feed for your site.> -->
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> -->
+    <!-- <Print CSS for the site.> -->
+    <!-- <link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Title">-->
+    <!--<RSS Feed for your site.> -->
 
-    <script data-goatcounter="https://mds08011.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
 
-<script type="module">
-    document.documentElement.classList.remove('no-js');
-    document.documentElement.classList.add('js');
-</script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
 
-<title>OpenStreetMap</title>
+    <title>OpenStreetMap</title>
 
-    <!-- <meta name="description" content="Page description"> --><!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
-    <!-- <meta property="og:title" content="Unique page title - My Site"> --><!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    <!-- <meta property="og:description" content="Page description"> --><!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
-    
+    <!-- <meta name="description" content="Page description"> -->
+    <!-- <The unique description of the page, for example, displayed on search result pages. It can be any length, but search engines truncate snippets to ~155–160 characters.> -->
+    <!-- <meta property="og:title" content="Unique page title - My Site"> -->
+    <!-- <The unique title of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+    <!-- <meta property="og:description" content="Page description"> -->
+    <!-- <The unique description of the page. Used by URL scrapers on social media platforms like Twitter or Facebook.> -->
+
     <!-- <meta property="og:image" content="https://commons.wikimedia.org/wiki/File:Felis_catus-cat_on_snow.jpg"> -->
     <!-- <The image displayed when you share the link to a page on social media, chat applications, or other sites that scrape URLs.> -->
     <!-- <Ideally, it should be a square image with the important content placed in the middle of the square in a rectangle with a 2:1 ratio. This will make sure that the image will look good in cards with rectangle and square shaped images.> -->
     <!-- <Rules for Twitter: Images for this Card support an aspect ratio of 2:1 with minimum dimensions of 300x157 or maximum of 4096x4096 pixels. Images must be less than 5MB in size. JPG, PNG, WEBP and GIF formats are supported.> -->
-    
-    <!-- <meta property="og:type" content="website"> --><!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
-    <!-- <meta property="og:image:alt" content="Image description"> --><!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
-    <!-- <meta name="twitter:card" content="summary"> --><!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
-    <!-- <meta name="twitter:dnt" content="on"> --><!-- Disallow Twitter from using your site’s info for personalization purposes.-->
-    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> --><!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
-    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> --><!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
-    <!-- <meta name="author" content="Malcolm Smith">  --><!-- <> -->
-    
+
+    <!-- <meta property="og:type" content="website"> -->
+    <!-- <The type of content you’re sharing, e.g. website, article, or video.movie. A required property for valid Open Graph pages.> -->
+    <!-- <meta property="og:image:alt" content="Image description"> -->
+    <!-- <A description of the image. Don’t use this meta tag if the image is purely decorative and doesn’t provide any meaningful information. Screen readers ignore the image, if we don’t provide alt text.> -->
+    <!-- <meta name="twitter:card" content="summary"> -->
+    <!-- <his meta tag defines how cards will look when shared on Twitter. There are two options for websites, summary and summary_large_image.> -->
+    <!-- <meta name="twitter:dnt" content="on"> -->
+    <!-- Disallow Twitter from using your site’s info for personalization purposes.-->
+    <!-- <meta property="og:url" content="https://malcolmdsmith.com"> -->
+    <!-- <The canonical URL of the page. A required property for valid Open Graph pages.> -->
+    <!-- <link rel="canonical" href="https://malcolmdsmith.com"> -->
+    <!-- <Use the canonical link element to prevent SEO issues caused by duplicate content by specifying the original source for pages that are available on multiple URLs.> -->
+    <!-- <meta name="author" content="Malcolm Smith">  -->
+    <!-- <> -->
+
     <!-- Control the behavior of search engine crawling and indexing -->
     <meta name="robots" content="index,follow"><!-- All Search Engines, else "noindex, nofollow"-->
     <meta name="googlebot" content="index,follow"><!-- Google Specific, else "noindex, nofollow" -->
@@ -45,10 +59,12 @@
     <!-- Geo tags -->
     <meta name="ICBM" content="32.7152752,-117.1572166">
     <meta name="geo.position" content="32.7152752,-117.1572166"><!-- Downtown San Diego -->
-    <meta name="geo.region" content="US-CA"><!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
+    <meta name="geo.region" content="US-CA">
+    <!-- Country code (ISO 3166-1): mandatory, state code (ISO 3166-2): optional; eg. content="US" / content="US-NY" -->
     <meta name="geo.placename" content="San Diego, CA"><!-- eg. content="New York City" -->
 
 </head>
+
 <body>
     <nav>
         <a href="/blog/">Blog</a> |
@@ -60,91 +76,110 @@
     <h2>OpenStreetMap Resources</h2>
     <h4>OSM Statistics and Analysis</h4>
     <ul>
-    <li>How did you contribute (HDYC): http://hdyc.neis-one.org</li>
-    <li>Meet Your Mapper: https://mym.rtijn.org/</li>
-    <li>https://simon04.dev.openstreetmap.org/whodidit/</li>
-    <li>Relation Analyzer: http://ra.osmsurround.org/</li>
+        <li>How did you contribute (HDYC): http://hdyc.neis-one.org</li>
+        <li>Meet Your Mapper: https://mym.rtijn.org/</li>
+        <li>https://simon04.dev.openstreetmap.org/whodidit/</li>
+        <li>Relation Analyzer: http://ra.osmsurround.org/</li>
     </ul>
     <h3 id="phone-apps">Phone Apps</h3>
     <ul>
-    <li>StreetComplete</li>
+        <li>StreetComplete</li>
     </ul>
     <h4>Editing Tools (other than iD and JOSM)</h4>
     <ul>
-    <li>Changeset reverter: http://revert.osmz.ru/</li>
-    <li>Parking Lanes Editor: https://zlant.github.io/parking-lanes/</li>
-    <li>NotesReview: https://ent8r.github.io/NotesReview/
-    <ul>
-    <li>“An interface for searching OSM notes with a specific keyword”</li>
-    </ul></li>
-    <li>OSM Microtasks: https://ent8r.github.io/osm-microtasks/
-    <ul>
-    <li>“A website for performing micro-tasks to improve the OpenStreetMap” [URLs, Phone Numbers, Fax]</li>
-    </ul></li>
-    <li>iD Editor Development Build: http://preview.ideditor.com/master</li>
-    <li>Lane Visualizer: http://osm.mueschelsoft.de/cgi-bin/render.pl</li>
-    <li>iD Indoor: https://wiki.openstreetmap.org/wiki/ID-indoor</li>
-    <li>OSMInEdit: https://wiki.openstreetmap.org/wiki/OsmInEdit</li>
-    <li>POISM: https://poism.dev.openstreetmap.us/</li>
-    <li>Busy Hours: https://github.com/Jungle-Bus/Busy-Hours/blob/master/README.md
-    <ul>
-    <li>Web tool to for editing of OpenStreetMap public transport hours.</li>
-    </ul></li>
-    <li>Osmtogeojson: https://github.com/tyrasd/osmtogeojson</li>
+        <li>Changeset reverter: http://revert.osmz.ru/</li>
+        <li>Parking Lanes Editor: https://zlant.github.io/parking-lanes/</li>
+        <li>NotesReview: https://ent8r.github.io/NotesReview/
+            <ul>
+                <li>“An interface for searching OSM notes with a specific keyword”</li>
+            </ul>
+        </li>
+        <li>OSM Microtasks: https://ent8r.github.io/osm-microtasks/
+            <ul>
+                <li>“A website for performing micro-tasks to improve the OpenStreetMap” [URLs, Phone Numbers, Fax]</li>
+            </ul>
+        </li>
+        <li>iD Editor Development Build: http://preview.ideditor.com/master</li>
+        <li>Lane Visualizer: http://osm.mueschelsoft.de/cgi-bin/render.pl</li>
+        <li>iD Indoor: https://wiki.openstreetmap.org/wiki/ID-indoor</li>
+        <li>OSMInEdit: https://wiki.openstreetmap.org/wiki/OsmInEdit</li>
+        <li>POISM: https://poism.dev.openstreetmap.us/</li>
+        <li>Busy Hours: https://github.com/Jungle-Bus/Busy-Hours/blob/master/README.md
+            <ul>
+                <li>Web tool to for editing of OpenStreetMap public transport hours.</li>
+            </ul>
+        </li>
+        <li>Osmtogeojson: https://github.com/tyrasd/osmtogeojson</li>
     </ul>
     <h3 id="general-geospatial-tools">General Geospatial Tools</h3>
     <ul>
-    <li>Geojson.net: https://geojson.net
-    <ul>
-    <li>Convert between file types</li>
-    <li>https://github.com/tmcw/geojson.net</li>
-    </ul></li>
-    <li>Mapshaper: https://mapshaper.org/
-    <ul>
-    <li>Mapshaper is software for editing Shapefile, GeoJSON, TopoJSON, CSV and several other data formats, written in JavaScript.</li>
-    <li>https://github.com/mbloch/mapshaper</li>
-    </ul></li>
-    <li>Validate geojson files: http://www.geojsonlint.com/ (source: https://github.com/JasonSanford/geojsonlint.com)</li>
-    <li>A port of OpenStreetMap Carto targeting client-side rendering with vector tiles: https://github.com/pnorman/openstreetmap-cartographic</li>
+        <li>Geojson.net: https://geojson.net
+            <ul>
+                <li>Convert between file types</li>
+                <li>https://github.com/tmcw/geojson.net</li>
+            </ul>
+        </li>
+        <li>Mapshaper: https://mapshaper.org/
+            <ul>
+                <li>Mapshaper is software for editing Shapefile, GeoJSON, TopoJSON, CSV and several other data formats,
+                    written in JavaScript.</li>
+                <li>https://github.com/mbloch/mapshaper</li>
+            </ul>
+        </li>
+        <li>Validate geojson files: http://www.geojsonlint.com/ (source:
+            https://github.com/JasonSanford/geojsonlint.com)</li>
+        <li>A port of OpenStreetMap Carto targeting client-side rendering with vector tiles:
+            https://github.com/pnorman/openstreetmap-cartographic</li>
     </ul>
     <h3 id="field-mapping-tools">Field Mapping Tools</h3>
     <ul>
-    <li>Field Papers: http://fieldpapers.org/</li>
-    <li>Print to PDF: https://maposmatic.osm-baustelle.de/</li>
-    <li>Wiki page of printing to paer options: https://wiki.openstreetmap.org/wiki/OSM_on_Paper</li>
+        <li>Field Papers: http://fieldpapers.org/</li>
+        <li>Print to PDF: https://maposmatic.osm-baustelle.de/</li>
+        <li>Wiki page of printing to paer options: https://wiki.openstreetmap.org/wiki/OSM_on_Paper</li>
     </ul>
     <h3 id="name-suggestion-index">Name Suggestion Index</h3>
     <ul>
-    <li>Brand Index: https://osmlab.github.io/name-suggestion-index/brands/index.html</li>
-    <li>Adding Missing Brands: https://github.com/osmlab/name-suggestion-index/blob/master/CONTRIBUTING.md#convenience_store–add-missing-brands</li>
+        <li>Brand Index: https://osmlab.github.io/name-suggestion-index/brands/index.html</li>
+        <li>Adding Missing Brands:
+            https://github.com/osmlab/name-suggestion-index/blob/master/CONTRIBUTING.md#convenience_store–add-missing-brands
+        </li>
     </ul>
     <h3 id="routing-navigation-software">Routing (Navigation) Software</h3>
     <ul>
-    <li>BRouter: http://brouter.de/brouter-web/</li>
-    <li>Open Source Routing Machine (OSRM): http://map.project-osrm.org/</li>
-    <li>Openrouteservice: https://openrouteservice.org/
-    <ul>
-    <li>Easy to use Isochrones (i.e. 15 walk radius)</li>
-    </ul></li>
-    <li>Trail Router: https://trailrouter.com/about/
-    <ul>
-    <li>Trail Router helps you discover new running routes. Our routing algorithm prefers paths that go through parks, forests or by water, and avoids busy roads wherever possible.</li>
-    </ul></li>
+        <li>BRouter: http://brouter.de/brouter-web/</li>
+        <li>Open Source Routing Machine (OSRM): http://map.project-osrm.org/</li>
+        <li>Openrouteservice: https://openrouteservice.org/
+            <ul>
+                <li>Easy to use Isochrones (i.e. 15 walk radius)</li>
+            </ul>
+        </li>
+        <li>Trail Router: https://trailrouter.com/about/
+            <ul>
+                <li>Trail Router helps you discover new running routes. Our routing algorithm prefers paths that go
+                    through parks, forests or by water, and avoids busy roads wherever possible.</li>
+            </ul>
+        </li>
     </ul>
     <h3 id="documentationtutorials">Documentation/Tutorials</h3>
     <ul>
-    <li>Mapbox team mapping guides: https://labs.mapbox.com/mapping/
-    <ul>
-    <li>Internal tutorials used by Mapbox</li>
-    </ul></li>
-    <li>Mapbox Workhops/Presentations: https://github.com/mapbox/workshops</li>
-    <li>Mapbox Studio Tutorials: https://www.mapbox.com/videos/</li>
-    <li>OSM Tool Section App: ht</li>
+        <li>Mapbox team mapping guides: https://labs.mapbox.com/mapping/
+            <ul>
+                <li>Internal tutorials used by Mapbox</li>
+            </ul>
+        </li>
+        <li>Mapbox Workhops/Presentations: https://github.com/mapbox/workshops</li>
+        <li>Mapbox Studio Tutorials: https://www.mapbox.com/videos/</li>
+        <li>OSM Tool Section App: ht</li>
     </ul>
     <footer>
         <hr>
-            <p><sub><Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br> -->
-            This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">Github</a></sub></p>
+        <p><sub>
+                <Minimalist, privacy-conscious analytics are implemented for this site and <a
+                    href="https://mds08011.goatcounter.com">publicly viewable</a>.<br> -->
+                    This website's source code is open and available on <a
+                        href="https://github.com/mds08011/mds08011.github.io">Github</a>
+            </sub></p>
     </footer>
 </body>
+
 </html>
