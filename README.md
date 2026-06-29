@@ -19,3 +19,11 @@ This is my personal blog as well as a place I experiment as I slowly learn HTML.
 ## Appendix
 
 Additional resources used in the creation of this website can be found here: https://malcolmdsmith.com/online/web-dev.html
+
+## Publishing SOP
+
+To publish a new post, follow this strict 4-step manual checklist:
+1. Duplicate `boilerplate.html` to a new file.
+2. Write HTML content within the new file.
+3. Update index lists manually to link to the new post.
+4. `git commit` and `git push` the changes.

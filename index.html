@@ -8,8 +8,7 @@
     <!-- The lang attribute applied to the html element, defines the natural language of the page. It contains a single “language tag” in the format defined in Tags for Identifying Languages (BCP47), for example en for English, de for German or ru for Russian.  Apply styling to specific components in browsers that don’t support JavaScript. This class will be removed in browsers that support and execute modern JavaScript. -->
 
     <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
-<!--     <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" media="screen" />
-<link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura-dark.css" media="screen and (prefers-color-scheme: dark)" /> -->
+    <link rel="stylesheet" href="/style.css" type="text/css">
     <!-- <CSS for the site.> -->
     <!-- <link rel="stylesheet" href="/assets/css/print.css" media="print"> -->
     <!-- <Print CSS for the site.> -->
@@ -75,22 +74,38 @@
 <title>MDS</title>
 
 <body>
-    <nav>
-        <a href="/blog/">Blog</a> |
-        <a href="/online/">Online Resources</a> |
-        <a href="/osm/openstreetmap.html">OpenStreetMap (OSM)</a> |
-        <a href="/contact.html">Contact</a>
-        <hr>
-    </nav>
-    <h3>This website is a work in progress</h3>
-    <p>Example Text</p>
-    <p>Example Text</p>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/online/">Resources</a></li>
+                <li><a href="https://github.com/mds08011">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section>
+            <h1>Hi, I'm Malcolm.</h1>
+            <p>Civil engineer, Linux tinkerer (Pop!_OS), and advocate for open-source tools, privacy, and durable goods.</p>
+            <p>This site is hand-coded HTML with zero trackers.</p>
+        </section>
+
+        <section>
+            <h2>Latest Posts</h2>
+            <ul>
+                <!-- Posts will be manually updated here -->
+            </ul>
+        </section>
+    </main>
+
     <footer>
         <hr>
         <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a
                     href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
                 This website's source code is open and available on <a
-                    href="https://github.com/mds08011/mds08011.github.io">Github</a></sub></p>
+                    href="https://github.com/mds08011/mds08011.github.io">GitHub</a></sub></p>
     </footer>
 </body>
 

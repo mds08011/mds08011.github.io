@@ -1,0 +1,46 @@
+:root {
+  --bg-color: #ffffff;
+  --text-color: #333333;
+  --link-color: #0056b3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --link-color: #66b3ff;
+  }
+}
+
+body {
+  max-width: 65ch;
+  margin: 0 auto;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  /* Sakura CSS compatibility / overrides */
+  padding: 1rem;
+}
+
+a {
+  color: var(--link-color);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+pre {
+  overflow-x: auto;
+}
