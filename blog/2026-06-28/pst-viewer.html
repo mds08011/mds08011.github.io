@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Old Emails with GoldFynch PST Viewer | MDS Blog</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/peace-corps.html">Peace Corps</a></li>
+                <li><a href="/online/">Resources</a></li>
+                <li><a href="/concrete.html">Field Tools</a></li>
+                <li><a href="https://github.com/mds08011">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Reading Old Emails with GoldFynch PST Viewer</h1>
+                <time datetime="2026-06-28">June 28, 2026</time>
+            </header>
+            
+            <p>If you've ever had to dig through an old archive of Outlook emails, you've probably run into a <code>.pst</code> file. Without having a full Microsoft Office installation, opening these files can be a real headache. Recently, I found the <a href="https://goldfynch.com/goldfynch-pst-viewer.html">GoldFynch PST Viewer</a> to be an incredibly helpful tool for solving this exact problem.</p>
+
+            <p>As an engineer, dealing with legacy file formats is a common challenge. What I really appreciate about this tool is that it's a simple, durable solution. It's built to run directly in your web browser, which means it respects your privacy—your sensitive old emails aren't being uploaded and processed on a random server somewhere. You can just drop the file in and read.</p>
+
+            <h2>How to Use It</h2>
+            <p>You don't need to install any heavy email clients or pay for proprietary software. Just visit the site and load your file. It's a great DRM-free way to maintain access to your own communication records over time.</p>
+
+            <figure>
+                <img src="/path/to/pst-viewer-screenshot.png" alt="A screenshot of the GoldFynch PST Viewer interface">
+                <figcaption>The GoldFynch PST Viewer interface. Just drag and drop your .pst file.</figcaption>
+            </figure>
+
+            <p>Once loaded, you can browse through the folder structure and read individual emails. If you have a massive archive and want to search for a specific keyword, just rely on the standard <kbd>Ctrl</kbd> + <kbd>F</kbd> browser search to find what you need.</p>
+
+            <details>
+                <summary>Looking for command-line alternatives?</summary>
+                <p>If you prefer the terminal or want to script the extraction of attachments from a PST file, you might look into open-source tools like <code>readpst</code>. For instance, on a Debian-based Linux system (like my Pop!_OS setup), you can install and run it like this:</p>
+                <pre><code>sudo apt-get install pst-utils
+readpst -D -M -b -o output_directory/ my_archive.pst</code></pre>
+            </details>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
