@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creating Quick Screen Recordings with gifcap | MDS Blog</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/peace-corps.html">Peace Corps</a></li>
+                <li><a href="/online/">Resources</a></li>
+                <li><a href="/concrete.html">Field Tools</a></li>
+                <li><a href="https://github.com/mds08011">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Creating Quick Screen Recordings with gifcap</h1>
+                <time datetime="2026-06-27">June 27, 2026</time>
+            </header>
+            
+            <p>If you're ever trying to show someone where to click or how to walk through a multi-step process on a computer, static screenshots sometimes don't cut it. Instead of typing out a long list of instructions, I've found <a href="https://gifcap.dev/">gifcap</a> to be an incredibly helpful tool for making quick, simple GIFs.</p>
+
+            <p>As an engineer, I appreciate tools that are practical, durable, and respect the user. That's exactly what gifcap does. Because it processes everything locally directly in your web browser, it's inherently privacy-respecting—none of your screen recording data is uploaded to a remote server. It's also DRM-free, completely open-source (<a href="https://github.com/joaomoreno/gifcap">check out the GitHub repo</a>), and extremely straightforward to use.</p>
+
+            <h2>How to Use It</h2>
+            <p>Using gifcap is as simple as visiting the site and hitting the record button. You don't need to install any heavy, bloated screen-recording software.</p>
+
+            <figure>
+                <img src="/path/to/gifcap-screenshot.png" alt="A screenshot of the gifcap.dev interface showing a record button">
+                <figcaption>The minimalist gifcap interface. Just hit record and pick a window or screen.</figcaption>
+            </figure>
+
+            <p>Once you're done recording, you can trim the GIF and export it immediately. If you need to stop recording quickly, you can just use standard browser shortcuts like <kbd>Ctrl</kbd> + <kbd>W</kbd> to close the tab, or click your browser's native stop-sharing button.</p>
+
+            <h2>Running it Locally</h2>
+            <p>Because it's an open-source project, you can easily clone the repository and run it locally if you want a truly durable setup that doesn't rely on the live website being up forever.</p>
+
+            <details>
+                <summary>Terminal commands to run gifcap locally</summary>
+                <pre><code>git clone https://github.com/joaomoreno/gifcap.git
+cd gifcap
+npm install
+npm run dev</code></pre>
+            </details>
+
+            <p>If you're interested in the technical background of how the developer built a client-side video encoder using WebAssembly, it's worth reading through the original <a href="https://news.ycombinator.com/item?id=22725651">Hacker News discussion</a>.</p>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
