@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forcing the Trash Out: Deleting .Trash-1000 on Linux External Drives | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/peace-corps.html">Peace Corps</a></li>
+                <li><a href="/online/">Resources</a></li>
+                <li><a href="/concrete.html">Field Tools</a></li>
+                <li><a href="https://github.com/mds08011">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Forcing the Trash Out: Deleting .Trash-1000 on Linux External Drives</h1>
+                <time datetime="2026-07-03">July 3, 2026</time>
+            </header>
+            
+            <p>That <code>.Trash-1000</code> issue is a classic, frustrating Linux quirk. When you delete files on an external drive, Linux tries to be helpful by moving them to a hidden trash folder so they can be recovered. However, because of the way external volume permissions are handled, it often locks the permissions (to the root user) to protect the structure of the trash bin.</p>
+            
+            <h2>The Problem</h2>
+            <p>This means your standard user account can't empty it via the desktop file manager. It just eats up your disk space or causes 'false positives' in duplicate file scanners.</p>
+            
+            <h2>The Solution</h2>
+            <p>The terminal is the only way to bypass the GUI restrictions. You must carefully run the following command to remove the hidden folder:</p>
+            <pre><code>sudo rm -rf /media/mds08011/Elements/.Trash-1000</code></pre>
+            
+            <h3>A Quick Warning</h3>
+            <p>Make sure to check your exact mount path! For example, running it on <code>/media/Elements/</code> will likely return a 'No such file or directory' error.</p>
+            
+            <p>For more details, check out this <a href="https://askubuntu.com/questions/403485/help-cant-empty-my-trash-folder-on-external-hdd" target="_blank" rel="noopener noreferrer">AskUbuntu thread</a>.</p>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
