@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy First: Scrubbing Photo GPS Data with ExifCleaner | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/peace-corps.html">Peace Corps</a></li>
+                <li><a href="/online/">Resources</a></li>
+                <li><a href="/concrete.html">Field Tools</a></li>
+                <li><a href="https://github.com/mds08011">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Privacy First: Scrubbing Photo GPS Data with ExifCleaner</h1>
+                <time datetime="2026-03-03">March 3, 2026</time>
+            </header>
+            
+            <p>I actually like keeping GPS tags on my photos 95% of the time. For personal archives, travel logs, and organizing memories, having that location metadata is incredibly useful. However, the moment I am posting a photo publicly to the web or sharing it with strangers, that same data becomes a massive privacy risk.</p>
+            
+            <h2>The Tool: ExifCleaner</h2>
+            <p><a href="https://exifcleaner.com/" target="_blank" rel="noopener noreferrer">ExifCleaner</a> is a fantastic, open-source GUI tool for scrubbing sensitive metadata from photos. It is cross-platform and uses the powerful ExifTool under the hood, but abstracts away the command line into a simple drag-and-drop interface.</p>
+            
+            <h3>Why ExifCleaner?</h3>
+            <p>The beauty of ExifCleaner lies in its simplicity and security. It processes images entirely locally on your machine, meaning you never have to upload your personal photos to a random cloud server just to strip out the GPS data. It's fast, effective, and respects your privacy.</p>
+            
+            <p>You can check out the source code or contribute on its <a href="https://github.com/szTheory/exifcleaner" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
