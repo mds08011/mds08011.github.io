@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="js">
 <head>
     <meta charset="UTF-8">
@@ -32,26 +32,26 @@
         <article>
             <header>
                 <h1>Reading Old Emails with GoldFynch PST Viewer</h1>
-                <time datetime="2026-06-28">June 28, 2026</time>
+                <h5>2026.06.28</h5>
             </header>
             
-            <p>If you've ever had to dig through an old archive of Outlook emails, you've probably run into a <code>.pst</code> file. Without having a full Microsoft Office installation, opening these files can be a real headache. Recently, I found the <a href="https://goldfynch.com/goldfynch-pst-viewer.html">GoldFynch PST Viewer</a> to be an incredibly helpful tool for solving this exact problem.</p>
+            <p>GoldFynch PST Viewer<sup><a href="#fn1" id="ref1">1</a></sup> is a tool for reading legacy <code>.pst</code> Outlook archives without a full Microsoft Office installation.</p>
 
-            <p>As an engineer, dealing with legacy file formats is a common challenge. What I really appreciate about this tool is that it's a simple, durable solution. It's built to run directly in your web browser, which means it respects your privacy—your sensitive old emails aren't being uploaded and processed on a random server somewhere. You can just drop the file in and read.</p>
+            <p>It runs directly in the web browser, processing files locally without uploading them to a remote server. This respects the privacy of sensitive communications.</p>
 
             <h2>How to Use It</h2>
-            <p>You don't need to install any heavy email clients or pay for proprietary software. Just visit the site and load your file. It's a great DRM-free way to maintain access to your own communication records over time.</p>
+            <p>Using the tool involves visiting the site and loading the file locally. It provides DRM-free access to older communication records.</p>
 
             <figure>
                 <img src="/path/to/pst-viewer-screenshot.png" alt="A screenshot of the GoldFynch PST Viewer interface">
-                <figcaption>The GoldFynch PST Viewer interface. Just drag and drop your .pst file.</figcaption>
+                <figcaption>The GoldFynch PST Viewer interface.</figcaption>
             </figure>
 
-            <p>Once loaded, you can browse through the folder structure and read individual emails. If you have a massive archive and want to search for a specific keyword, just rely on the standard <kbd>Ctrl</kbd> + <kbd>F</kbd> browser search to find what you need.</p>
+            <p>The interface allows browsing through the folder structure and reading individual emails. Browser-native search (<kbd>Ctrl</kbd> + <kbd>F</kbd>) can be used to search for specific keywords.</p>
 
             <details>
                 <summary>Looking for command-line alternatives?</summary>
-                <p>If you prefer the terminal or want to script the extraction of attachments from a PST file, you might look into open-source tools like <code>readpst</code>. For instance, on a Debian-based Linux system (like my Pop!_OS setup), you can install and run it like this:</p>
+                <p>For command-line extraction of attachments from a PST file, open-source tools like <code>readpst</code> are available. On a Debian-based Linux system, it can be installed and executed as follows:</p>
                 <pre><code>sudo apt-get install pst-utils
 readpst -D -M -b -o output_directory/ my_archive.pst</code></pre>
             </details>
@@ -60,6 +60,7 @@ readpst -D -M -b -o output_directory/ my_archive.pst</code></pre>
 
     <footer>
         <hr>
+        <sup id="fn1">1. [GoldFynch PST Viewer] <a href="https://goldfynch.com/goldfynch-pst-viewer.html">https://goldfynch.com/goldfynch-pst-viewer.html</a><a href="#ref1" title="Jump back to footnote 1 in the text.">↩</a></sup><br>
         <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
         This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
     </footer>

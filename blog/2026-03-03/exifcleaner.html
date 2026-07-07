@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="js">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy First: Scrubbing Photo GPS Data with ExifCleaner | MDS</title>
+    <title>Removing photo GPS data with ExifCleaner | MDS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,24 +31,26 @@
     <main>
         <article>
             <header>
-                <h1>Privacy First: Scrubbing Photo GPS Data with ExifCleaner</h1>
-                <time datetime="2026-03-03">March 3, 2026</time>
+                <h1>Removing photo GPS data with ExifCleaner</h1>
+                <h5>2026.03.03</h5>
             </header>
             
-            <p>I actually like keeping GPS tags on my photos 95% of the time. For personal archives, travel logs, and organizing memories, having that location metadata is incredibly useful. However, the moment I am posting a photo publicly to the web or sharing it with strangers, that same data becomes a massive privacy risk.</p>
+            <p>GPS tags are preferred on photos 95% of the time for personal archiving and travel logs. However, when posting publicly, that data is a privacy concern. This tool, ExifCleaner, is useful for that specific requirement.</p>
             
             <h2>The Tool: ExifCleaner</h2>
-            <p><a href="https://exifcleaner.com/" target="_blank" rel="noopener noreferrer">ExifCleaner</a> is a fantastic, open-source GUI tool for scrubbing sensitive metadata from photos. It is cross-platform and uses the powerful ExifTool under the hood, but abstracts away the command line into a simple drag-and-drop interface.</p>
+            <p>ExifCleaner<sup><a href="#fn1" id="ref1">1</a></sup> is an open-source GUI tool for scrubbing metadata from photos. It is cross-platform and uses ExifTool, abstracting the command line into a drag-and-drop interface.</p>
             
             <h3>Why ExifCleaner?</h3>
-            <p>The beauty of ExifCleaner lies in its simplicity and security. It processes images entirely locally on your machine, meaning you never have to upload your personal photos to a random cloud server just to strip out the GPS data. It's fast, effective, and respects your privacy.</p>
+            <p>It processes images locally, ensuring photos are not uploaded to remote servers. It is fast, effective, and respects privacy.</p>
             
-            <p>You can check out the source code or contribute on its <a href="https://github.com/szTheory/exifcleaner" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+            <p>Source code is available on the GitHub repository.<sup><a href="#fn2" id="ref2">2</a></sup></p>
         </article>
     </main>
 
     <footer>
         <hr>
+        <sup id="fn1">1. <a href="https://exifcleaner.com/">https://exifcleaner.com/</a><a href="#ref1" title="Jump back to footnote 1 in the text.">↩</a></sup><br>
+        <sup id="fn2">2. <a href="https://github.com/szTheory/exifcleaner">https://github.com/szTheory/exifcleaner</a><a href="#ref2" title="Jump back to footnote 2 in the text.">↩</a></sup><br>
         <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
         This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
     </footer>

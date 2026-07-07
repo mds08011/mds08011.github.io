@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="js">
 <head>
     <meta charset="UTF-8">
@@ -32,15 +32,13 @@
         <article>
             <header>
                 <h1>Creating Quick Screen Recordings with gifcap</h1>
-                <time datetime="2026-06-27">June 27, 2026</time>
+                <h5>2026.06.27</h5>
             </header>
             
-            <p>If you're ever trying to show someone where to click or how to walk through a multi-step process on a computer, static screenshots sometimes don't cut it. Instead of typing out a long list of instructions, I've found <a href="https://gifcap.dev/">gifcap</a> to be an incredibly helpful tool for making quick, simple GIFs.</p>
-
-            <p>As an engineer, I appreciate tools that are practical, durable, and respect the user. That's exactly what gifcap does. Because it processes everything locally directly in your web browser, it's inherently privacy-respecting—none of your screen recording data is uploaded to a remote server. It's also DRM-free, completely open-source (<a href="https://github.com/joaomoreno/gifcap">check out the GitHub repo</a>), and extremely straightforward to use.</p>
+            <p>Gifcap<sup><a href="#fn1" id="ref1">1</a></sup> is a tool for creating simple screen recordings in GIF format. It processes everything locally in the web browser, meaning screen recording data is not uploaded to a remote server. It is DRM-free and open-source.<sup><a href="#fn2" id="ref2">2</a></sup></p>
 
             <h2>How to Use It</h2>
-            <p>Using gifcap is as simple as visiting the site and hitting the record button. You don't need to install any heavy, bloated screen-recording software.</p>
+            <p>Using gifcap involves visiting the site and starting a recording.</p>
 
             <figure>
                 <img src="/path/to/gifcap-screenshot.png" alt="A screenshot of the gifcap.dev interface showing a record button">
@@ -60,12 +58,15 @@ npm install
 npm run dev</code></pre>
             </details>
 
-            <p>If you're interested in the technical background of how the developer built a client-side video encoder using WebAssembly, it's worth reading through the original <a href="https://news.ycombinator.com/item?id=22725651">Hacker News discussion</a>.</p>
+            <p>Technical background on the client-side video encoder using WebAssembly is available on Hacker News.<sup><a href="#fn3" id="ref3">3</a></sup></p>
         </article>
     </main>
 
     <footer>
         <hr>
+        <sup id="fn1">1. [gifcap.dev] <a href="https://gifcap.dev/">https://gifcap.dev/</a><a href="#ref1" title="Jump back to footnote 1 in the text.">↩</a></sup><br>
+        <sup id="fn2">2. [gifcap GitHub repository] <a href="https://github.com/joaomoreno/gifcap">https://github.com/joaomoreno/gifcap</a><a href="#ref2" title="Jump back to footnote 2 in the text.">↩</a></sup><br>
+        <sup id="fn3">3. [Hacker News discussion] <a href="https://news.ycombinator.com/item?id=22725651">https://news.ycombinator.com/item?id=22725651</a><a href="#ref3" title="Jump back to footnote 3 in the text.">↩</a></sup><br>
         <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
         This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
     </footer>
