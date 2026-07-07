@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparing Images for Print Client-Side | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Preparing Images for Print Client-Side</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Constructing high-fidelity physical prints from digital raster aggregates frequently involves third-party processing utilities or server-side rendering pipelines. By exploiting the native Cascading Style Sheets (CSS) <code>@media print</code> directive in conjunction with dynamic DOM manipulation, multiple images can be collated onto a unified A4-dimensioned layout purely within the client's execution environment.</p>
+            
+            <p>The implemented architecture enables a user to import an arbitrary dataset of images via the FileReader API. These blobs are sequentially mapped into an adjustable CSS Grid structural pattern that forces dimensional constraint adherence, yielding a layout optimally configured for hardware spooling systems [1].</p>
+            
+            <figure>
+                <img src="/path/to/image-print-screenshot.png" alt="A browser window demonstrating a 2x2 structural photo layout optimized for printing" loading="lazy">
+                <figcaption>Figure 1: The grid allocation interface configuring image constraints for an A4 print job.</figcaption>
+            </figure>
+
+            <p>Significant operational integrity is maintained by injecting a transient `<style>` element during grid updates. This guarantees that parameters such as column count and orientation actively override standard browser print semantics. Furthermore, the print dialog can be immediately invoked utilizing standard keyboard interrupts, such as <kbd>Ctrl</kbd> + <kbd>P</kbd> [2].</p>
+            
+            <details>
+                <summary>Verifying the injected print stylesheet</summary>
+                <pre><code>$ document.getElementById('dynamic-print-style').textContent
+@media print {
+    @page { size: A4 portrait; margin: 0; }
+    ...
+}</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "Photo print layout". Available: <a href="https://tools.simonwillison.net/image-print">https://tools.simonwillison.net/image-print</a>.</li>
+                    <li>Willison, S. "image-print.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/image-print.html">https://github.com/simonw/tools/blob/main/image-print.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Local SVG Sandbox | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>A Local SVG Sandbox</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Scalable Vector Graphics (SVG) encapsulated within Base64-encoded data URIs present a unique security advantage when rendered natively via HTML `<img>` elements. Under these specific deployment conditions, the underlying browser execution engine strictly prohibits the instantiation of embedded JavaScript routines, actively mitigating cross-site scripting (XSS) vectors that may otherwise be present in raw markup.</p>
+            
+            <p>To analyze the exact structural markup of these vectors without invoking unsafe execution, a client-side sandbox has been designed. It iteratively scans the active DOM for images utilizing SVG data protocols, strips the preliminary URI identifier, and invokes the <code>atob()</code> function to dump the raw ASCII output [1].</p>
+            
+            <figure>
+                <img src="/path/to/svg-sandbox-screenshot.png" alt="A grid interface showing rendered vector graphics adjacent to their decoded XML syntax" loading="lazy">
+                <figcaption>Figure 1: The sandbox extracting and rendering the raw XML of Base64 encoded SVGs.</figcaption>
+            </figure>
+
+            <p>The resulting markup is safely printed into preformatted code blocks. As verified by independent browser policy implementations, any malicious event handlers (such as <code>onclick</code> subroutines) embedded within the vectors are definitively neutralized when the image is structurally constrained in this manner [2].</p>
+            
+            <details>
+                <summary>Manually decoding a data URI payload</summary>
+                <pre><code>$ echo "PHN2Zz48Y2lyY2xlIHI9IjMwIi8+PC9zdmc+" | base64 --decode
+&lt;svg&gt;&lt;circle r="30"/&gt;&lt;/svg&gt;</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "SVG Base64 Embedding Demo". Available: <a href="https://tools.simonwillison.net/svg-sandbox">https://tools.simonwillison.net/svg-sandbox</a>.</li>
+                    <li>Willison, S. "svg-sandbox.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/svg-sandbox.html">https://github.com/simonw/tools/blob/main/svg-sandbox.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
