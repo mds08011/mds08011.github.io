@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Vanilla JavaScript Pomodoro Timer | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>A Vanilla JavaScript Pomodoro Timer</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Task duration monitoring utilizing the Pomodoro technique is a proven methodology for maintaining sustained workflow output. However, utilizing subscription-based or network-dependent applications introduces unnecessary telemetry tracking and dependency risk. Constructing a completely isolated interval tracker using the native browser execution stack satisfies operational requirements while eliminating extraneous overhead.</p>
+            
+            <p>This implementation utilizes the <code>requestAnimationFrame</code> method coupled with standard temporal measurements (via <code>Date.now()</code>) to guarantee execution accuracy across variable hardware clock cycles. The application state, encompassing historical sessions and pause delineations, is retained persistently utilizing the <code>localStorage</code> API, ensuring session resilience between page cycles [1].</p>
+            
+            <figure>
+                <img src="/path/to/pomodoro-screenshot.png" alt="A minimalist timer counting down from 25 minutes, with a log of previous sessions below" loading="lazy">
+                <figcaption>Figure 1: The execution view of the timer highlighting the local session logging mechanism.</figcaption>
+            </figure>
+
+            <p>Interaction constraints have been localized to specific input combinations. For example, triggering a timer cycle can be executed via the <kbd>Space</kbd> key when the goal input field is decoupled from active focus. The full source code structure and methodology have been closely replicated from the referenced implementation [2].</p>
+            
+            <details>
+                <summary>Retrieving session logs from local storage</summary>
+                <pre><code>$ node -e "console.log('Use browser DevTools to read window.localStorage.getItem(\'pomodoroSessions\')');"</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "Pomodoro Timer". Available: <a href="https://tools.simonwillison.net/pomodoro">https://tools.simonwillison.net/pomodoro</a>.</li>
+                    <li>Willison, S. "pomodoro.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/pomodoro.html">https://github.com/simonw/tools/blob/main/pomodoro.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

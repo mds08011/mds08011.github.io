@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        .timer-container {
+            text-align: center;
+            background-color: #f9f9f9;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+        }
+        #timer {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            font-family: monospace;
+        }
+        #sessionLog table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        #sessionLog th, #sessionLog td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #sessionLog th { background-color: #f2f2f2; }
+        #jsonOutput {
+            width: 100%;
+            height: 150px;
+            margin-top: 2rem;
+            font-family: monospace;
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+        }
+        .deleteBtn {
+            background-color: transparent;
+            border: none;
+            color: #f44336;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1rem;
+        }
+        .controls button { margin: 0.5rem; }
+        .controls select { padding: 0.4rem; margin: 0.5rem; }
+        #goalInput { width: 100%; padding: 0.5rem; margin-bottom: 1rem; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <h1>Pomodoro Timer</h1>
+        <div class="timer-container">
+            <input type="text" id="goalInput" placeholder="Enter your goal for this session" required>
+            <div id="timer">25:00</div>
+            <div class="controls">
+                <select id="durationSelect">
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="20">20 minutes</option>
+                    <option value="25" selected>25 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                </select>
+                <br>
+                <button id="startBtn">Start</button>
+                <button id="resetBtn">Reset</button>
+                <button id="endBtn">End Session</button>
+            </div>
+        </div>
+
+        <div id="sessionLog">
+            <h2>Session Log</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Goal</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Duration</th>
+                            <th>Pauses</th>
+                            <th>Act</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionLogBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <textarea id="jsonOutput" readonly placeholder="Session log JSON will appear here..."></textarea>
+    </main>
+    <script>
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const endBtn = document.getElementById('endBtn');
+        const durationSelect = document.getElementById('durationSelect');
+        const goalInput = document.getElementById('goalInput');
+        const sessionLogBody = document.getElementById('sessionLogBody');
+        const jsonOutput = document.getElementById('jsonOutput');
+
+        let startTime;
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let duration = 25 * 60;
+        let currentSession = null;
+        let sessions = [];
+
+        function isLocalStorageAvailable() {
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function loadSessions() {
+            if (isLocalStorageAvailable()) {
+                const storedSessions = localStorage.getItem('pomodoroSessions');
+                if (storedSessions) {
+                    sessions = JSON.parse(storedSessions);
+                }
+            }
+            updateSessionLog();
+        }
+
+        loadSessions();
+
+        function formatDate(date) {
+            return new Date(date).toLocaleString('en-US', {
+                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+            }).replace(',', '');
+        }
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (!isRunning) {
+                if (!goalInput.value) {
+                    alert('Please enter a goal for this session.');
+                    return;
+                }
+                isRunning = true;
+                startBtn.textContent = 'Pause';
+                durationSelect.disabled = true;
+                goalInput.disabled = true;
+                if (!currentSession) {
+                    currentSession = { goal: goalInput.value, startTime: new Date().toISOString(), endTime: null, duration: 0, pauses: [] };
+                } else {
+                    currentSession.pauses[currentSession.pauses.length - 1].resumeTime = new Date().toISOString();
+                }
+                startTime = Date.now() - ((duration - timeLeft) * 1000);
+                requestAnimationFrame(updateTimer);
+            } else {
+                isRunning = false;
+                startBtn.textContent = 'Resume';
+                currentSession.pauses.push({ pauseTime: new Date().toISOString(), resumeTime: null });
+            }
+        }
+
+        function updateTimer() {
+            if (isRunning) {
+                const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                timeLeft = duration - elapsedTime;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    isRunning = false;
+                    startBtn.textContent = 'Start';
+                    durationSelect.disabled = false;
+                    goalInput.disabled = false;
+                    endSession();
+                    alert('Pomodoro session complete!');
+                } else {
+                    requestAnimationFrame(updateTimer);
+                }
+                updateDisplay();
+            }
+        }
+
+        function resetTimer() {
+            isRunning = false;
+            duration = parseInt(durationSelect.value) * 60;
+            timeLeft = duration;
+            updateDisplay();
+            startBtn.textContent = 'Start';
+            durationSelect.disabled = false;
+            goalInput.disabled = false;
+            currentSession = null;
+        }
+
+        function changeDuration() {
+            if (!isRunning) {
+                duration = parseInt(durationSelect.value) * 60;
+                timeLeft = duration;
+                updateDisplay();
+            }
+        }
+
+        function endSession() {
+            if (currentSession) {
+                currentSession.endTime = new Date().toISOString();
+                currentSession.duration = Math.round((new Date(currentSession.endTime) - new Date(currentSession.startTime)) / 1000);
+                sessions.unshift(currentSession);
+                updateSessionLog();
+                saveSessions();
+                resetTimer();
+            }
+        }
+
+        function updateSessionLog() {
+            sessionLogBody.innerHTML = '';
+            sessions.forEach((session, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${session.goal}</td>
+                    <td>${formatDate(session.startTime)}</td>
+                    <td>${session.endTime ? formatDate(session.endTime) : 'In progress'}</td>
+                    <td>${Math.floor(session.duration / 60)}m ${session.duration % 60}s</td>
+                    <td>${session.pauses.length}</td>
+                    <td><button class="deleteBtn" data-index="${index}">❌</button></td>
+                `;
+                sessionLogBody.appendChild(row);
+            });
+            jsonOutput.value = JSON.stringify(sessions, null, 2);
+            document.querySelectorAll('.deleteBtn').forEach(btn => {
+                btn.addEventListener('click', deleteSession);
+            });
+        }
+
+        function deleteSession(event) {
+            const index = parseInt(event.target.getAttribute('data-index'));
+            sessions.splice(index, 1);
+            updateSessionLog();
+            saveSessions();
+        }
+
+        function saveSessions() {
+            if (isLocalStorageAvailable()) {
+                localStorage.setItem('pomodoroSessions', JSON.stringify(sessions));
+            }
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        endBtn.addEventListener('click', endSession);
+        durationSelect.addEventListener('change', changeDuration);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && document.activeElement !== goalInput) {
+                e.preventDefault();
+                startTimer();
+            }
+        });
+
+        updateDisplay();
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Live Preview | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        .split-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 60vh;
+        }
+        .editor-container, .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .editor {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+        }
+        .preview {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        @media (min-width: 768px) {
+            .split-container { flex-direction: row; }
+            .editor, .preview { height: 60vh; }
+        }
+        .copy-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .copy-notification.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main style="max-width: 90%; margin: 0 auto;">
+        <h1>HTML Live Preview</h1>
+        <div class="button-group">
+            <button class="copy-button">Copy HTML</button>
+        </div>
+        <div class="split-container">
+            <div class="editor-container">
+                <textarea class="editor" spellcheck="false" autofocus></textarea>
+            </div>
+            <div class="preview-container">
+                <iframe class="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
+        </div>
+        <div class="copy-notification">HTML copied to clipboard!</div>
+    </main>
+    <script type="module">
+        const defaultContent = `<h3>Real-time HTML editor</h3>\n<p>Enter HTML here and see a live preview as you type.</p>`;
+        const editor = document.querySelector('.editor');
+        const preview = document.querySelector('.preview');
+        const copyButton = document.querySelector('.copy-button');
+        const copyNotification = document.querySelector('.copy-notification');
+
+        editor.value = defaultContent;
+
+        function createBlobURL(htmlContent) {
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            return URL.createObjectURL(blob);
+        }
+
+        function updatePreview() {
+            try {
+                const blobURL = createBlobURL(editor.value);
+                preview.src = blobURL;
+                const oldURL = preview.dataset.blobURL;
+                if (oldURL) URL.revokeObjectURL(oldURL);
+                preview.dataset.blobURL = blobURL;
+            } catch (e) {
+                console.error('Error updating preview:', e);
+            }
+        }
+
+        function copyToClipboard() {
+            try {
+                editor.select();
+                navigator.clipboard.writeText(editor.value).then(() => {
+                    copyNotification.classList.add('show');
+                    setTimeout(() => copyNotification.classList.remove('show'), 2000);
+                }).catch(err => {
+                    document.execCommand('copy');
+                    copyNotification.classList.add('show');
+                    setTimeout(() => copyNotification.classList.remove('show'), 2000);
+                });
+                setTimeout(() => editor.focus(), 50);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func(), wait);
+            };
+        }
+
+        const debouncedUpdate = debounce(updatePreview, 300);
+        editor.addEventListener('input', debouncedUpdate);
+        window.addEventListener('load', updatePreview);
+        window.addEventListener('resize', () => updatePreview());
+        copyButton.addEventListener('click', copyToClipboard);
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

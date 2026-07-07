@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXIF Data Viewer | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        .dropzone {
+            display: block;
+            width: 100%;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+            transition: background-color 0.15s, border-color 0.15s;
+            color: #666;
+        }
+        .dropzone:hover, .dropzone:focus-visible, .dropzone.dragover {
+            border-color: #2563eb;
+            background: #eff4ff;
+            color: #2563eb;
+            outline: none;
+        }
+        .dropzone .hint { display: block; font-size: 0.85rem; margin-top: 4px; color: #666; }
+        .dropzone .filename { display: block; margin-top: 6px; font-size: 0.85rem; color: #222; }
+        #file-input { display: none; }
+        #coordinates:not(:empty), #exif-data:not(:empty) {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background-color: #f1f3f5;
+            border-radius: 6px;
+        }
+        #exif-data pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            margin: 0;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>EXIF Data Viewer</h1>
+            <label for="file-input" class="dropzone" id="dropzone" tabindex="0">
+                <span class="label-text"><strong>Click to choose</strong> or drop an image here</span>
+                <span class="hint">JPEG, PNG, HEIC, etc.</span>
+                <span class="filename" id="filename"></span>
+            </label>
+            <input type="file" id="file-input" accept="image/*">
+            <div id="coordinates"></div>
+            <div id="exif-data"></div>
+        </div>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const dropzone = document.getElementById('dropzone');
+            const filenameEl = document.getElementById('filename');
+            const coordinatesDiv = document.getElementById('coordinates');
+            const exifDataDiv = document.getElementById('exif-data');
+
+            fileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) handleFile(file);
+            });
+
+            dropzone.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    fileInput.click();
+                }
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dropzone.classList.add('dragover');
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dropzone.classList.remove('dragover');
+                });
+            });
+
+            dropzone.addEventListener('drop', function(event) {
+                const file = event.dataTransfer.files[0];
+                if (file) handleFile(file);
+            });
+
+            function handleFile(file) {
+                filenameEl.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        EXIF.getData(this, function() {
+                            const allTags = EXIF.getAllTags(this);
+                            displayExifData(allTags);
+                        });
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function displayExifData(tags) {
+                let lat = null;
+                let lon = null;
+                if (tags.GPSLatitude && tags.GPSLongitude) {
+                    lat = convertDMSToDD(tags.GPSLatitude, tags.GPSLatitudeRef);
+                    lon = convertDMSToDD(tags.GPSLongitude, tags.GPSLongitudeRef);
+                }
+                if (lat !== null && lon !== null) {
+                    coordinatesDiv.innerHTML = `
+                        <h2>GPS Coordinates</h2>
+                        <p>Latitude: ${lat.toFixed(6)}</p>
+                        <p>Longitude: ${lon.toFixed(6)}</p>
+                        <p><a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" rel="noopener noreferrer">View on Google Maps</a></p>
+                    `;
+                } else {
+                    coordinatesDiv.innerHTML = '<p>No GPS coordinates found in the image.</p>';
+                }
+                exifDataDiv.innerHTML = `
+                    <h2>All EXIF Data</h2>
+                    <pre>${escapeHtml(formatExifJson(tags))}</pre>
+                `;
+            }
+
+            function formatExifJson(obj) {
+                const keys = Object.keys(obj);
+                if (keys.length === 0) return '{}';
+                const lines = ['{'];
+                keys.forEach((key, i) => {
+                    const value = JSON.stringify(obj[key]);
+                    const comma = i < keys.length - 1 ? ',' : '';
+                    lines.push(`  ${JSON.stringify(key)}: ${value === undefined ? 'null' : value}${comma}`);
+                });
+                lines.push('}');
+                return lines.join('\n');
+            }
+
+            function escapeHtml(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function convertDMSToDD(dms, ref) {
+                let dd = dms[0] + dms[1] / 60 + dms[2] / 3600;
+                if (ref === "S" || ref === "W") dd = dd * -1;
+                return dd;
+            }
+        });
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

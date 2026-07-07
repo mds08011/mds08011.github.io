@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viewing EXIF Data Locally in the Browser | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Viewing EXIF Data Locally in the Browser</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Exchangeable Image File Format (EXIF) metadata frequently contains highly sensitive geographic coordinates and device telemetry embedded within standard image captures. Transmitting these images to external servers for parsing violates strict zero-trust operational security guidelines. By processing this metadata entirely client-side, geographical positioning system (GPS) coordinates can be extracted and mapped without network egress.</p>
+            
+            <p>This implementation reads the binary headers of standard image files using the FileReader API and processes them through an external client-side parser to extract EXIF dictionaries. The tool successfully parses and formats these records, converting Degrees, Minutes, and Seconds (DMS) coordinates into Decimal Degrees (DD) for immediate geographical reference [1].</p>
+            
+            <figure>
+                <img src="/path/to/exif-screenshot.png" alt="A browser window showing extracted GPS coordinates and EXIF metadata dumped from a local photograph" loading="lazy">
+                <figcaption>Figure 1: The EXIF extraction interface detailing embedded telemetry parameters.</figcaption>
+            </figure>
+
+            <p>During localized deployment, a simple drag-and-drop event listener was configured on a designated dropzone element to intercept file objects. The underlying logic prevents file upload and directly instantiates a canvas rendering context for analysis, minimizing memory overhead and securing the parsing pipeline [2].</p>
+            
+            <details>
+                <summary>Inspecting local EXIF tags</summary>
+                <pre><code>$ exiftool sample_image.jpg | grep "GPS Position"
+GPS Position                    : 32 deg 42' 54.99" N, 117 deg 9' 25.98" W</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "EXIF Data Viewer". Available: <a href="https://tools.simonwillison.net/exif">https://tools.simonwillison.net/exif</a>.</li>
+                    <li>Willison, S. "exif.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/exif.html">https://github.com/simonw/tools/blob/main/exif.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
