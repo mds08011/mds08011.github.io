@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixing NTFS/exFAT Superblock Mount Errors on Pop!_OS | MDS</title>
+    <title>Tools | MDS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,21 +31,12 @@
     <main>
         <article>
             <header>
-                <h1>Fixing NTFS/exFAT Superblock Mount Errors on Pop!_OS</h1>
-                <time datetime="2026-03-02">March 2, 2026</time>
+                <h1>Field Tools</h1>
             </header>
             
-            <p>If you're plugging an external USB HDD (like a WD Elements) into Pop!_OS and getting the dreaded <code>wrong fs type, bad option, bad superblock</code> error, don't panic. This usually happens for one of two reasons: either the drive wasn't safely ejected from Windows (leaving a 'dirty bit'), or your system is missing the necessary exFAT drivers.</p>
-            
-            <h2>Fix 1: Clearing the Dirty Flag (NTFS)</h2>
-            <p>If your drive is formatted as NTFS and you pulled it out of a Windows machine without safely ejecting it, a "dirty flag" is set. You can use <code>ntfsfix</code> in the terminal to clear it.</p>
-            <pre><code>sudo ntfsfix /dev/sdb1</code></pre>
-            <p><em>(Make sure to replace <code>sdb1</code> with the actual partition of your drive.)</em></p>
-
-            <h2>Fix 2: Installing Missing Drivers (exFAT)</h2>
-            <p>If your drive is formatted as exFAT and Pop!_OS doesn't mount it, you probably just need the exFAT drivers installed.</p>
-            <pre><code>sudo apt install exfat-fuse exfat-utils</code></pre>
-            <p>After running either of these fixes depending on your file system, unplug and replug the drive, and it should mount correctly.</p>
+            <ul>
+                <li><a href="/concrete.html">Concrete Pour & Waste Estimator</a></li>
+            </ul>
         </article>
     </main>
 
