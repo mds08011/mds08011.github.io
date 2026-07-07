@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR PDF & Image Scanner | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <script type="module">
+        import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/+esm';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.worker.min.mjs";
+        window.pdfjsLib = pdfjsLib;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        .dropzone {
+            box-sizing: border-box;
+            width: 100%;
+            height: 10em;
+            border: 2px dashed #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 1em;
+            margin-bottom: 1em;
+            text-align: center;
+        }
+        .dropzone.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .dropzone.drag-over {
+            background-color: #f0f8ff;
+            border-color: #0071e3;
+        }
+        .image-container img {
+            margin-bottom: 10px;
+            max-width: 100%;
+        }
+        textarea {
+            width: 100%;
+            height: 10em;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .full-document-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin: 0.5rem 0 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>OCR PDFs and Images</h1>
+            <p>This tool runs entirely in your browser. No files are uploaded to a server.</p>
+            <p>
+                <label>Language: 
+                    <select id="id_language"><option>ENG</option></select>
+                </label>
+            </p>
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.gif" style="display: none;" />
+            
+            <div class="actions">
+                <button id="loadExampleButton" type="button">Load example PDF</button>
+            </div>
+
+            <div class="dropzone" id="dropzone">
+                Drag and drop a PDF, JPG, PNG, or GIF file here or click to select a file
+            </div>
+            
+            <div class="full-document-section" id="fullDocumentSection">
+                <h2>Full document</h2>
+                <textarea class="full-document" id="fullDocument"></textarea>
+                <h2>Pages</h2>
+            </div>
+            <div class="image-container"></div>
+        </div>
+    </main>
+
+    <script>
+    const desiredWidth = 1000;
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const imageContainer = document.querySelector('.image-container');
+    const fullDocumentTextarea = document.getElementById('fullDocument');
+    const fullDocumentSection = document.getElementById('fullDocumentSection');
+    const languageSelect = document.getElementById('id_language');
+    const loadExampleButton = document.getElementById('loadExampleButton');
+
+    const EXAMPLE_URL = 'https://static.simonwillison.net/static/cors-allow/2025/attention-all-you-need.pdf';
+    const DROPZONE_DEFAULT_TEXT = dropzone.innerText;
+
+    let fileSelectionAllowed = true;
+
+    const LANGUAGES = {
+        "eng": "English",
+        "spa": "Spanish",
+        "fra": "French",
+        "deu": "German",
+        "ita": "Italian",
+        "por": "Portuguese",
+        "rus": "Russian",
+        "chi_sim": "Chinese - Simplified",
+        "jpn": "Japanese",
+        "kor": "Korean"
+    };
+
+    while (languageSelect.firstChild) {
+        languageSelect.removeChild(languageSelect.firstChild);
+    }
+    for (const [code, name] of Object.entries(LANGUAGES)) {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = name;
+        if (code === 'eng') option.selected = true;
+        languageSelect.appendChild(option);
+    }
+
+    function showFullDocument() {
+        const populatedTextareas = Array.from(
+            document.querySelectorAll('.image-container textarea')
+        ).filter(ta => ta.value.trim().length);
+        if (populatedTextareas.length > 1) {
+            fullDocumentTextarea.value = populatedTextareas.map(ta => ta.value.trim()).join("\n\n");
+            fullDocumentSection.style.display = 'block';
+        } else {
+            fullDocumentTextarea.value = '';
+            fullDocumentSection.style.display = 'none';
+        }
+    }
+
+    function setTextarea(ta, text) {
+        ta.value = text.trim();
+        ta.style.height = 'auto';
+        ta.style.height = (ta.scrollHeight + 5) + 'px';
+    }
+
+    dropzone.addEventListener('dragover', handleDragOver);
+    dropzone.addEventListener('dragleave', handleDragLeave);
+    dropzone.addEventListener('drop', handleDrop);
+    dropzone.addEventListener('click', handleClick);
+    loadExampleButton.addEventListener('click', loadExamplePDF);
+
+    async function handleDragOver(event) {
+        event.preventDefault();
+        if (fileSelectionAllowed) dropzone.classList.add('drag-over');
+    }
+
+    async function handleDragLeave(event) {
+        event.preventDefault();
+        if (fileSelectionAllowed) dropzone.classList.remove('drag-over');
+    }
+
+    async function handleDrop(event) {
+        event.preventDefault();
+        if (fileSelectionAllowed) {
+            dropzone.classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            fileInput.files = event.dataTransfer.files;
+            processFile(file);
+        }
+    }
+
+    async function handleClick() {
+        if (fileSelectionAllowed) fileInput.click();
+    }
+
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        processFile(file);
+    });
+
+    async function loadExamplePDF() {
+        if (!fileSelectionAllowed) return;
+        const previousText = dropzone.innerText;
+        dropzone.innerText = 'Fetching example PDF...';
+        dropzone.classList.add('disabled');
+        fileSelectionAllowed = false;
+        try {
+            const response = await fetch(EXAMPLE_URL, { mode: 'cors' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+            const file = new File([pdfBlob], 'example.pdf', { type: 'application/pdf' });
+            await processFile(file);
+        } catch (err) {
+            console.error('Failed to load example PDF:', err);
+            alert('Failed to load the example PDF.');
+        } finally {
+            dropzone.innerText = DROPZONE_DEFAULT_TEXT;
+            dropzone.classList.remove('disabled');
+            fileSelectionAllowed = true;
+        }
+    }
+
+    async function processFile(file) {
+        const worker = await Tesseract.createWorker(languageSelect.value);
+        fullDocumentTextarea.value = '';
+        fullDocumentSection.style.display = 'none';
+        imageContainer.innerHTML = '';
+        const originalText = dropzone.innerText;
+        dropzone.innerText = 'Processing file...';
+        dropzone.classList.add('disabled');
+        fileSelectionAllowed = false;
+
+        if (file.type === 'application/pdf') {
+            const { numPages, imageIterator } = await convertPDFToImages(file);
+            let done = 0;
+            dropzone.innerText = `Processing ${numPages} page${numPages > 1 ? 's' : ''}`;
+            for await (const { imageURL } of imageIterator) {
+                const ta = await displayImage(imageURL);
+                const { text } = await ocrImage(worker, imageURL);
+                setTextarea(ta, text);
+                showFullDocument();
+                done += 1;
+                dropzone.innerText = `Done ${done} of ${numPages}`;
+            }
+        } else {
+            const imageURL = URL.createObjectURL(file);
+            const ta = await displayImage(imageURL);
+            const { text } = await ocrImage(worker, imageURL);
+            setTextarea(ta, text);
+            showFullDocument();
+        }
+
+        await worker.terminate();
+        dropzone.innerText = originalText;
+        dropzone.classList.remove('disabled');
+        fileSelectionAllowed = true;
+    }
+
+    async function displayImage(imageURL) {
+        const imgElement = document.createElement('img');
+        imgElement.src = imageURL;
+        imageContainer.appendChild(imgElement);
+        const altTextarea = document.createElement('textarea');
+        altTextarea.placeholder = 'OCRing image...';
+        imageContainer.appendChild(altTextarea);
+        return altTextarea;
+    }
+
+    document.addEventListener('paste', (event) => {
+        const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        const images = Array.from(items).filter(item => item.type.indexOf('image') !== -1);
+        if (images.length) {
+            processFile(images[0].getAsFile());
+        }
+    });
+
+    async function convertPDFToImages(file) {
+        const pdf = await window.pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+        const numPages = pdf.numPages;
+        async function* images() {
+            for (let i = 1; i <= numPages; i++) {
+                try {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = desiredWidth;
+                    canvas.height = (desiredWidth / viewport.width) * viewport.height;
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: page.getViewport({ scale: desiredWidth / viewport.width }),
+                    };
+                    await page.render(renderContext).promise;
+                    const imageURL = canvas.toDataURL('image/jpeg', 0.8);
+                    yield { imageURL };
+                } catch (error) {
+                    console.error(`Error rendering page ${i}:`, error);
+                }
+            }
+        }
+        return {numPages, imageIterator: images()};
+    }
+
+    async function ocrImage(worker, imageUrl) {
+        const { data: { text } } = await worker.recognize(imageUrl);
+        return { text };
+    }
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

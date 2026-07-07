@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client-Side Image Format Conversion to JPEG | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Client-Side Image Format Conversion to JPEG</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Standardizing image formats before archival or transmission is a fundamental requirement in data normalization workflows. Offloading the computational burden of converting modern image encodings into baseline Joint Photographic Experts Group (JPEG) format to the client reduces server-side processing overhead and eliminates intermediary data storage risks.</p>
+            
+            <p>This implementation leverages the native HTML5 Canvas API to read uncompressed image blobs and redraw them utilizing the browser's integrated lossy compression subroutines. A functional deployment of this zero-dependency utility has been integrated into the local toolkit infrastructure [1].</p>
+            
+            <figure>
+                <img src="/path/to/image-to-jpeg-screenshot.png" alt="An interface showing an image before and after JPEG compression, detailing structural savings" loading="lazy">
+                <figcaption>Figure 1: The interface demonstrating byte-size reduction metrics post-compression.</figcaption>
+            </figure>
+
+            <p>The core rendering function relies entirely on vanilla JavaScript invoking the <code>canvas.toDataURL('image/jpeg', quality)</code> method. This negates the requirement for any external runtime dependencies or server-side ImageMagick processes. The architectural blueprint for this implementation was modeled directly from the referenced source documentation [2].</p>
+            
+            <details>
+                <summary>Verifying output mimetype</summary>
+                <pre><code>$ file optimized-image.jpg
+optimized-image.jpg: JPEG image data, JFIF standard 1.01</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "Drag and Drop Image Optimizer". Available: <a href="https://tools.simonwillison.net/image-to-jpeg">https://tools.simonwillison.net/image-to-jpeg</a>.</li>
+                    <li>Willison, S. "image-to-jpeg.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/image-to-jpeg.html">https://github.com/simonw/tools/blob/main/image-to-jpeg.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

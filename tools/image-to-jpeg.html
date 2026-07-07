@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to JPEG Optimizer | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        #dropzone {
+            width: 100%;
+            min-height: 120px;
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            text-align: center;
+            padding: 24px;
+            margin-bottom: 24px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-weight: 500;
+        }
+        #dropzone:hover, #dropzone.dragover {
+            border-color: #4c51bf;
+            background: #e8ebff;
+        }
+        .controls { margin-bottom: 24px; }
+        .control-group { margin-bottom: 16px; }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #qualityRange { flex: 1; }
+        .quality-value {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        .size-info {
+            background: #f3f4f6;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            color: #374151;
+        }
+        #output {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: none;
+            cursor: pointer;
+            user-select: none;
+        }
+        #output.active { display: block; }
+        .data-uri-container textarea {
+            width: 100%;
+            height: 120px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .download-btn {
+            display: none;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .download-btn.active { display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>Image Optimizer</h1>
+            
+            <div id="dropzone">Click or drag and drop an image here</div>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="qualityRange">JPEG Quality</label>
+                    <div class="slider-container">
+                        <input type="range" id="qualityRange" min="0" max="100" value="75" />
+                        <span class="quality-value" id="qualityValue">75</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <div class="size-info" id="jpegSize">Upload an image to see compression results</div>
+                </div>
+                
+                <div class="control-group">
+                    <label><input type="checkbox" id="viewToggle"> Show Original Image</label>
+                </div>
+            </div>
+
+            <img id="output" src="" alt="Processed Image" />
+            <div class="preview-hint" id="previewHint" style="display: none; text-align: center; margin-bottom: 1rem; font-style: italic;">
+                Hold down on the image to temporarily see the <span id="previewText">original</span>
+            </div>
+            
+            <button class="download-btn" id="downloadBtn">Download Optimized Image</button>
+            
+            <div class="data-uri-container">
+                <label for="imgDataUri">Image Data URI:</label>
+                <button id="copyBtn">Copy to Clipboard</button>
+                <textarea id="imgDataUri" readonly placeholder="Processed image data will appear here..."></textarea>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const output = document.getElementById('output');
+        const imgDataUri = document.getElementById('imgDataUri');
+        const qualityRange = document.getElementById('qualityRange');
+        const qualityValue = document.getElementById('qualityValue');
+        const jpegSize = document.getElementById('jpegSize');
+        const viewToggle = document.getElementById('viewToggle');
+        const previewHint = document.getElementById('previewHint');
+        const previewText = document.getElementById('previewText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        
+        let originalSrc;
+        let optimizedSrc;
+        let isPressed = false;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    originalSrc = e.target.result;
+                    updateImage();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please select an image file.');
+            }
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    originalSrc = e.target.result;
+                    updateImage();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please drop an image file.');
+            }
+        });
+
+        qualityRange.addEventListener('input', () => {
+            qualityValue.textContent = qualityRange.value;
+            updateImage();
+        });
+
+        viewToggle.addEventListener('change', () => {
+            updateDisplayedImage();
+            updatePreviewHint();
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (optimizedSrc) {
+                const link = document.createElement('a');
+                link.download = 'optimized-image.jpg';
+                link.href = optimizedSrc;
+                link.click();
+            }
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            if (imgDataUri.value) {
+                try {
+                    await navigator.clipboard.writeText(imgDataUri.value);
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+                } catch (err) {
+                    imgDataUri.select();
+                    document.execCommand('copy');
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+                }
+            }
+        });
+
+        output.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isPressed = true;
+            showOppositeImage();
+        });
+
+        output.addEventListener('mouseup', () => {
+            if (isPressed) {
+                isPressed = false;
+                updateDisplayedImage();
+            }
+        });
+
+        output.addEventListener('mouseleave', () => {
+            if (isPressed) {
+                isPressed = false;
+                updateDisplayedImage();
+            }
+        });
+
+        function updateImage() {
+            if (!originalSrc) return;
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const aspectRatio = img.height / img.width;
+                canvas.width = Math.min(800, img.width);
+                canvas.height = canvas.width * aspectRatio;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const quality = qualityRange.value / 100;
+                optimizedSrc = canvas.toDataURL('image/jpeg', quality);
+                
+                output.classList.add('active');
+                downloadBtn.classList.add('active');
+                previewHint.style.display = 'block';
+                updateDisplayedImage();
+                updatePreviewHint();
+                
+                imgDataUri.value = `<img src="${optimizedSrc}" alt="Optimized Image" />`;
+                
+                const originalSize = Math.round(originalSrc.length * 3 / 4);
+                const optimizedSize = Math.round(optimizedSrc.length * 3 / 4);
+                const savings = Math.round((1 - optimizedSize / originalSize) * 100);
+                
+                jpegSize.textContent = `Optimized: ${optimizedSize.toLocaleString()} bytes | Original: ${originalSize.toLocaleString()} bytes | Saved: ${savings}%`;
+            };
+            img.src = originalSrc;
+        }
+
+        function updateDisplayedImage() {
+            if (!originalSrc || !optimizedSrc) return;
+            const showOriginal = viewToggle.checked;
+            output.src = showOriginal ? originalSrc : optimizedSrc;
+        }
+
+        function updatePreviewHint() {
+            const showOriginal = viewToggle.checked;
+            previewText.textContent = showOriginal ? 'optimized' : 'original';
+        }
+
+        function showOppositeImage() {
+            if (!originalSrc || !optimizedSrc) return;
+            const showOriginal = viewToggle.checked;
+            output.src = showOriginal ? optimizedSrc : originalSrc;
+        }
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

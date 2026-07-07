@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            color: #1d1d1f;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .row label { margin-bottom: 0; }
+        .color-input {
+            width: 40px;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .mode-tabs {
+            display: flex;
+            gap: 4px;
+            background: #f5f5f7;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 7px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            margin: 0;
+            transition: background 0.15s ease;
+        }
+        .mode-tab.active {
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+        .mode-panel { display: none; }
+        .mode-panel.active { display: block; }
+        .password-wrap { position: relative; }
+        .password-wrap input { padding-right: 64px; }
+        .password-toggle {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #0071e3;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .error { color: #d70015; display: none; margin-bottom: 10px; }
+        .error.visible { display: block; }
+        .qr-display {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: none;
+            color: #1d1d1f;
+        }
+        .qr-display.visible { display: flex; }
+        .qr-display canvas { max-width: 100%; height: auto; border-radius: 8px; }
+        .qr-url { margin: 12px 0; word-break: break-all; text-align: center; }
+        .empty-state {
+            margin-top: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #86868b;
+        }
+        button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        button.primary { background: #0071e3; color: white; width: 100%; }
+        button.secondary { background: #f5f5f7; border: 1px solid #d2d2d7; margin: 5px; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>QR Code Generator</h1>
+            <p>Create a scannable code for a URL, text, or WiFi network.</p>
+
+            <div class="card">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" id="mode-tab-text">URL / text</button>
+                    <button class="mode-tab" id="mode-tab-wifi">WiFi</button>
+                </div>
+
+                <div class="mode-panel active" id="mode-panel-text">
+                    <label for="url-input">URL or text</label>
+                    <input type="text" id="url-input" placeholder="https://example.com" autocomplete="off" autocapitalize="off" spellcheck="false">
+                </div>
+
+                <div class="mode-panel" id="mode-panel-wifi">
+                    <label for="wifi-ssid">Network name (SSID)</label>
+                    <input type="text" id="wifi-ssid" placeholder="My WiFi" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    
+                    <label for="wifi-password">Password</label>
+                    <div class="password-wrap">
+                        <input type="password" id="wifi-password" placeholder="Password" autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <button type="button" class="password-toggle" id="wifi-password-toggle">Show</button>
+                    </div>
+                    
+                    <div class="row" style="margin-bottom:0;">
+                        <label for="wifi-encryption">Security</label>
+                        <select id="wifi-encryption">
+                            <option value="WPA" selected>WPA / WPA2 / WPA3 (most common)</option>
+                            <option value="WEP">WEP (legacy)</option>
+                            <option value="nopass">None (open network)</option>
+                        </select>
+                        <label>
+                            <input type="checkbox" id="wifi-hidden"> Hidden
+                        </label>
+                    </div>
+                </div>
+
+                <div class="error" id="error-msg"></div>
+
+                <div class="row">
+                    <label for="style-select">Style</label>
+                    <select id="style-select" style="width: auto;">
+                        <option value="square" selected>Square</option>
+                        <option value="liquid">Liquid</option>
+                    </select>
+                    <label>
+                        <input type="checkbox" id="border-toggle"> Border
+                    </label>
+                </div>
+
+                <div class="row">
+                    <label for="size-select">Size</label>
+                    <select id="size-select" style="width: auto;">
+                        <option value="240">Small</option>
+                        <option value="360" selected>Medium</option>
+                        <option value="520">Large</option>
+                    </select>
+                    <label for="color-input" style="margin-left:auto;">Color</label>
+                    <input type="color" id="color-input" class="color-input" value="#000000">
+                </div>
+
+                <button class="primary" id="generate-btn">Generate QR code</button>
+            </div>
+
+            <div class="qr-display" id="qr-display">
+                <canvas id="qr-canvas"></canvas>
+                <div class="qr-url" id="qr-url"></div>
+                <div>
+                    <button class="secondary" id="download-btn">Download PNG</button>
+                    <button class="secondary" id="copy-btn">Copy image</button>
+                </div>
+            </div>
+
+            <div class="empty-state" id="empty-state">
+                Your QR code will appear here.
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script type="module">
+        const urlInput = document.getElementById('url-input');
+        const wifiSsidInput = document.getElementById('wifi-ssid');
+        const wifiPasswordInput = document.getElementById('wifi-password');
+        const wifiEncryptionSelect = document.getElementById('wifi-encryption');
+        const wifiHiddenToggle = document.getElementById('wifi-hidden');
+        const wifiPasswordToggle = document.getElementById('wifi-password-toggle');
+        const modeTabText = document.getElementById('mode-tab-text');
+        const modeTabWifi = document.getElementById('mode-tab-wifi');
+        const modePanelText = document.getElementById('mode-panel-text');
+        const modePanelWifi = document.getElementById('mode-panel-wifi');
+        const styleSelect = document.getElementById('style-select');
+        const borderToggle = document.getElementById('border-toggle');
+        const sizeSelect = document.getElementById('size-select');
+        const colorInput = document.getElementById('color-input');
+        const generateBtn = document.getElementById('generate-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const qrDisplay = document.getElementById('qr-display');
+        const qrCanvas = document.getElementById('qr-canvas');
+        const qrUrlEl = document.getElementById('qr-url');
+        const emptyState = document.getElementById('empty-state');
+        const errorMsg = document.getElementById('error-msg');
+
+        let currentValue = '';
+        let currentLabel = '';
+        let mode = 'text';
+
+        function setMode(next) {
+            mode = next;
+            const isWifi = next === 'wifi';
+            modeTabText.classList.toggle('active', !isWifi);
+            modeTabWifi.classList.toggle('active', isWifi);
+            modePanelText.classList.toggle('active', !isWifi);
+            modePanelWifi.classList.toggle('active', isWifi);
+            clearError();
+            if (currentValue) generate();
+        }
+
+        function escapeWifiField(value) {
+            return String(value).replace(/([\\;,":])/g, '\\$1');
+        }
+
+        function buildWifiPayload() {
+            const ssid = wifiSsidInput.value;
+            const password = wifiPasswordInput.value;
+            const encryption = wifiEncryptionSelect.value;
+            const hidden = wifiHiddenToggle.checked;
+            if (!ssid) return null;
+            const parts = [`T:${encryption}`, `S:${escapeWifiField(ssid)}`];
+            if (encryption !== 'nopass') parts.push(`P:${escapeWifiField(password)}`);
+            if (hidden) parts.push('H:true');
+            return `WIFI:${parts.join(';')};;`;
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('visible');
+        }
+
+        function clearError() {
+            errorMsg.classList.remove('visible');
+        }
+
+        function buildMatrix(qr) {
+            const n = qr.getModuleCount();
+            const m = [];
+            for (let r = 0; r < n; r++) {
+                const row = [];
+                for (let c = 0; c < n; c++) row.push(qr.isDark(r, c));
+                m.push(row);
+            }
+            return m;
+        }
+
+        function isFinderModule(row, col, n) {
+            if (row < 7 && col < 7) return true;
+            if (row < 7 && col >= n - 7) return true;
+            if (row >= n - 7 && col < 7) return true;
+            return false;
+        }
+
+        function drawFinder(ctx, x, y, s, color) {
+            const cx = x + 3.5 * s;
+            const cy = y + 3.5 * s;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 3.5 * s, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 2.5 * s, 0, Math.PI * 2, true);
+            ctx.fill('evenodd');
+            ctx.beginPath();
+            ctx.arc(cx, cy, 1.5 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawLiquidCell(ctx, modules, r, c, x, y, s) {
+            const n = modules.length;
+            const get = (rr, cc) => rr >= 0 && rr < n && cc >= 0 && cc < n && modules[rr][cc];
+            const north = get(r - 1, c);
+            const south = get(r + 1, c);
+            const east = get(r, c + 1);
+            const west = get(r, c - 1);
+            const rad = s / 2;
+            const tl = (north || west) ? 0 : rad;
+            const tr = (north || east) ? 0 : rad;
+            const br = (south || east) ? 0 : rad;
+            const bl = (south || west) ? 0 : rad;
+
+            ctx.beginPath();
+            ctx.moveTo(x + tl, y);
+            ctx.lineTo(x + s - tr, y);
+            if (tr > 0) ctx.arcTo(x + s, y, x + s, y + tr, tr);
+            ctx.lineTo(x + s, y + s - br);
+            if (br > 0) ctx.arcTo(x + s, y + s, x + s - br, y + s, br);
+            ctx.lineTo(x + bl, y + s);
+            if (bl > 0) ctx.arcTo(x, y + s, x, y + s - bl, bl);
+            ctx.lineTo(x, y + tl);
+            if (tl > 0) ctx.arcTo(x, y, x + tl, y, tl);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawQR(value, targetSize, color, style, withBorder) {
+            const qr = qrcode(0, style === 'liquid' ? 'H' : 'M');
+            qr.addData(value);
+            qr.make();
+            const modules = buildMatrix(qr);
+            const moduleCount = modules.length;
+            const margin = 4;
+            const totalModules = moduleCount + margin * 2;
+            const cellSize = Math.max(2, Math.floor(targetSize / totalModules));
+            const actualSize = cellSize * totalModules;
+            const dpr = window.devicePixelRatio || 1;
+            qrCanvas.width = actualSize * dpr;
+            qrCanvas.height = actualSize * dpr;
+            qrCanvas.style.width = actualSize + 'px';
+            qrCanvas.style.height = actualSize + 'px';
+
+            const ctx = qrCanvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.imageSmoothingEnabled = true;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, actualSize, actualSize);
+            ctx.fillStyle = color;
+            const offset = margin * cellSize;
+
+            if (style === 'square') {
+                for (let r = 0; r < moduleCount; r++) {
+                    for (let c = 0; c < moduleCount; c++) {
+                        if (modules[r][c]) {
+                            ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize, cellSize);
+                        }
+                    }
+                }
+            } else {
+                for (let r = 0; r < moduleCount; r++) {
+                    for (let c = 0; c < moduleCount; c++) {
+                        if (!modules[r][c]) continue;
+                        if (isFinderModule(r, c, moduleCount)) continue;
+                        drawLiquidCell(ctx, modules, r, c, offset + c * cellSize, offset + r * cellSize, cellSize);
+                    }
+                }
+                drawFinder(ctx, offset, offset, cellSize, color);
+                drawFinder(ctx, offset + (moduleCount - 7) * cellSize, offset, cellSize, color);
+                drawFinder(ctx, offset, offset + (moduleCount - 7) * cellSize, cellSize, color);
+            }
+
+            if (withBorder) {
+                const inset = cellSize * 1.2;
+                const borderThickness = Math.max(2, cellSize * 0.55);
+                const cornerRadius = cellSize * 2.2;
+                const bx = inset;
+                const by = inset;
+                const bw = actualSize - inset * 2;
+                const bh = actualSize - inset * 2;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = borderThickness;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(bx + cornerRadius, by);
+                ctx.lineTo(bx + bw - cornerRadius, by);
+                ctx.arcTo(bx + bw, by, bx + bw, by + cornerRadius, cornerRadius);
+                ctx.lineTo(bx + bw, by + bh - cornerRadius);
+                ctx.arcTo(bx + bw, by + bh, bx + bw - cornerRadius, by + bh, cornerRadius);
+                ctx.lineTo(bx + cornerRadius, by + bh);
+                ctx.arcTo(bx, by + bh, bx, by + bh - cornerRadius, cornerRadius);
+                ctx.lineTo(bx, by + cornerRadius);
+                ctx.arcTo(bx, by, bx + cornerRadius, by, cornerRadius);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+
+        function generate() {
+            let value;
+            let label;
+            if (mode === 'wifi') {
+                if (!wifiSsidInput.value) { showError('Please enter a network name (SSID).'); return; }
+                value = buildWifiPayload();
+                label = `WiFi: ${wifiSsidInput.value}`;
+            } else {
+                value = urlInput.value.trim();
+                if (!value) { showError('Please enter a URL or text.'); return; }
+                label = value;
+            }
+            clearError();
+            try {
+                const size = parseInt(sizeSelect.value, 10);
+                const color = colorInput.value;
+                const style = styleSelect.value;
+                const withBorder = borderToggle.checked;
+                drawQR(value, size, color, style, withBorder);
+                currentValue = value;
+                currentLabel = label;
+                qrUrlEl.textContent = label;
+                qrDisplay.classList.add('visible');
+                emptyState.style.display = 'none';
+            } catch (err) {
+                showError('Could not generate QR code. Text may be too long.');
+                console.error(err);
+            }
+        }
+
+        function downloadPNG() {
+            if (!currentValue) return;
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = qrCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        async function copyImage() {
+            if (!currentValue) return;
+            try {
+                const blob = await new Promise(resolve => qrCanvas.toBlob(resolve, 'image/png'));
+                if (navigator.clipboard && window.ClipboardItem) {
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy image'; }, 1500);
+                } else {
+                    copyBtn.textContent = 'Not supported';
+                    setTimeout(() => { copyBtn.textContent = 'Copy image'; }, 1500);
+                }
+            } catch (err) {
+                copyBtn.textContent = 'Copy failed';
+                setTimeout(() => { copyBtn.textContent = 'Copy image'; }, 1500);
+            }
+        }
+
+        generateBtn.addEventListener('click', generate);
+        downloadBtn.addEventListener('click', downloadPNG);
+        copyBtn.addEventListener('click', copyImage);
+        modeTabText.addEventListener('click', () => setMode('text'));
+        modeTabWifi.addEventListener('click', () => setMode('wifi'));
+        wifiPasswordToggle.addEventListener('click', () => {
+            const showing = wifiPasswordInput.type === 'text';
+            wifiPasswordInput.type = showing ? 'password' : 'text';
+            wifiPasswordToggle.textContent = showing ? 'Hide' : 'Show';
+        });
+
+        [urlInput, wifiSsidInput, wifiPasswordInput].forEach(el => {
+            el.addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+            el.addEventListener('input', () => { if (errorMsg.classList.contains('visible')) clearError(); });
+        });
+
+        [styleSelect, sizeSelect, borderToggle, wifiEncryptionSelect, wifiHiddenToggle].forEach(el => {
+            el.addEventListener('change', () => { if (currentValue) generate(); });
+        });
+        [colorInput, wifiSsidInput, wifiPasswordInput].forEach(el => {
+            el.addEventListener('input', () => { if (currentValue) generate(); });
+        });
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

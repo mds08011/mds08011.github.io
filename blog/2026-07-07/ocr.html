@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Tesseract OCR Locally in the Browser | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Running Tesseract OCR Locally in the Browser</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Implementing client-side optical character recognition (OCR) mitigates the privacy and bandwidth constraints typically associated with server-based text extraction. By utilizing a JavaScript compilation of the Tesseract OCR engine, it is possible to parse textual data from rasterized images and Portable Document Format (PDF) files entirely within the local execution environment.</p>
+            
+            <p>The implementation relies on PDF.js to convert PDF documents into individual rasterized canvases, followed by Tesseract.js processing the visual data to yield a string extraction. This approach is highly efficient for zero-bloat workflows, as no network egress of sensitive documents is required. A live demonstration of this functionality has been adapted and deployed to the local tools repository [1].</p>
+            
+            <figure>
+                <img src="/path/to/ocr-screenshot.png" alt="A browser window displaying the OCR extraction interface processing a sample PDF document" loading="lazy">
+                <figcaption>Figure 1: The client-side OCR extraction tool processing an uploaded PDF document.</figcaption>
+            </figure>
+
+            <p>During local testing, users can employ the <kbd>Ctrl</kbd> + <kbd>V</kbd> shortcut to directly paste image data into the application context, triggering the extraction pipeline immediately. The core technical methodology and architectural decisions regarding the WebWorker implementation are documented comprehensively in the source reference material [2].</p>
+            
+            <details>
+                <summary>Local dependency verification</summary>
+                <pre><code>$ curl -I https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js
+HTTP/2 200 
+content-type: application/javascript; charset=utf-8</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "OCR PDFs and images directly in your browser". Available: <a href="https://tools.simonwillison.net/ocr">https://tools.simonwillison.net/ocr</a>.</li>
+                    <li>Willison, S. "Running OCR against PDFs and images directly in the browser". Available: <a href="https://til.simonwillison.net/javascript/tesseract-ocr-javascript">https://til.simonwillison.net/javascript/tesseract-ocr-javascript</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
