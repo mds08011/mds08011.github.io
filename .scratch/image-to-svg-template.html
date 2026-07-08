@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to SVG | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        #drop-zone.dragover {
+            background-color: #e9e9e9;
+        }
+        #svg-container {
+            max-width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        #svg-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+        #svg-code {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        #copy-button {
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Image to SVG</h1>
+                <p>Convert JPG or PNG images to SVG entirely client-side using <a href="https://github.com/jankovicsandras/imagetracerjs">imagetracerjs</a>.</p>
+            </header>
+            
+            <div id="drop-zone">
+                <p>Drag and drop a JPG or PNG image here, or click to select a file</p>
+            </div>
+            <input type="file" id="file-input" style="display: none;" accept="image/jpeg, image/png">
+            
+            <div id="svg-container"></div>
+            
+            <h2>SVG Code:</h2>
+            <button id="copy-button">Copy to clipboard</button>
+            <textarea id="svg-code" readonly></textarea>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+
+    <script>
+    <!-- INSERT_IMAGETRACER -->
+    </script>
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const svgContainer = document.getElementById('svg-container');
+        const svgCode = document.getElementById('svg-code');
+        const copyButton = document.getElementById('copy-button');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(svgCode.value).then(() => {
+                copyButton.textContent = 'Copied';
+                setTimeout(() => {
+                    copyButton.textContent = 'Copy to clipboard';
+                }, 1500);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        });
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && (file.type === 'image/jpeg' || file.type === 'image/png')) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => convertToSVG(img);
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function convertToSVG(img) {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            const svgString = window.ImageTracer.imagedataToSVG(imageData, {viewbox: true});
+            
+            svgContainer.innerHTML = svgString;
+            svgCode.value = svgString;
+        }
+    </script>
+</body>
+</html>

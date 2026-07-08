@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculating Date Deltas via Client-Side Execution | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Calculating Date Deltas via Client-Side Execution</h1>
+                <time datetime="2026-07-07">July 07, 2026</time>
+            </header>
+            
+            <p>Precise temporal calculations form the bedrock of accurate project scheduling and logistical planning. Manual derivation of date deltas, particularly when accounting for non-working days such as weekends, is subject to a high coefficient of human error.</p>
+            
+            <p>To stabilize these calculations, I have imported and refined a localized Date Calculator utility originally conceptualized by Simon Willison [1]. The utility computes the numerical discrepancy between any two defined Gregorian dates utilizing pure vanilla JavaScript. It requires no server-side telemetry or remote dependencies, functioning as an entirely enclosed temporal analysis module.</p>
+            
+            <figure>
+                <img src="/apple-touch-icon.png" alt="Temporal visualization placeholder" loading="lazy">
+                <figcaption>Figure 1: A conceptual node representing chronological alignment points.</figcaption>
+            </figure>
+            
+            <p>The logic evaluates inputs based on the UNIX epoch scale, executing differential arithmetic while isolating standard business days from weekends. This allows for rigorous estimation parameters during the pre-construction or planning phases of any significant engagement.</p>
+            
+            <pre><code>// Fundamental temporal difference logic
+const diffMs = Math.abs(date2 - date1);
+const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));</code></pre>
+
+            <p>Users may initiate calculations by pressing <kbd>Tab</kbd> to navigate through the input fields on the tool interface.</p>
+
+            <hr>
+            <h3>References</h3>
+            <ol>
+                <li>[1] Simon Willison. "Date Calculator". Accessed July 7, 2026. <a href="https://github.com/simonw/tools/blob/main/date-calculator.html">https://github.com/simonw/tools/blob/main/date-calculator.html</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
