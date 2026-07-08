@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculating NPSH Available Before the Pump Tells You Itself | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Calculating NPSH Available Before the Pump Tells You Itself</h1>
+                <time datetime="2026-06-05">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Cavitation sounds like pumping gravel. By the time you hear it, the impeller eye is already pitting, flow and head are falling, and the amps are fluctuating. The check that prevents it is comparing the net positive suction head <em>available</em> at the pump against what the pump <em>requires</em> at its operating flow &mdash; and NPSHa is four terms that are each easy to look up and easier to forget.</p>
+
+            <h2>The Approach</h2>
+            <p><code>NPSHa = h_atm &plusmn; h_static &minus; h_vp &minus; h_friction</code> &nbsp;(all in feet of water)</p>
+            <p>Atmospheric pressure falls with site elevation per the standard atmosphere, <code>P = 14.696 &times; (1 &minus; 6.8754&times;10&#8315;&#8310; &times; elev)^5.2559</code> psia, converted at 2.31 ft/psi &mdash; Denver starts with about 2 ft less head than the coast. Static head is positive for flooded suction, negative for lift. Vapor pressure is interpolated from the water temperature table and subtracted, because once local pressure falls to it, the water flashes &mdash; and that flashing is cavitation [2].</p>
+
+            <p>The temperature term is the one that ambushes people. Vapor pressure is a rounding error at 60&deg;F (0.26 psia) but it climbs fast: 3.7 psia at 150&deg;F, 7.5 at 180&deg;F. The same suction arrangement that runs happily on cold water can cavitate outright on 130&deg;F digester recirculation.</p>
+
+            <figure>
+                <img src="/path/to/npsha-screenshot.png" alt="Calculator summing atmospheric, static, vapor pressure, and friction terms into NPSHa with margin over NPSHr" loading="lazy">
+                <figcaption>Figure 1: The four-term sum with the margin over the pump's NPSHr called out.</figcaption>
+            </figure>
+
+            <p>The tool compares the result against the NPSHr you read off the manufacturer's curve and shows the margin &mdash; the Hydraulic Institute publishes margin guidance because running at exactly NPSHr is itself a cavitation regime [1].</p>
+
+            <details>
+                <summary>Field diagnosis notes baked into the tool</summary>
+                <ul>
+                    <li>NPSHr rises steeply with flow. A pump running far out to the right of its curve (low system head &mdash; short bypass discharge, say) can cavitate purely from over-flow. Throttling the discharge walks it back up the curve.</li>
+                    <li>The classic marginal case is additive: self-priming trash pump + hot day + long suction hose + plugged strainer + wet well drawn low. Every term moves the same direction.</li>
+                    <li>NPSHa margin is not a substitute for intake hydraulics &mdash; submergence against vortexing is a separate Hydraulic Institute check.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/npsha-calculator.html">NPSH Available Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ANSI/HI 9.6.1 &mdash; Rotodynamic Pumps: Guideline for NPSH Margin. <a href="https://www.pumps.org/">https://www.pumps.org/</a></li>
+                <li>[2] Karassik et al., <em>Pump Handbook</em> &mdash; NPSH fundamentals.</li>
+                <li>[3] Manufacturer's certified pump curve &mdash; NPSHr at the actual operating flow (governing input).</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asphalt Patch Tonnage for Trench Restoration | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Asphalt Patch Tonnage for Trench Restoration</h1>
+                <time datetime="2026-06-19">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Trench paving is ordered in tons, but the encroachment permit thinks in geometry: a T-patch whose base course runs at trench width and whose surface course extends a cutback beyond the saw cut on each side. Converting the T-shaped cross-section to tonnage per course, with a realistic waste factor, is the difference between the paving crew finishing the day and a partial load of cooling mix with nowhere to go.</p>
+
+            <h2>The Approach</h2>
+            <p>Per course, it's the standard density conversion:</p>
+            <p><code>tons = area (sf) &times; depth (in) / 12 &times; density (pcf) / 2000</code></p>
+            <p>with the T-patch geometry handled by running the base course at trench width and the surface course at trench width plus the cutback each side. The pay area reported is the surface (widest) footprint in SF and SY, because that's usually what the permit measures. A handy cross-check the tool exposes: at 145 pcf, one ton covers about 16.5 sf per inch of compacted depth &mdash; the &ldquo;110 lb per square yard per inch&rdquo; rule estimators carry around [2].</p>
+
+            <figure>
+                <img src="/path/to/asphalt-patch-screenshot.png" alt="Calculator showing base and surface course tonnage for a T-patch with cutback, waste factor, and truckloads" loading="lazy">
+                <figcaption>Figure 1: A T-patch split into base and surface course tonnage with the waste factor applied.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Where the waste actually comes from</summary>
+                <ul>
+                    <li>Small patches have brutal waste percentages by construction: a 10-ton minimum load against a 6-ton patch is 40% &ldquo;waste&rdquo; no matter how careful the crew is. Batching nearby patches into one paving day is the real fix.</li>
+                    <li>HMA loses workability with temperature &mdash; a long haul or a slow crew on a cold day means more raked-off, unusable mix. That's waste factor too.</li>
+                    <li>Milling the cutback instead of a second saw cut usually gives a better joint and a cleaner tack surface, if the permit allows it.</li>
+                    <li>Confirm whether the permit measures by surface area or tonnage tickets &mdash; and keep the tickets either way.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The agency's standard trench restoration detail governs the dimensions; the approved mix design governs the density [1][3].</p>
+
+            <p>The tool: <a href="/tools/asphalt-patch-calculator.html">Asphalt Patch Tonnage Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Agency encroachment permit / standard trench restoration details &mdash; governing dimensions and mix requirements.</li>
+                <li>[2] Asphalt Institute MS-22, <em>Construction of Quality Asphalt Pavements</em>. <a href="https://www.asphaltinstitute.org/">https://www.asphaltinstitute.org/</a></li>
+                <li>[3] Approved mix design &mdash; actual compacted density.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

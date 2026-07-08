@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water-Tightness Testing Concrete Basins per ACI 350.1 | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Water-Tightness Testing Concrete Basins per ACI 350.1</h1>
+                <time datetime="2026-07-08">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A water-tightness test on a concrete basin sounds simple: fill it, wait, measure the drop. The catch is that the water surface drops for reasons that have nothing to do with leaks. A big open basin evaporates measurably every day, rain adds water back, and new concrete <em>drinks</em> for its first several days full. Run the test naively and you'll fail a tight basin in August or pass a leaky one in a drizzle. ACI 350.1 structures the test so the number you compute is actually leakage [1].</p>
+
+            <h2>The Approach</h2>
+            <p>The correction comes first. The elegant version is the evaporation pan: float a calibrated pan of water in the basin, and it sees the same evaporation and rainfall as the basin surface, so the difference isolates leakage:</p>
+            <p><code>&Delta;h = drop_basin &minus; &Delta;h_pan</code></p>
+            <p>Or measure the terms separately: <code>&Delta;h = drop_basin &minus; evaporation + rainfall</code>. The corrected drop converts to volume and normalizes to the standard 24-hour basis:</p>
+            <p><code>%/24hr = V_lost / V_test &times; (24 / t_hr) &times; 100</code></p>
+            <p>checked against the allowable percentage of volume per 24 hours from the spec. The tool also inverts the whole chain into the pre-test planning number: the allowable drop in inches over <em>your</em> test duration, so the crew knows before the test starts what reading means pass.</p>
+
+            <figure>
+                <img src="/path/to/basin-hydrostatic-screenshot.png" alt="Calculator showing pan-corrected drop, volume lost, percent per 24 hours, and the allowable drop for the test duration" loading="lazy">
+                <figcaption>Figure 1: The pan-corrected loss rate against the ACI 350.1 allowable, with the pre-test allowable drop in inches.</figcaption>
+            </figure>
+
+            <p>Two protocol points do most of the work of making the number defensible. First, <strong>stabilization</strong>: ACI 350.1 requires the basin sit full for a stabilization period (commonly 3 days) before the measured test starts, or an early &ldquo;failure&rdquo; is just absorption. Second, <strong>measurement precision governs duration</strong>: with a good hook gauge you can resolve about 1/16 in., so if the allowable drop over 24 hours is smaller than that, extend the test &mdash; the standard allows it for exactly this reason, and the tool flags allowable drops under a quarter inch.</p>
+
+            <details>
+                <summary>Running the test so the numbers mean something</summary>
+                <ul>
+                    <li>Measure from fixed reference points at multiple locations, at the same time of day &mdash; thermal expansion of the water is real over a big surface.</li>
+                    <li>Valves and bulkheads count as leaks: a weeping plug valve fails the basin on paper. Isolate and verify them before blaming the concrete.</li>
+                    <li>Most specs distinguish acceptable exterior dampness from unacceptable flowing water regardless of the volumetric result &mdash; walk the walls, don't just read the gauge.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The contract spec governs the criterion, stabilization period, and retest provisions; AWWA D110/D115 have their own tightness provisions for circular prestressed tanks [2][3].</p>
+
+            <p>The tool: <a href="/tools/basin-hydrostatic-test-calculator.html">Basin Hydrostatic Test Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ACI 350.1 &mdash; Specification for Tightness Testing of Environmental Engineering Concrete Containment Structures. <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
+                <li>[2] AWWA D110 / D115 &mdash; tightness testing provisions for circular prestressed tanks, where applicable.</li>
+                <li>[3] Contract specifications &mdash; governing criterion, stabilization period, and retest provisions.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

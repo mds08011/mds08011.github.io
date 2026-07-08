@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Hammer Quick-Checks: Joukowsky and the 2L/a Trap | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Water Hammer Quick-Checks: Joukowsky and the 2L/a Trap</h1>
+                <time datetime="2026-07-02">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>&ldquo;Can we just close this valve, or does it need to be slow?&rdquo; is a question that comes up during every startup and every bypass, and the honest answer requires two numbers: how much pressure a velocity change can generate, and how fast is actually <em>fast</em> for this particular line. People's intuition is calibrated on garden hoses; pipelines are worse in a very specific way.</p>
+
+            <h2>The Approach</h2>
+            <p>The peak transient from an instantaneous velocity change is the Joukowsky rise:</p>
+            <p><code>&Delta;H = a&middot;&Delta;V / g</code> &nbsp;(ft of head) &nbsp;&rarr;&nbsp; <code>&Delta;P = 0.433&middot;&Delta;H</code> &nbsp;(psi)</p>
+            <p>With a wave speed around 4,000 ft/s in iron pipe, every 1 ft/s of velocity destroyed instantly costs about 124 ft of head &mdash; 54 psi. That's the whole reason surge control exists: velocity is cheap to create and expensive to stop. The tool stacks the rise on the operating pressure and checks the total against the pipe's rating, with material presets since wave speed varies enormously (HDPE is far more forgiving than steel or DIP) [2].</p>
+
+            <h3>The 2L/a trap</h3>
+            <p>The part that catches experienced people is the <em>critical closure time</em>. The pressure wave runs to the nearest free surface and reflects back in <code>t_c = 2L/a</code>. Any closure faster than that is instantaneous as far as the pipe is concerned &mdash; full Joukowsky, no credit for your careful hand on the wheel. Closures much slower let the reflection relieve pressure as you go, and a practical field rule is at least ~10&times; critical time for a controlled closure.</p>
+            <p>Here's the trap in numbers: a &ldquo;slow&rdquo; 30-second closure on a 5-mile forcemain, where <code>t_c &asymp; 13 s</code> for DIP, is barely 2&times; critical &mdash; not actually slow at all. Length is the variable intuition ignores, and it's the one that matters most. The tool prints both numbers side by side so the comparison is unavoidable.</p>
+
+            <figure>
+                <img src="/path/to/surge-quick-check-screenshot.png" alt="Calculator showing Joukowsky pressure rise, critical closure time, and total pressure against the pipe rating" loading="lazy">
+                <figcaption>Figure 1: Joukowsky rise and the critical closure time for the line length &mdash; the two numbers that answer the valve question.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Material notes worth knowing</summary>
+                <ul>
+                    <li><strong>HDPE</strong> is forgiving twice over: low wave speed, and PE4710 ratings allow occasional surge to 2.0&times; and recurring surge to 1.5&times; the pressure class &mdash; a materially different acceptance basis than rigid pipe.</li>
+                    <li><strong>PVC</strong> is fatigue-sensitive: recurring surge on a PVC forcemain is a design issue, not just a peak-pressure issue.</li>
+                    <li><strong>Negative surge</strong> matters too: the down-swing after a pump trip can pull high points below atmospheric &mdash; column separation &mdash; and the rejoin slam can exceed the initial rise. That's what vacuum relief at high points is for.</li>
+                    <li>Check valve slam is the everyday version: a check that closes <em>after</em> reverse flow establishes converts that reverse velocity to surge.</li>
+                </ul>
+            </details>
+
+            <p>It's a screening tool &mdash; when the quick check fails or the system has air valves, tanks, and multiple paths, that's transient-analysis territory, not spreadsheet territory [3]. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/surge-quick-check.html">Surge (Water Hammer) Quick-Check Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] AWWA M51 &mdash; Air Valves: Air-Release, Air/Vacuum, and Combination. <a href="https://www.awwa.org/">https://www.awwa.org/</a></li>
+                <li>[2] Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> &mdash; HDPE surge allowances. <a href="https://plasticpipe.org/">https://plasticpipe.org/</a></li>
+                <li>[3] Wylie &amp; Streeter, <em>Fluid Transients in Systems</em> &mdash; the real analysis when the screen fails.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

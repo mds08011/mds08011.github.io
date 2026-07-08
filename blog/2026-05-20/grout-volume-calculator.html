@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estimating Annular and Abandonment Grout Volumes | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Estimating Annular and Abandonment Grout Volumes</h1>
+                <time datetime="2026-05-20">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Grouting the annular space between a casing and its carrier pipe, or filling an abandoned line, is an ordering problem with an awkward geometry: the volume you need is the difference of two cylinders, and being wrong in either direction is expensive. Short means a cold joint in the middle of a fill that's supposed to be monolithic and a truck on emergency order; long means paying for CLSM you pour on the ground.</p>
+
+            <h2>The Approach</h2>
+            <p>Three modes, all straightforward geometry in cubic feet with diameters in inches:</p>
+            <p>Annular: <code>V = &pi;/4 &times; (D_casing&sup2; &minus; D_carrier&sup2;) / 144 &times; L</code><br>
+            Abandonment: <code>V = &pi;/4 &times; D_ID&sup2; / 144 &times; L</code> &nbsp;&nbsp; Structure: <code>V = L &times; W &times; depth</code></p>
+            <p>Output lands in cubic yards, gallons, and sacks with an overage percentage on top. The gallons line exists because grout plants batch by the cubic foot and pump strokes get sized in gallons, while ready-mix CLSM arrives in ~10 CY trucks — the same estimate has to talk to both [3].</p>
+
+            <figure>
+                <img src="/path/to/grout-volume-screenshot.png" alt="Annular mode showing casing and carrier diameters converted to cubic yards, gallons, and sack count with overage" loading="lazy">
+                <figcaption>Figure 1: A casing annulus converted to order quantities in all three units at once.</figcaption>
+            </figure>
+
+            <p>The estimate is for ordering; the vent is for acceptance. Grout goes in at the low end and the job is done when it returns at the high-end vent — not when the calculator says the void should be full. If those two disagree, the void was never the shape the drawing said it was.</p>
+
+            <details>
+                <summary>The buoyancy trap inside the annulus</summary>
+                <p>An empty carrier pipe in a flooded annulus floats — hard. An air-filled HDPE carrier in fluid grout generates serious uplift per foot, pinning the carrier against the casing crown and ruining the spacer geometry. The fixes are standard: fill the carrier with water first, grout in stages so earlier lifts set before the head builds, or use restrained spacers per the plan. Cellular (foamed) grout is popular for big annular fills partly for this reason &mdash; less density differential against the carrier, and it flows farther at lower pressure. Its yields come from the supplier's mix design, not a standard table.</p>
+            </details>
+
+            <p>For abandonments, most specs want the line verified full: bulkheads both ends, fill from the low end, and don't forget that laterals and structures on the run take grout too — the tool's overage entry is where that judgment lives. Single file, vanilla JS, <code>localStorage</code> persistence [1][2].</p>
+
+            <p>The tool: <a href="/tools/grout-volume-calculator.html">Annular &amp; Abandonment Grout Volume Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Contract specifications &mdash; grout/CLSM mix, placement pressure limits, and verification requirements (governing).</li>
+                <li>[2] ACI 229R &mdash; Controlled Low-Strength Materials. <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
+                <li>[3] Product data sheets &mdash; sack yields and cellular grout designs.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

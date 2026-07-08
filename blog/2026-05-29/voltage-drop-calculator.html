@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circular-Mil Voltage Drop for Temporary Power Runs | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Circular-Mil Voltage Drop for Temporary Power Runs</h1>
+                <time datetime="2026-05-29">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Temporary power on a job site means long runs: a generator a few hundred feet from a bypass pump, cord strung down the fence line to a trailer, a welder at the far end of the yard. Long runs mean voltage drop, and low voltage at a motor is sneaky &mdash; the motor draws <em>more</em> current to do the same work, which makes more heat, which is how a marginal temp feeder quietly cooks a rental pump motor over a week without ever tripping a breaker.</p>
+
+            <h2>The Approach</h2>
+            <p>The standard estimating method is the circular-mil formula:</p>
+            <p>Three-phase: <code>V_d = &radic;3 &times; K &times; I &times; L / CM</code> &nbsp;&nbsp; Single-phase: <code>V_d = 2 &times; K &times; I &times; L / CM</code></p>
+            <p>K is conductor resistivity in &Omega;&middot;cmil/ft (12.9 for copper, 21.2 for aluminum at operating temperature), L is one-way length, and CM is the conductor's circular-mil area. Parallel sets split the current, which is arithmetically the same as multiplying CM. The method neglects reactance, which is fine at high power factor and modest conductor sizes &mdash; exactly the temp-power regime [1].</p>
+
+            <p>The result gets checked against the NEC's familiar 3%/5% guideline. Worth knowing: that's an informational note, not a code mandate &mdash; a recommendation for &ldquo;reasonable efficiency of operation.&rdquo; But motors, VFDs, and contactor coils all get grumpy well before the lights dim, so the guideline is a sensible field line to hold.</p>
+
+            <figure>
+                <img src="/path/to/voltage-drop-screenshot.png" alt="Calculator showing percent voltage drop for a 480 V three-phase run against the 3 percent guideline" loading="lazy">
+                <figcaption>Figure 1: A 300-ft generator-to-pump feeder checked against the 3% line.</figcaption>
+            </figure>
+
+            <p>Since the current draw is the input you rarely have memorized, the tool carries the NEC Table 430.250 motor FLA values for 460 V three-phase motors (a 25 HP pump pulls 34 A, a 100 HP pulls 124 A) &mdash; table values, which are what sizing uses, not nameplate [1].</p>
+
+            <details>
+                <summary>Scope note</summary>
+                <p>This is a voltage-drop estimator, deliberately. Ampacity, overcurrent protection, grounding, and anything that becomes permanent belong to the electrician and the electrical engineer of record &mdash; the tool says so on its face rather than pretending a drop calc is a circuit design [2].</p>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/voltage-drop-calculator.html">Voltage Drop Quick-Check Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] NFPA 70 (NEC) &mdash; Art. 210/215 informational notes on voltage drop; Table 430.250 motor FLA; Chapter 9 Table 8 conductor properties. <a href="https://www.nfpa.org/">https://www.nfpa.org/</a></li>
+                <li>[2] The electrician / electrical engineer of record &mdash; ampacity, protection, and anything permanent.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checking Flotation Safety Before Draining a Structure | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Checking Flotation Safety Before Draining a Structure</h1>
+                <time datetime="2026-06-24">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A concrete basin full of water is heavy. A concrete basin full of air, sitting in saturated ground, is a boat &mdash; and structures have genuinely floated out of the ground: wet wells popping after backfill, basins lifting during a rehab because the plant next door kept the groundwater high. The dangerous moment is always a decision that feels routine: draining a tank for inspection, or turning off the well points over a weekend because the excavation looked dry.</p>
+
+            <h2>The Approach</h2>
+            <p>It's Archimedes, done honestly. Uplift is the footprint times the groundwater height above the base slab times 62.4 pcf; resistance is everything that actually pushes down:</p>
+            <p><code>U = A_footprint &times; h_gw &times; 62.4</code> &nbsp;&nbsp; <code>FS = W_resist / U</code></p>
+            <p>where the resisting weight sums the concrete dead load (walls as the outside-minus-inside prism, plus base and top slabs), soil cover, and any entered permanent weight. The output I use most is the inversion: the <strong>maximum groundwater height</strong> at which FS drops to the required value. That number goes straight into the dewatering plan as a trigger &mdash; &ldquo;keep the water below elevation X or the pumps stay on&rdquo; [2][3].</p>
+
+            <figure>
+                <img src="/path/to/buoyancy-check-screenshot.png" alt="Calculator showing uplift, resisting weight, factor of safety, and the maximum groundwater level for the required FS" loading="lazy">
+                <figcaption>Figure 1: The FS check with the max-groundwater trigger level for the dewatering plan.</figcaption>
+            </figure>
+
+            <h3>What it deliberately leaves out</h3>
+            <p>The tool's scope-limiting is a design feature, not laziness. Side friction and adhesion are real but unreliable &mdash; especially in soft or recently disturbed backfill &mdash; so like most flotation checks it neglects them, and anything they add is silent extra margin. Tension piles and rock anchors change the whole problem into a designed system, which a field check has no business approximating. And the check assumes the structure is <em>empty</em>, because empty is exactly the condition you're about to create the moment you drain it. A basin that's safe full and unsafe empty is the situation the tool exists to catch [1].</p>
+
+            <details>
+                <summary>Field scenarios where this bites</summary>
+                <ul>
+                    <li>Draining an existing basin for rehab while the plant's other basins stay full &mdash; local groundwater at a working plant is often higher than the original borings suggest.</li>
+                    <li>New wet wells and vaults after backfill but before the equipment, top slab, or pavement the designer counted on &mdash; check the interim condition, not just the final one.</li>
+                    <li>Heavy rain filling a granular backfill zone faster than the native ground drains &mdash; a temporary perched water table right against your walls.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/buoyancy-check-calculator.html">Structure Buoyancy / Flotation Check</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ACI 350 &mdash; Code Requirements for Environmental Engineering Concrete Structures (flotation provisions and load factors). <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
+                <li>[2] Project geotechnical report &mdash; design groundwater elevations (the governing input).</li>
+                <li>[3] Approved dewatering plan &mdash; the document this check should send you back to when the FS is thin.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

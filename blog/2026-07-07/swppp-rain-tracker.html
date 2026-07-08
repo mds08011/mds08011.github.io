@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging Rain Events and SWPPP Inspections Client-Side | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Logging Rain Events and SWPPP Inspections Client-Side</h1>
+                <time datetime="2026-07-07">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Stormwater compliance is a bookkeeping problem wearing a hydrology costume. The permit says: inspect on a routine interval, and inspect within some window after any rain event over a threshold. Simple rules &mdash; but they generate real questions on a Tuesday in February. Did Thursday's 0.6 inches qualify? Did anyone inspect after it? When's the next routine one due? Stormwater enforcement runs on records, and a rain log kept daily, matched to signed inspection forms, is the difference between a clean audit and a notice of violation built on gaps [1].</p>
+
+            <h2>The Approach</h2>
+            <p>The tracker keeps two logs &mdash; rain events with amounts, and inspections with types (routine, post-rain, pre-storm) &mdash; against configurable permit rules: qualifying threshold, post-rain due window, routine interval. A qualifying event is covered if an inspection lands between the event date and the event date plus the window; otherwise it surfaces as awaiting inspection, and overdue once the window passes. The matching logic is deliberately simple and visible &mdash; if your permit counts working days or combines events, adjust behavior, not expectations.</p>
+
+            <figure>
+                <img src="/path/to/swppp-rain-tracker-screenshot.png" alt="Tracker status showing next routine inspection due date and a qualifying rain event awaiting its post-rain inspection" loading="lazy">
+                <figcaption>Figure 1: The status verdict &mdash; qualifying events awaiting inspection and the next routine due date, computed from the two logs.</figcaption>
+            </figure>
+
+            <h3>The date bug that isn't obvious until it is</h3>
+            <p>One implementation detail worth passing along, because it silently corrupts any date-only log: in JavaScript, <code>new Date("2026-07-07")</code> parses as <em>UTC midnight</em>. In any US timezone, that instant is still the previous local day &mdash; so every date in your log displays one day early, and a rain event slides to the wrong side of a compliance window. The fix is to split the string and construct by components, which the engine treats as local time:</p>
+            <pre><code>// wrong: UTC midnight, off by one day west of Greenwich
+var d = new Date("2026-07-07");
+
+// right: local midnight
+var p = "2026-07-07".split("-");
+var d = new Date(+p[0], +p[1] - 1, +p[2]);</code></pre>
+            <p>Both this tracker and the <a href="/blog/2026-07-08/working-day-tracker.html">working-day tracker</a> use the component form everywhere a date enters or leaves storage.</p>
+
+            <details>
+                <summary>Why contemporaneous logging matters</summary>
+                <ul>
+                    <li>Log the rain even when it doesn't qualify &mdash; a string of 0.2-inch days that never triggered an inspection is itself a record that you were watching.</li>
+                    <li>Forecast-triggered requirements (pre-storm inspections, REAP-type action plans in some states) are on you to track from the forecast &mdash; the pre-storm inspection type records that you did.</li>
+                    <li>The daily habit is the compliance; the tracker just makes the habit cheap.</li>
+                </ul>
+            </details>
+
+            <p>Everything lives in this browser's <code>localStorage</code> and nothing leaves it &mdash; the tracker is a field aid; the signed inspection forms and the SWPPP remain the compliance documents [2]. Single file, vanilla JS.</p>
+
+            <p>The tool: <a href="/tools/swppp-rain-tracker.html">SWPPP Rain Event &amp; Inspection Tracker</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] EPA Construction General Permit (or the state-issued equivalent) &mdash; qualifying events, frequencies, and deadlines. <a href="https://www.epa.gov/npdes/stormwater-discharges-construction-activities">https://www.epa.gov/npdes/stormwater-discharges-construction-activities</a></li>
+                <li>[2] The project SWPPP &mdash; site-specific inspection requirements (governing document).</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

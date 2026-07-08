@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scaling 4&ndash;20 mA Loop Signals, Linear and Square-Root | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Scaling 4&ndash;20 mA Loop Signals, Linear and Square-Root</h1>
+                <time datetime="2026-07-06">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Loop checkout during commissioning is a translation exercise: the meter says 13.2 mA, the loop sheet says the transmitter spans 0&ndash;30 ft, and SCADA says 17.4 ft &mdash; do those agree? The linear arithmetic is easy enough to do on paper until you're forty loops deep, and then there's the one transmitter type that isn't linear at all and quietly breaks everyone's mental math.</p>
+
+            <h2>The Approach</h2>
+            <p>Linear is the standard span conversion, which handles elevated and suppressed zeros (LRV &ne; 0, including negative for vacuum or bidirectional flow) since the span is just URV &minus; LRV, signed:</p>
+            <p><code>PV = LRV + (mA &minus; 4)/16 &times; (URV &minus; LRV)</code></p>
+
+            <h3>The square-root gotcha</h3>
+            <p>Differential-pressure flow elements are the exception that trips people. DP across an orifice or venturi varies with the <em>square</em> of flow, so when the transmitter sends raw DP linearly, flow is recovered as:</p>
+            <p><code>PV = LRV + &radic;((mA &minus; 4)/16) &times; (URV &minus; LRV)</code></p>
+            <p>The consequence on a checkout: <strong>12 mA &mdash; 50% signal &mdash; is 70.7% of full flow</strong>, and 8 mA (25% signal) is 50% flow. If the SCADA readback during a loop check matches the linear column instead of the square-root column, the extraction is configured in the wrong place &mdash; or configured twice, which under-reads everything below full scale. The tool prints the five-point checkout table (4, 8, 12, 16, 20 mA) in both characterizations so the mismatch is visible in one pass [1].</p>
+
+            <figure>
+                <img src="/path/to/ma-signal-scaling-screenshot.png" alt="Five-point checkout table showing linear and square-root engineering values side by side for 4, 8, 12, 16, and 20 mA" loading="lazy">
+                <figcaption>Figure 1: The five-point table &mdash; the linear and square-root columns disagree everywhere except 4 and 20 mA.</figcaption>
+            </figure>
+
+            <h3>Fault bands are diagnostics, not data</h3>
+            <p>Readings outside the live range mean something specific under NAMUR NE 43: 3.8&ndash;20.5 mA is valid range including over/under-range margin; &le;3.6 mA is the transmitter signaling failure downscale (or a wiring/power problem); &ge;21.0 mA is failure upscale; and 0 mA is an open loop &mdash; broken wire, blown fuse, dead supply. The tool flags any reading in these bands rather than pretending it's a process value [2].</p>
+
+            <details>
+                <summary>Field notes from the loop-check trenches</summary>
+                <ul>
+                    <li>Read the voltage across the loop's 250 &Omega; resistor and divide instead of breaking a running loop &mdash; 3.000 V is 12.00 mA.</li>
+                    <li>Confirm LRV/URV from the transmitter's own display or HART, not the instrument index &mdash; ranges change during startup and the paper lags [3].</li>
+                    <li>If SCADA and the field disagree by a consistent scale factor, someone scaled 0&ndash;100% where engineering units were expected at the PLC. The five-point table finds it in one pass.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/ma-signal-scaling-calculator.html">4&ndash;20 mA Signal Scaling Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ISA-51.1 &mdash; Process Instrumentation Terminology (ranges, spans, elevated/suppressed zero). <a href="https://www.isa.org/">https://www.isa.org/</a></li>
+                <li>[2] NAMUR NE 43 &mdash; Standardization of the Signal Level for Failure Information of Digital Transmitters.</li>
+                <li>[3] Project loop sheets and instrument index &mdash; the governing configuration documents.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

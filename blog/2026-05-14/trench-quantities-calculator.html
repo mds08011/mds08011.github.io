@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trench Quantities in Bank, Loose, and Compacted Yards | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Trench Quantities in Bank, Loose, and Compacted Yards</h1>
+                <time datetime="2026-05-14">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Trench quantities are prism arithmetic — width times depth times length, minus the pipe. Nobody gets the prisms wrong. What goes wrong is that the same dirt is <em>three different volumes</em> depending on where it's sitting: in the ground, in the truck, or compacted back in the trench. Order bedding rock off the neat-line number and you run short; schedule haul-off trucks off the bank volume and you're a truck or two light every day; and the supplier's tickets are in tons while the inspector thinks in cubic yards.</p>
+
+            <h2>The Approach</h2>
+            <p>The neat-line volumes are the easy part, all in bank measure:</p>
+            <p><code>Excavation = W &times; D &times; L</code> &nbsp;&nbsp; <code>Pipe zone = W &times; (OD + h_zone) &times; L &minus; V_pipe</code></p>
+            <p>where the pipe displaces <code>&pi;/4 &times; (OD/12)&sup2; &times; L</code>. The tool then converts each stream to the measure that matters for it [2]:</p>
+            <ul>
+                <li><strong>Bank CY</strong> — in the ground, undisturbed. The neat-line numbers.</li>
+                <li><strong>Loose CY</strong> — bank &times; (1 + swell). What the trucks haul, so what hauling gets priced and scheduled on.</li>
+                <li><strong>Compacted CY</strong> — what the delivered loose yard shrinks to at spec density, which is why import gets a compaction/waste allowance on top of neat-line.</li>
+            </ul>
+            <p>It finishes the chain with import tonnage at the material's density and a truckload count, because that's the number the phone call to the yard actually needs.</p>
+
+            <figure>
+                <img src="/path/to/trench-quantities-screenshot.png" alt="Calculator output showing excavation, bedding, pipe zone, spoil with swell, import tonnage, and truckloads" loading="lazy">
+                <figcaption>Figure 1: One trench section carried through from neat-line prisms to tons and truckloads.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Field notes that ride along</summary>
+                <ul>
+                    <li>Depth varies along a run on grade — use the average of station depths, or split into reaches and run the tool per reach.</li>
+                    <li>If a trench box sets the dig width, use the box width plus 6&ndash;12 in. of over-cut, not the spec minimum trench width.</li>
+                    <li>Unsuitable subgrade means over-excavation and extra bedding — a re-run with the deeper numbers is the change-order quantity backup, dated the day it happened.</li>
+                    <li>Keeping bank/loose/compacted straight on the daily report saves the argument at the pay application.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, inputs persisted in <code>localStorage</code>. Measurement-and-payment rules in the contract spec govern what's actually payable — this computes what's actually in the ground [1].</p>
+
+            <p>The tool: <a href="/tools/trench-quantities-calculator.html">Trench Excavation &amp; Backfill Quantity Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Contract specifications &mdash; trench detail, bedding/zone materials, and measurement/payment rules (governing).</li>
+                <li>[2] Caterpillar Performance Handbook &mdash; swell/shrink factors by material type.</li>
+                <li>[3] Pipe manufacturer dimension tables &mdash; actual ODs by material and pressure class.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

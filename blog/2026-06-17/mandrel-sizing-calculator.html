@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sizing Deflection Test Mandrels from the Base Inside Diameter | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Sizing Deflection Test Mandrels from the Base Inside Diameter</h1>
+                <time datetime="2026-06-17">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Flexible sewer pipe &mdash; PVC, HDPE &mdash; deflects to whatever shape its bedding allows, which is why the mandrel pull exists: it's really a test of the embedment, not the pipe. The math is one line. The trap is in which diameter you multiply. An &ldquo;8-inch&rdquo; SDR 35 pipe doesn't have an 8-inch bore, and it doesn't have the nominal ID from the catalog either &mdash; the standard's <em>base ID</em> accounts for average walls and tolerances, and getting this wrong fails good pipe.</p>
+
+            <h2>The Approach</h2>
+            <p><code>D_mandrel = base ID &times; (1 &minus; deflection/100)</code></p>
+            <p>and the inverse, for when a mandrel already exists and the question is what it actually proves: <code>deflection = (1 &minus; D_mandrel / base ID) &times; 100</code>.</p>
+            <p>The base ID is nominal OD minus two average walls, adjusted per the pipe standard &mdash; which is why an 8-inch D3034 SDR 35 mandrel at 5% is <strong>7.28 in.</strong>, not the 7.60 in. you'd get from a nominal ID. The tool carries the common D3034 SDR 35 base IDs (6 in. = 5.742, 8 in. = 7.665, up through 15 in. = 13.898) and takes a custom entry for F679 large-diameter, profile-wall, and HDPE, where the base ID has to come from the applicable standard or the submittal [1].</p>
+
+            <figure>
+                <img src="/path/to/mandrel-sizing-screenshot.png" alt="Calculator showing base ID, deflection limit, and resulting mandrel diameter, with the inverse check mode" loading="lazy">
+                <figcaption>Figure 1: An 8-inch SDR 35 mandrel sized at 5% deflection from the D3034 base ID.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Test rules that ride along with the size</summary>
+                <ul>
+                    <li>The mandrel is rigid with an <strong>odd number of legs</strong> (typically 9), so two legs can't align across a single flat and read a deflected pipe as round.</li>
+                    <li>Pulled <strong>by hand</strong>, no winches. If it takes a comealong, the pipe fails.</li>
+                    <li>Most specs require the test no sooner than <strong>30 days</strong> after backfill, so initial deflection has developed before you measure it.</li>
+                    <li>Verify the mandrel against a proving ring before the pull &mdash; mandrels get dropped and legs get bent, and a bent leg tests a smaller pipe than the paperwork says.</li>
+                    <li>A failed segment usually means re-excavating and re-compacting the haunching &mdash; watching haunch compaction during installation is cheaper than any mandrel.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The contract's mandrel table governs where one exists &mdash; this computes what the table should contain and what a given mandrel actually verifies [2][3].</p>
+
+            <p>The tool: <a href="/tools/mandrel-sizing-calculator.html">Mandrel (Deflection) Test Sizing Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ASTM D3034 &mdash; Type PSM PVC Sewer Pipe and Fittings (dimension tables). <a href="https://www.astm.org/">https://www.astm.org/</a></li>
+                <li>[2] ASTM D2321 &mdash; Underground Installation of Thermoplastic Pipe (installation and deflection context).</li>
+                <li>[3] Contract specifications &mdash; governing mandrel table, deflection limit, and test timing.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

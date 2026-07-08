@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculating Ventilation Purge Time (Which Is Not Entry Clearance) | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Calculating Ventilation Purge Time (Which Is Not Entry Clearance)</h1>
+                <time datetime="2026-07-07">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Before a confined space entry, the blower runs. How long? The scheduling arithmetic is trivial &mdash; volume, air changes, CFM &mdash; but this is a domain where a calculator can do active harm if it implies the wrong thing, so the most important design decision in this tool isn't a formula. It's the banner across the top, and it's non-negotiable: <strong>this tool does not clear a space for entry. Ever.</strong></p>
+
+            <h2>The Approach</h2>
+            <p>The math takes one line:</p>
+            <p><code>t = V &times; N / Q_eff</code> &nbsp;&mdash; volume (cf) times required air changes, divided by effective delivered airflow, giving minutes. Effective airflow is the blower's rated CFM derated for duct losses, which are not small &mdash; a rated 1,500 CFM blower through a long kinked duct can deliver half that [3]. The tool computes space volume for circular (manhole, wet well) and rectangular (vault, channel) sections, or takes a direct entry.</p>
+
+            <p>What clears a space is calibrated atmospheric testing &mdash; oxygen, LEL, H&#8322;S, CO at minimum, at the top, middle, and bottom of the space &mdash; by the qualified person, under the entry permit, with continuous monitoring after. A calculated purge time tells you when it's worth <em>testing again</em>, nothing more. Sewer-connected spaces can re-contaminate in minutes from an upstream slug regardless of how long the blower ran. Everything hard about confined spaces is in the parts that aren't math, and the tool says so on its face [1][2].</p>
+
+            <figure>
+                <img src="/path/to/confined-space-purge-photo.jpg" alt="A ventilation blower at a manhole rim with duct routed down toward the bottom of the space" loading="lazy">
+                <figcaption>Figure 1: Duct routed to the bottom of the space &mdash; where H&#8322;S, heavier than air, actually sits.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Placement matters as much as time</summary>
+                <ul>
+                    <li>Duct the supply to within a couple feet of the <em>bottom</em> (or far end of a horizontal space) so fresh air displaces bottom-up. A blower parked at the rim churns the top and leaves the bottom undisturbed.</li>
+                    <li>Position the blower intake upwind of generator exhaust, truck exhaust, and the space's own vent discharge &mdash; otherwise you're pumping CO in with great efficiency.</li>
+                    <li>If the pre-entry test fails after a full calculated purge, the space has a <em>supply</em> problem &mdash; off-gassing, a connected atmosphere &mdash; not a time problem. More minutes on the blower isn't the fix; the entry supervisor's re-evaluation is.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The permit, the attendant, the retrieval gear, and the competent/qualified person requirements are all upstream of this arithmetic.</p>
+
+            <p>The tool: <a href="/tools/confined-space-purge-calculator.html">Confined Space Ventilation Purge Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] OSHA 29 CFR 1910.146 &mdash; Permit-Required Confined Spaces (general industry) and 29 CFR 1926 Subpart AA (construction). <a href="https://www.osha.gov/">https://www.osha.gov/</a></li>
+                <li>[2] The employer's written confined space program and the entry permit &mdash; governing procedures.</li>
+                <li>[3] Blower manufacturer duct-loss data &mdash; actual delivered CFM for the duct setup in use.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

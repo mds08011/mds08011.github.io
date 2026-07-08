@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detention Time and Disinfection CT with EPA Baffling Factors | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Detention Time and Disinfection CT with EPA Baffling Factors</h1>
+                <time datetime="2026-07-06">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Disinfection credit isn't earned by the <em>average</em> water molecule &mdash; it's earned by the fastest one. A clearwell might have a theoretical detention time of two hours, but if the inlet and outlet are close together, some water short-circuits through in a fraction of that, and the pathogens ride with it. That's why CT compliance runs on T10 &mdash; the time the fastest 10% of the water actually spends in the basin &mdash; not on the tank volume the drawings advertise.</p>
+
+            <h2>The Approach</h2>
+            <p>The chain is short:</p>
+            <p><code>HRT = V / Q</code> &nbsp;&nbsp; <code>T10 = HRT &times; BF</code> &nbsp;&nbsp; <code>CT = C_residual &times; T10</code></p>
+            <p>The baffling factor BF is the honesty coefficient, taken from the EPA Surface Water Treatment Rule guidance: 0.1 for an unbaffled basin with inlet and outlet close together, 0.3 poor, 0.5 average, 0.7 superior (serpentine baffles, perforated inlet, weir outlet), and 1.0 only for true plug flow &mdash; pipeline at least ~10 diameters long [1]. A tracer study can substantiate a better number; the custom entry is for that [2].</p>
+
+            <p>The tool also inverts the chain into the number operators actually want pinned to the wall: <code>Q_max = V &times; BF &times; C / CT_req</code> &mdash; the maximum flow at which the segment still makes its required CT. During startup, low flows make CT trivially easy; the check that matters is at design peak, and the max-flow output is that operating envelope in one number.</p>
+
+            <figure>
+                <img src="/path/to/detention-ct-screenshot.png" alt="Calculator showing HRT, T10 from the selected baffling factor, achieved CT, and the ratio against required CT" loading="lazy">
+                <figcaption>Figure 1: HRT knocked down to T10 by the baffling factor, with the CT ratio against the requirement.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Field notes that keep the number honest</summary>
+                <ul>
+                    <li>Volume is the <em>effective</em> volume at the actual operating level &mdash; a clearwell run at half depth has half the CT the drawings imply.</li>
+                    <li>Residual decays through the segment; using the outlet residual is the conservative convention.</li>
+                    <li>Segments in series (basin + pipeline) each get their own CT and the credits sum &mdash; run the tool per segment.</li>
+                </ul>
+            </details>
+
+            <p>The required CT itself comes from the EPA tables for the target log inactivation at the water's temperature and pH &mdash; and the state primacy agency and the facility's permit govern [1][3]. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/detention-ct-calculator.html">Detention Time &amp; Disinfection CT Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] US EPA &mdash; Surface Water Treatment Rule guidance manuals (CT tables, baffling factors). <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
+                <li>[2] EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> &mdash; T10 determination and tracer studies.</li>
+                <li>[3] State primacy agency guidance and the facility's operations permit &mdash; governing requirements.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
