@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Offline Chlorine Dosing Calculator for Water Main and Tank Disinfection | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>An Offline Chlorine Dosing Calculator for Water Main and Tank Disinfection</h1>
+                <time datetime="2026-07-08">2026.07.08</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Disinfecting a new water main or storage tank is a small arithmetic problem wrapped in a big consequences problem. AWWA C651 and C652 tell you the target dose &mdash; 25 mg/L continuous feed, 100 mg/L for a slug, 10 mg/L to fill a tank &mdash; but the number the crew actually needs is <em>how many gallons of bleach go in the tap</em>. Under-dose and the segment fails its bacteriological sample and you flush and start over. Over-dose and you have created a dechlorination and discharge headache that the SWPPP now cares about [1].</p>
+
+            <p>The conversion is not hard, but it is exactly the kind of thing that gets done wrong on a phone at the bottom of a trench with one bar of signal, from a formula half-remembered off a laminated card. I wanted a single page that does the whole chain &mdash; volume, chlorine mass, product quantity &mdash; and keeps my last inputs when the browser inevitably gets killed.</p>
+
+            <h2>The Approach</h2>
+            <p>Everything hangs off the &ldquo;pounds formula.&rdquo; A gallon of water weighs 8.34 lb, so dosing one part per million into a million gallons takes 8.34 lb of available chlorine:</p>
+            <p><code>lb Cl&#8322; = V (MG) &times; dose (mg/L) &times; 8.34</code></p>
+            <p>Pipe volume comes from the geometry, <code>V = (&pi;/4)(d/12)&sup2; &times; L &times; 7.4805</code> gal, which is the same thing as the field shortcut <code>V &asymp; 0.0408 &middot; d&sup2; &middot; L</code>. From the required chlorine mass you divide by the product strength to get gallons of liquid hypochlorite or pounds of granular cal-hypo. The one wrinkle worth stating out loud: 12.5% sodium hypochlorite delivered to the drum is not 12.5% by the time it has sat in the yard in July, so the tool lets you dial the real strength in.</p>
+
+            <figure>
+                <img src="/path/to/chlorine-dosing-screenshot.png" alt="The pipeline tab of the calculator showing segment volume, available chlorine required, and gallons of sodium hypochlorite to inject" loading="lazy">
+                <figcaption>Figure 1: The pipeline (C651) tab converting a 12-inch main segment straight through to gallons of hypochlorite.</figcaption>
+            </figure>
+
+            <p>It ended up as four tabs: pipeline (C651), tank (C652), a generic batch-solution mixer for spray and swab solutions, and a dechlorination tab that reproduces the C651 neutralization table so you can size the sulfite or thiosulfate for the flush water before it hits the ground [1][4].</p>
+
+            <details>
+                <summary>The dechlorination rates baked in (lb chemical per mg/L residual per 100,000 gal)</summary>
+                <pre><code>Sulfur dioxide          0.8 lb
+Sodium bisulfite        1.2 lb
+Sodium sulfite          1.4 lb
+Sodium thiosulfate      1.2 lb
+Ascorbic acid           2.1 lb</code></pre>
+                <p>These are stoichiometric. Thiosulfate in particular reacts slowly at low pH, so the field habit is to add some excess and confirm non-detect with a test kit before releasing &mdash; the tool sizes the theoretical minimum, not the field pour.</p>
+            </details>
+
+            <p>The whole thing is a single HTML file with vanilla JS and no dependencies; inputs persist in <code>localStorage</code> and nothing leaves the browser. It is a field arithmetic aid, not the disinfection plan &mdash; the contract spec and the standard still govern contact time, residuals, and sampling.</p>
+
+            <p>The tool: <a href="/tools/chlorine-dosing-calculator.html">Chlorine Dosing &amp; Disinfection Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] AWWA C651 &mdash; Disinfecting Water Mains. <a href="https://www.awwa.org/">https://www.awwa.org/</a></li>
+                <li>[2] AWWA C652 &mdash; Disinfection of Water-Storage Facilities.</li>
+                <li>[3] AWWA C653 &mdash; Disinfection of Water Treatment Plants.</li>
+                <li>[4] AWWA C655 &mdash; Field Dechlorination.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

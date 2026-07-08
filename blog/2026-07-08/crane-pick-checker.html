@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checking Crane Picks Against Chart Capacity | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Checking Crane Picks Against Chart Capacity</h1>
+                <time datetime="2026-07-08">2026.07.08</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Whether a crane pick needs a full critical-lift plan or just standard pre-lift paperwork usually comes down to one ratio: gross load over the chart capacity at the working radius. The math is division. The reason picks go wrong is never the division &mdash; it's that the gross load quietly grows and the chart capacity quietly shrinks, and the person doing it in their head lands on a comfortable number that isn't real.</p>
+
+            <h2>The Approach</h2>
+            <p>The whole calculation is honest bookkeeping:</p>
+            <p><code>Gross load = load + rigging + block/ball + other deductions</code><br>
+            <code>% of capacity = gross load / chart capacity at radius &times; 100</code></p>
+            <p>An &ldquo;18,000 lb pump&rdquo; that's 18,000 lb dry, plus a 900 lb spreader, 400 lb of slings and shackles, and a 1,200 lb headache ball, checked at the <em>set</em> radius instead of the pick radius, is a completely different lift than the one in your head. The tool forces each of those into its own line so nothing gets left off, and asks for capacity at both the pick and set radii because the load swings out to the larger radius to reach the set point [1][2].</p>
+
+            <figure>
+                <img src="/path/to/crane-pick-checker-screenshot.png" alt="Checker summing gross load and reporting percent of chart capacity at pick and set radii, flagging critical-lift threshold" loading="lazy">
+                <figcaption>Figure 1: Gross load rolled up and checked against chart capacity, with the critical-lift threshold flagged.</figcaption>
+            </figure>
+
+            <p>Above the contract's threshold &mdash; commonly 75% of chart capacity, or any two-crane pick, or picks over energized lines or occupied facilities &mdash; most specs require a written critical lift plan. The tool draws that line and tells you which side of it you're on, but it's a screening check, not the plan. And percent of capacity is meaningless if an outrigger is about to punch through soft ground &mdash; ground bearing is its own separate problem.</p>
+
+            <details>
+                <summary>Common ways this check goes wrong in the field</summary>
+                <ul>
+                    <li>Reading the chart for the wrong configuration &mdash; full vs. reduced counterweight, outriggers full vs. intermediate, over-the-rear vs. 360&deg;.</li>
+                    <li>Radius measured to the wrong point. It's from the center of rotation to the hook, not from the outrigger or the tracks &mdash; and it grows as the boom deflects under load.</li>
+                    <li>Forgetting the load swings to a larger radius to reach the set point.</li>
+                    <li>Weights from memory. Get the bill of lading, the submittal, or weigh it.</li>
+                    <li>Soft ground under one float &mdash; matting and ground bearing are their own check.</li>
+                </ul>
+            </details>
+
+            <p>The governing document is always the load chart in the cab of the specific crane, including its General Notes. This tool just keeps the inputs honest. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/crane-pick-checker.html">Crane Pick Percent-of-Capacity Checker</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] OSHA 29 CFR 1926 Subpart CC &mdash; Cranes and Derricks in Construction. <a href="https://www.osha.gov/">https://www.osha.gov/</a></li>
+                <li>[2] ASME B30.5 &mdash; Mobile and Locomotive Cranes. <a href="https://www.asme.org/">https://www.asme.org/</a></li>
+                <li>[3] The load chart in the cab of the specific crane, including its General Notes &mdash; the actual governing document.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

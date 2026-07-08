@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking Working-Day Contract Time with Computed Federal Holidays | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Tracking Working-Day Contract Time with Computed Federal Holidays</h1>
+                <time datetime="2026-07-08">2026.07.08</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>On a working-day contract, time isn't measured in calendar days &mdash; it's measured in charged working days, and the count is a running argument with the resident engineer. Weekends don't count. Holidays don't count. Weather days and suspensions don't count, <em>if</em> you logged them. Reconstruct that list at month nine and it's worth a fraction of a contemporaneous record. I wanted a tracker that walks the calendar honestly and keeps a persistent log of the no-work days as they happen.</p>
+
+            <h2>The Approach</h2>
+            <p>The tracker walks day by day from notice-to-proceed to today. A date is charged if it's Monday&ndash;Friday, not an observed federal holiday (toggleable), and not in the no-work log. Days remaining is duration minus charged, and the projected completion date walks forward from today counting future weekdays until the remaining count runs out. It can't foresee future weather days, so the projected date honestly drifts later every time you log one &mdash; which is the correct behavior, not a bug.</p>
+
+            <h3>Computing the holidays instead of hardcoding them</h3>
+            <p>The one implementation detail I'm a little proud of: there's no holiday lookup table to go stale. All eleven federal holidays are <em>generated</em> for any year the calendar walk touches. The fixed-date ones &mdash; New Year's, Juneteenth, Independence Day, Veterans Day, Christmas &mdash; get the standard observation shift (Saturday falls back to Friday, Sunday bumps to Monday). The floating ones are computed from their rule:</p>
+            <pre><code>MLK Day            3rd Monday in January
+Washington's Bday  3rd Monday in February
+Memorial Day       last Monday in May
+Labor Day          1st Monday in September
+Columbus Day       2nd Monday in October
+Thanksgiving       4th Thursday in November</code></pre>
+            <p>A multi-year job crossing 2026 into 2027 gets the right dates for both years with no maintenance, and a job that runs into 2030 will too [2].</p>
+
+            <figure>
+                <img src="/path/to/working-day-tracker-screenshot.png" alt="Tracker showing charged days, days remaining, projected completion date, and a log of non-charged weather days" loading="lazy">
+                <figcaption>Figure 1: Charged days and projected completion, with the running no-work log that drives the count.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Why the day-of logging habit matters</summary>
+                <ul>
+                    <li>Weather-day disputes are won with contemporaneous records &mdash; your daily report, photos of standing water, and a log entry dated that day.</li>
+                    <li>If your count and the RE's diverge, the earlier you catch it the smaller the argument. Compare at every pay application.</li>
+                    <li>A weather day is usually only non-chargeable if it actually stopped the controlling operation. A rainout on a day you were doing interior electrical may still be charged &mdash; log the note field with what was prevented.</li>
+                </ul>
+            </details>
+
+            <p>The contract's General Conditions are still the governing document for what &ldquo;working day&rdquo; and &ldquo;chargeable&rdquo; mean and which holidays are in the list &mdash; this just does the arithmetic and remembers the log. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/working-day-tracker.html">Working Day Contract Time Tracker</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Contract General Conditions &mdash; definition of working day, chargeable day, and the holiday list (governing document).</li>
+                <li>[2] 5 U.S.C. &sect; 6103 &mdash; federal holidays. <a href="https://www.law.cornell.edu/uscode/text/5/6103">https://www.law.cornell.edu/uscode/text/5/6103</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

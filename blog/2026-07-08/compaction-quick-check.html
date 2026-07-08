@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checking Field Compaction Against the Proctor | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Checking Field Compaction Against the Proctor</h1>
+                <time datetime="2026-07-08">2026.07.08</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A nuclear density gauge reads wet density and moisture. What the spec wants is percent compaction &mdash; dry density as a fraction of the Proctor maximum. The conversion is two lines of arithmetic, but standing over the gauge you also want the answer to the next question the roller operator is going to ask: <em>if it's short, what wet density do I need to hit?</em> This tool does both, plus the moisture check that a lot of quick calcs skip.</p>
+
+            <h2>The Approach</h2>
+            <p>Strip the water out of the wet reading to get dry density, then compare to the lab max:</p>
+            <p><code>&gamma;_dry = &gamma;_wet / (1 + w/100)</code> &nbsp;&nbsp; <code>RC = &gamma;_dry / &gamma;_dry,max &times; 100</code></p>
+            <p>And solved the other way, the wet density that lands you on the required compaction at the current moisture &mdash; the number to hand the operator:</p>
+            <p><code>&gamma;_wet,req = (RC_req/100) &times; &gamma;_dry,max &times; (1 + w/100)</code></p>
+
+            <figure>
+                <img src="/path/to/compaction-quick-check-screenshot.png" alt="Calculator showing dry density, percent compaction, moisture deviation from optimum, and required wet density" loading="lazy">
+                <figcaption>Figure 1: A passing density with the moisture deviation and target wet density called out alongside.</figcaption>
+            </figure>
+
+            <p>The moisture piece is what earns the tool its keep. A lift can pass density today and still be a problem: wet of optimum in a clay, it may pump under the next lift or the pipe zone tomorrow; dry of optimum, some clays hit density in a brittle, high-suction state that collapses when it finally gets wet under a slab. The tool shows the deviation from optimum so a passing density with bad moisture doesn't get waved through [1].</p>
+
+            <details>
+                <summary>When percent compaction comes back over 100%</summary>
+                <p>Not impossible &mdash; field energy can beat the standard Proctor &mdash; but over about 102&ndash;103% deserves suspicion before celebration:</p>
+                <ul>
+                    <li>Wrong Proctor curve for the material actually in the hole. The most common cause by far.</li>
+                    <li>Oversize particles reading dense. Past ~5% retained on the &frac34;-in. sieve, an oversize correction (ASTM D4718) applies and the raw comparison is invalid.</li>
+                    <li>Standard (D698) vs. modified (D1557) Proctor mix-up &mdash; modified maxes run several pcf higher.</li>
+                </ul>
+            </details>
+
+            <p>It's a quick-check, not a lab report &mdash; it assumes you have the right Proctor for the material and that any oversize correction has already been handled. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+
+            <p>The tool: <a href="/tools/compaction-quick-check.html">Compaction Quick-Check Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ASTM D698 / D1557 &mdash; Standard and Modified Proctor laboratory compaction. <a href="https://www.astm.org/">https://www.astm.org/</a></li>
+                <li>[2] ASTM D6938 &mdash; In-place density and water content by nuclear methods.</li>
+                <li>[3] ASTM D4718 &mdash; Correction of unit weight and water content for soils containing oversize particles.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
