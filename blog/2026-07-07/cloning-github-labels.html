@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloning GitHub Issue Labels via CLI | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Cloning GitHub Issue Labels via CLI</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Managing issue taxonomies across discrete version control repositories often involves redundant manual data entry. While GitHub provides an interface for standard label management, migrating an established schema of issue labels—complete with their designated hexadecimal color codes and descriptions—requires external tooling.</p>
+            
+            <p>The official GitHub Command Line Interface (CLI) provides a direct vector for this operation via the <code>gh label clone</code> subroutine. This command extracts the complete label schema from a specified source repository and provisions it against the target destination in a single authenticated transaction [1].</p>
+            
+            <figure>
+                <img src="/path/to/github-label-screenshot.png" alt="A terminal window displaying the execution of the label cloning command" loading="lazy">
+                <figcaption>Figure 1: Executing the GitHub CLI to mirror repository labels.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Cloning syntax</summary>
+                <pre><code>$ gh label clone simonw/datasette --repo my-org/my-new-repo</code></pre>
+            </details>
+
+            <p>Execution of this command strictly requires the <code>gh</code> binary to be authenticated with appropriate write scopes for the destination repository.</p>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "Creating GitHub Labels". Available: <a href="https://til.simonwillison.net/github-actions/creating-github-labels">https://til.simonwillison.net/github-actions/creating-github-labels</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
