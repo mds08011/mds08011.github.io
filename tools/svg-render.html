@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to JPEG/PNG Renderer | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        #dropZone {
+            width: 100%; height: 150px; border: 2px dashed #ccc; border-radius: 5px;
+            padding: 10px; margin: 10px 0; position: relative; box-sizing: border-box;
+        }
+        #dropZone.dragover { border-color: #000; background-color: #f0f0f0; }
+        #svgInput { width: 100%; height: 100%; border: none; resize: none; box-sizing: border-box; font-family: monospace;}
+        #imageContainer { margin-top: 20px; text-align: center; }
+        #convertedImage { max-width: 100%; border: 1px dashed #666; }
+        .option-group { margin-bottom: 10px; }
+        #widthInput, #paddingInput { width: 80px; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <h1>SVG to JPEG/PNG Renderer</h1>
+        
+        <input type="file" id="fileInput" accept=".svg">
+        <div id="dropZone">
+            <textarea id="svgInput" placeholder="Paste your SVG XML code here or drag & drop an SVG file"></textarea>
+        </div>
+        
+        <div class="option-group">
+            <label><input type="radio" name="format" value="image/jpeg" checked> JPEG</label>
+            <label><input id="pngRadio" type="radio" name="format" value="image/png"> PNG</label>
+        </div>
+        <div class="option-group">
+            <label for="bgColor">Background Color:</label>
+            <input type="color" id="bgColor" value="#ffffff">
+            <label><input type="checkbox" id="transparentBg"> Transparent</label>
+        </div>
+        <div class="option-group">
+            <label for="widthInput">Output Width (px):</label>
+            <input type="number" id="widthInput" value="800" min="1">
+            <label for="paddingInput">Padding (px):</label>
+            <input type="number" id="paddingInput" value="0" min="0">
+        </div>
+        
+        <button id="convertButton">Convert SVG</button>
+        
+        <div id="imageContainer"></div>
+        <div>
+            <a id="downloadLink" style="display: none;">Download Image</a>
+            <span id="fileSize"></span>
+        </div>
+        
+        <div id="output" style="display: none; margin-top: 20px;">
+            <h3>Base64 Image Tag:</h3>
+            <button id="copyImageButton">Copy image tag</button>
+            <pre id="base64Output" style="white-space: pre-wrap; word-break: break-all;"></pre>
+        </div>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const svgInput = document.getElementById('svgInput');
+        const fileInput = document.getElementById('fileInput');
+        const widthInput = document.getElementById('widthInput');
+        const paddingInput = document.getElementById('paddingInput');
+        const bgColor = document.getElementById('bgColor');
+        const transparentBg = document.getElementById('transparentBg');
+        const convertButton = document.getElementById('convertButton');
+        const imageContainer = document.getElementById('imageContainer');
+        const formatRadios = document.querySelectorAll('input[name="format"]');
+        const downloadLink = document.getElementById('downloadLink');
+        const fileSizeSpan = document.getElementById('fileSize');
+        const outputDiv = document.getElementById('output');
+        const base64Output = document.getElementById('base64Output');
+        const copyImageButton = document.getElementById('copyImageButton');
+
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        const debouncedConvert = debounce(convertSvgToImage, 300);
+        paddingInput.addEventListener('input', debouncedConvert);
+        widthInput.addEventListener('input', debouncedConvert);
+        bgColor.addEventListener('input', debouncedConvert);
+        formatRadios.forEach(radio => radio.addEventListener('change', convertSvgToImage));
+        transparentBg.addEventListener('change', convertSvgToImage);
+        convertButton.addEventListener('click', convertSvgToImage);
+
+        bgColor.addEventListener('input', () => transparentBg.checked = false);
+        transparentBg.addEventListener('change', () => {
+            if (transparentBg.checked) {
+                bgColor.value = "#ffffff";
+                document.getElementById('pngRadio').checked = true;
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'image/svg+xml') readFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) readFile(e.target.files[0]);
+        });
+
+        function readFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => { svgInput.value = e.target.result; convertSvgToImage(); };
+            reader.readAsText(file);
+        }
+
+        function convertSvgToImage() {
+            let svgContent = svgInput.value;
+            if (!svgContent.trim()) {
+                imageContainer.innerHTML = '';
+                downloadLink.style.display = 'none';
+                fileSizeSpan.textContent = '';
+                outputDiv.style.display = 'none';
+                return;
+            }
+
+            const format = document.querySelector('input[name="format"]:checked').value;
+            const newWidth = parseInt(widthInput.value) || 800;
+            const padding = parseInt(paddingInput.value) || 0;
+
+            const lowerContent = svgContent.toLowerCase();
+            const svgStart = lowerContent.indexOf('<svg');
+            const svgEnd = lowerContent.lastIndexOf('</svg>');
+
+            if (svgStart === -1 || svgEnd === -1) return;
+            svgContent = svgContent.slice(svgStart, svgEnd + 6);
+
+            const svgElement = new DOMParser().parseFromString(svgContent, 'image/svg+xml').documentElement;
+            if (!svgElement || svgElement.nodeName !== 'svg') return;
+
+            let viewBox = svgElement.getAttribute('viewBox');
+            let width, height;
+            if (viewBox) {
+                [, , width, height] = viewBox.split(' ').map(Number);
+            } else {
+                width = parseInt(svgElement.getAttribute('width')) || 300;
+                height = parseInt(svgElement.getAttribute('height')) || 150;
+            }
+
+            const aspectRatio = width / height;
+            const contentWidth = newWidth;
+            const contentHeight = Math.round(contentWidth / aspectRatio);
+            const totalWidth = contentWidth + (padding * 2);
+            const totalHeight = contentHeight + (padding * 2);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = totalWidth; canvas.height = totalHeight;
+            const ctx = canvas.getContext('2d');
+
+            if (!transparentBg.checked) {
+                ctx.fillStyle = bgColor.value;
+                ctx.fillRect(0, 0, totalWidth, totalHeight);
+            }
+
+            const svgBlob = new Blob([svgContent], {type: 'image/svg+xml;charset=utf-8'});
+            const URL_ = window.URL || window.webkitURL || window;
+            const svgUrl = URL_.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, padding, padding, contentWidth, contentHeight);
+                URL_.revokeObjectURL(svgUrl);
+
+                const imageDataUrl = canvas.toDataURL(format, 0.9);
+                const fileSizeInKB = (Math.round((imageDataUrl.length * 3) / 4) / 1024).toFixed(2);
+
+                imageContainer.innerHTML = '';
+                const convertedImg = document.createElement('img');
+                convertedImg.src = imageDataUrl;
+                convertedImg.id = 'convertedImage';
+                imageContainer.appendChild(convertedImg);
+
+                downloadLink.href = imageDataUrl;
+                downloadLink.download = `converted_image.${format === 'image/jpeg' ? 'jpg' : 'png'}`;
+                downloadLink.style.display = 'inline-block';
+                fileSizeSpan.textContent = `(${fileSizeInKB} KB)`;
+
+                const imgTag = `<img src="${imageDataUrl}" alt="Converted Image" width="${totalWidth}" height="${totalHeight}">`;
+                base64Output.textContent = imgTag;
+                outputDiv.style.display = 'block';
+            };
+            img.src = svgUrl;
+        }
+
+        copyImageButton.addEventListener('click', () => {
+            const range = document.createRange();
+            range.selectNode(base64Output);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            copyImageButton.innerText = 'Copied!';
+            setTimeout(() => copyImageButton.innerText = 'Copy image tag', 2000);
+        });
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

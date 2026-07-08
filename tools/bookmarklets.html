@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Bookmarklets | Tools | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+    <style>
+        .bookmarklet-card {
+            background: #fff; border-radius: 8px; padding: 25px; margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee;
+        }
+        .bookmarklet-buttons { display: flex; align-items: center; gap: 12px; margin: 15px 0; }
+        .bookmarklet-link {
+            display: inline-block; background: #2c5aa0; color: white; padding: 12px 24px;
+            border-radius: 6px; text-decoration: none; font-weight: bold; cursor: grab;
+        }
+        .bookmarklet-link:hover { background: #1e3d6f; color: white; }
+        .copy-btn {
+            padding: 12px 20px; background: #666; color: white; border: none;
+            border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+        .copy-btn:hover { background: #555; }
+        .code-block {
+            background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px;
+            overflow-x: auto; font-family: monospace; font-size: 12px;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        details summary { cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+    <main>
+        <h1>JavaScript Bookmarklets</h1>
+        <p>A collection of useful bookmarklets for web development and browsing. Drag any bookmarklet button to your bookmarks bar to install, or use the copy button for mobile installation.</p>
+
+        <div class="bookmarklet-card">
+            <h3>View Reference Anchors</h3>
+            <p>Reveals all linkable anchor points on a page by adding visible <code>#</code> links to elements with <code>id</code> attributes.</p>
+            <div class="bookmarklet-buttons">
+                <a class="bookmarklet-link" href="javascript:(function(){if(document.getElementById('__anchor_styles')){return}const style=document.createElement('style');style.id='__anchor_styles';style.textContent=`.__anchor_link{position:relative;text-decoration:none!important;color:#2c5aa0!important;font-weight:bold;font-size:0.9em;margin-right:4px;padding:2px 5px;border-radius:3px;background:rgba(44,90,160,0.1);opacity:0.7;transition:opacity 0.2s,background 0.2s}.__anchor_link:hover{opacity:1;background:rgba(44,90,160,0.2)}.__anchor_added{scroll-margin-top:20px}`;document.head.appendChild(style);const anchors=new Set();document.querySelectorAll('[id]').forEach(el=>{if(el.id&&!el.id.startsWith('__anchor'))anchors.add(el)});document.querySelectorAll('a[name]').forEach(el=>{if(el.getAttribute('name'))anchors.add(el)});let count=0;anchors.forEach(el=>{if(el.querySelector('.__anchor_link'))return;const id=el.id||el.getAttribute('name');if(!id)return;const link=document.createElement('a');link.className='__anchor_link';link.href='#'+id;link.textContent='#';link.title='Click to copy link to #'+id;link.onclick=function(e){e.preventDefault();e.stopPropagation();const url=location.href.split('#')[0]+'#'+id;navigator.clipboard.writeText(url).then(()=>{link.textContent='\u2713';setTimeout(()=>link.textContent='#',1500)}).catch(()=>{prompt('Copy this URL:',url)})};el.classList.add('__anchor_added');if(el.firstChild){el.insertBefore(link,el.firstChild)}else{el.appendChild(link)}count++});alert('Found '+count+' anchor points on this page')})();">View Anchors</a>
+                <button class="copy-btn">Copy URL</button>
+            </div>
+            <details>
+                <summary>View source code</summary>
+                <pre class="code-block">(function() {
+    // Collect all anchor targets
+    const anchors = new Set();
+    document.querySelectorAll('[id]').forEach(el => {
+        if (el.id) anchors.add(el);
+    });
+    // Appends visible tags to DOM (minified for actual bookmarklet link)
+})();</pre>
+            </details>
+        </div>
+
+        <div class="bookmarklet-card">
+            <h3>View DOM Source</h3>
+            <p>Opens a modal dialog showing the current page's live DOM HTML source (<code>document.documentElement.outerHTML</code>), not the static source.</p>
+            <div class="bookmarklet-buttons">
+                <a class="bookmarklet-link" href="javascript:(function(){if(document.getElementById('__viewsource_modal')){document.getElementById('__viewsource_modal').remove();return}const overlay=document.createElement('div');overlay.id='__viewsource_modal';overlay.innerHTML=`<style>#__viewsource_modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif}#__viewsource_box{background:#fff;border-radius:8px;width:90vw;height:85vh;max-width:1200px;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3)}#__viewsource_header{padding:15px 20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center}#__viewsource_header h2{margin:0;font-size:18px;color:#333}#__viewsource_buttons{display:flex;gap:10px}#__viewsource_buttons button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:500}#__viewsource_pretty{background:#2c5aa0;color:#fff}#__viewsource_pretty:hover{background:#1e3d6f}#__viewsource_copy{background:#28a745;color:#fff}#__viewsource_copy:hover{background:#218838}#__viewsource_close{background:#dc3545;color:#fff}#__viewsource_close:hover{background:#c82333}#__viewsource_textarea{flex:1;margin:0;padding:15px;border:none;resize:none;font-family:monospace;font-size:13px;line-height:1.5;white-space:pre;overflow:auto}</style><div id='__viewsource_box'><div id='__viewsource_header'><h2>Page Source</h2><div id='__viewsource_buttons'><button id='__viewsource_pretty'>Pretty Print</button><button id='__viewsource_copy'>Copy</button><button id='__viewsource_close'>\u2715 Close</button></div></div><textarea id='__viewsource_textarea' readonly></textarea></div>`;document.body.appendChild(overlay);const textarea=document.getElementById('__viewsource_textarea');const html=document.documentElement.outerHTML;textarea.value=html;document.getElementById('__viewsource_close').onclick=()=>overlay.remove();overlay.onclick=(e)=>{if(e.target===overlay)overlay.remove()};document.addEventListener('keydown',function esc(e){if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',esc)}});document.getElementById('__viewsource_copy').onclick=function(){textarea.select();navigator.clipboard.writeText(textarea.value).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)}).catch(()=>{document.execCommand('copy');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})};document.getElementById('__viewsource_pretty').onclick=function(){const raw=textarea.value;let formatted='';let indent=0;const tab='  ';const rawLines=raw.replace(/>\s*</g,'>\n<').split('\n');rawLines.forEach(line=>{line=line.trim();if(!line)return;if(line.match(/^<\//)){ indent=Math.max(0,indent-1)}formatted+=tab.repeat(indent)+line+'\n';if(line.match(/^<[a-z][^>]*[^\/]>$/i)&&!line.match(/^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i)){indent++}});textarea.value=formatted.trim();this.textContent='Done!';this.disabled=true}})();">View Source</a>
+                <button class="copy-btn">Copy URL</button>
+            </div>
+            <details>
+                <summary>View source code</summary>
+                <pre class="code-block">(function() {
+    // Injects a fixed modal reading document.documentElement.outerHTML
+    // Includes naive formatter and clipboard hooks
+})();</pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.onclick = function() {
+                const card = this.closest('.bookmarklet-card');
+                const link = card.querySelector('.bookmarklet-link');
+                navigator.clipboard.writeText(link.getAttribute('href')).then(() => {
+                    this.textContent = 'Copied!';
+                    setTimeout(() => this.textContent = 'Copy URL', 2000);
+                });
+            };
+        });
+    </script>
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

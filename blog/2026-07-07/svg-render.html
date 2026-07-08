@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rendering SVGs Locally | Blog | MDS</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Rendering SVGs Locally</h1>
+                <time datetime="2026-07-07">July 7, 2026</time>
+            </header>
+            
+            <p>Translating arbitrary Extensible Markup Language (XML) vector strings into rasterized static image formats historically required dependencies like ImageMagick or Inkscape. However, the HTML5 Canvas API natively supports painting serialized SVG blobs onto a local rendering context, negating the requirement for server-side processing architectures entirely.</p>
+            
+            <p>This localized implementation utilizes a <code>DOMParser</code> to extract coordinate parameters directly from the <code>viewBox</code> vector constraint. The underlying XML is subsequently converted into a transient <code>Blob</code> and allocated an Object URL. This URL is assigned to a virtual <code>Image</code> object, which is directly painted onto an offscreen <code>canvas</code> utilizing the <code>drawImage()</code> subroutine [1].</p>
+            
+            <figure>
+                <img src="/path/to/svg-render-screenshot.png" alt="A web application generating a downloadable PNG artifact directly from raw SVG markup" loading="lazy">
+                <figcaption>Figure 1: The rasterization pipeline exporting a base64 encoded PNG from XML syntax.</figcaption>
+            </figure>
+
+            <p>Once written to the canvas buffer, the resulting image is securely exported back to the user environment via the <code>toDataURL()</code> method, enforcing localized processing requirements. State synchronization between the <code>textarea</code> inputs and the rendering loop is constrained using standard debouncing algorithms to prevent pipeline blockages during active input [2].</p>
+            
+            <details>
+                <summary>Parsing SVG Dimensions</summary>
+                <pre><code>$ echo '&lt;svg viewBox="0 0 400 300"&gt;&lt;/svg&gt;' | grep -o 'viewBox="[^"]*"'
+viewBox="0 0 400 300"</code></pre>
+            </details>
+
+            <section>
+                <h3>References</h3>
+                <ol>
+                    <li>Willison, S. "SVG to JPEG/PNG". Available: <a href="https://tools.simonwillison.net/svg-render">https://tools.simonwillison.net/svg-render</a>.</li>
+                    <li>Willison, S. "svg-render.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/svg-render.html">https://github.com/simonw/tools/blob/main/svg-render.html</a>.</li>
+                </ol>
+            </section>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
