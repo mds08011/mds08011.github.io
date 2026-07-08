@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rebar Weight Takeoff &amp; Tension Lap Splice Calculator</title>
+<meta name="description" content="Offline field calculator for rebar ordering: multi-line weight takeoff by bar size, plus ACI 318 simplified tension development and Class A/B lap splice lengths. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  fieldset > .row > div > label > input,
+  fieldset > .row > div > label > select { max-width: 20rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.4rem;
+    text-align: left;
+    font-size: 0.92rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items td.wt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items input, table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.95rem; }
+  table.items button {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Rebar Weight Takeoff &amp; Tension Lap Splice Calculator</h1>
+<p class="subtitle">Multi-line weight takeoff for ordering, plus ACI 318 simplified tension development and lap splice lengths. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Where the structural drawings include a lap splice schedule or typical details, <em>the drawings govern</em> — this tool is for checking a suspicious lap, answering an RFI intelligently, or sanity-checking a shop drawing, not for replacing the EOR's schedule. Lap lengths here use the ACI simplified (conservative) equations for uncoated or epoxy-coated bars in tension.
+</div>
+
+<h2>Weight Takeoff</h2>
+<fieldset>
+  <legend>Line Items</legend>
+  <table class="items">
+    <thead>
+      <tr><th>Bar</th><th>Qty</th><th>Length ea. (ft)</th><th>Weight (lb)</th><th></th></tr>
+    </thead>
+    <tbody id="item-body"></tbody>
+  </table>
+  <button type="button" class="add" id="add-row">+ Add line</button>
+  <div class="results" id="wt-results" hidden>
+    <h3>Order Totals</h3>
+    <table>
+      <tr><td>Total weight</td><td class="val" id="r-lbs">—</td></tr>
+      <tr><td>In tons</td><td class="val" id="r-tons">—</td></tr>
+      <tr><td>With 5% laps/waste allowance</td><td class="val" id="r-waste">—</td></tr>
+    </table>
+    <p class="small">The 5% line is a placing convenience allowance only — laps shown on the drawings should already be in your takeoff lengths.</p>
+  </div>
+</fieldset>
+
+<h2>Tension Lap Splice</h2>
+<fieldset>
+  <legend>Development &amp; Lap Length — ACI 318 Simplified Method</legend>
+  <div class="row">
+    <div>
+      <label for="lap-bar">Bar size
+        <select id="lap-bar"></select>
+      </label>
+    </div>
+    <div>
+      <label for="fc">Concrete strength f′c (psi)
+        <select id="fc-preset">
+          <option value="3000">3,000</option>
+          <option value="4000" selected>4,000</option>
+          <option value="4500">4,500</option>
+          <option value="5000">5,000</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="fc" min="0" step="any" value="4000" hidden>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="fy">Bar yield fy (psi)
+        <select id="fy">
+          <option value="60000" selected>60,000 (Grade 60)</option>
+          <option value="80000">80,000 (Grade 80)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="casesel">Spacing &amp; cover condition
+        <select id="casesel">
+          <option value="1">Case 1 — spacing/cover meet the code minimums (typical detailed work)</option>
+          <option value="2">Case 2 — other (tight spacing / thin cover)</option>
+        </select>
+      </label>
+      <p class="small">Case 1: clear spacing ≥ d<sub>b</sub>, clear cover ≥ d<sub>b</sub>, with code-minimum stirrups/ties — or clear spacing ≥ 2d<sub>b</sub> and cover ≥ d<sub>b</sub>. When in doubt, Case 2 is conservative.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="topbar">Top bar (&gt;12 in. of fresh concrete cast below)
+        <select id="topbar">
+          <option value="1.0" selected>No — ψt = 1.0</option>
+          <option value="1.3">Yes — ψt = 1.3</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="epoxy">Epoxy-coated
+        <select id="epoxy">
+          <option value="1.0" selected>No — ψe = 1.0</option>
+          <option value="1.5">Yes — ψe = 1.5 (product ψtψe capped at 1.7)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="lambda">Concrete type
+        <select id="lambda">
+          <option value="1.0" selected>Normalweight — λ = 1.0</option>
+          <option value="0.75">Lightweight — λ = 0.75</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="results" id="lap-results" hidden>
+    <h3>Results</h3>
+    <table>
+      <tr><td>Bar diameter d<sub>b</sub></td><td class="val" id="r-db">—</td></tr>
+      <tr><td>Development length ℓ<sub>d</sub></td><td class="val" id="r-ld">—</td></tr>
+      <tr><td>Class A lap (1.0 ℓ<sub>d</sub>)</td><td class="val" id="r-classa">—</td></tr>
+      <tr><td>Class B lap (1.3 ℓ<sub>d</sub>) — the usual case</td><td class="val" id="r-classb">—</td></tr>
+    </table>
+    <div class="warn" id="lap-warn" hidden></div>
+  </div>
+</fieldset>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Bar weights and diameters</summary>
+  <p>Standard ASTM A615 deformed bar properties (nominal diameter in inches, weight in lb/ft): #3 — 0.375 / 0.376; #4 — 0.500 / 0.668; #5 — 0.625 / 1.043; #6 — 0.750 / 1.502; #7 — 0.875 / 2.044; #8 — 1.000 / 2.670; #9 — 1.128 / 3.400; #10 — 1.270 / 4.303; #11 — 1.410 / 5.313; #14 — 1.693 / 7.65; #18 — 2.257 / 13.60.</p>
+</details>
+
+<details>
+  <summary>Simplified development length (ACI 318)</summary>
+  <p>For deformed bars in tension, spacing/cover Case 1:</p>
+  <p>#6 and smaller: <code>ℓd = (fy·ψt·ψe / (25·λ·√f′c)) · db</code><br>
+  #7 and larger: <code>ℓd = (fy·ψt·ψe / (20·λ·√f′c)) · db</code></p>
+  <p>Case 2 multiplies both by 1.5 (equivalently, denominators 50/3 and 40/3). The product ψt·ψe need not exceed 1.7, √f′c is capped at 100 psi (f′c = 10,000 psi) for development calcs, and ℓd is never taken less than 12 in.</p>
+  <p>Class B lap = 1.3 ℓd (minimum 12 in.); Class A = 1.0 ℓd. Most drawings default all tension laps to Class B unless noted, because Class A requires ≥2× steel provided over the splice and ≤50% of bars spliced at one location — conditions the field can rarely verify.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>#14 and #18 bars cannot be lap spliced — mechanical or welded splices only. The tool flags this.</li>
+    <li>Grade 80 laps run a third longer than Grade 60 — check the bar tags before assuming.</li>
+    <li>Stagger and location of splices are design decisions from the drawings; this tool only computes length.</li>
+    <li>When counting laps in a takeoff: each lap adds one lap length of bar per splice. On long walls with 60-ft stock, that adds up fast enough to matter at the order.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ACI 318 — Building Code Requirements for Structural Concrete, development and splice provisions (Ch. 25 in current editions). <span class="small">https://www.concrete.org/</span></li>
+  <li>CRSI, <em>Manual of Standard Practice</em> — bar data and placing conventions. <span class="small">https://www.crsi.org/</span></li>
+  <li>ASTM A615 — deformed bar dimensions and weights.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "rebar.v1";
+
+  var BARS = {
+    "#3":  { db: 0.375, wt: 0.376 },
+    "#4":  { db: 0.500, wt: 0.668 },
+    "#5":  { db: 0.625, wt: 1.043 },
+    "#6":  { db: 0.750, wt: 1.502 },
+    "#7":  { db: 0.875, wt: 2.044 },
+    "#8":  { db: 1.000, wt: 2.670 },
+    "#9":  { db: 1.128, wt: 3.400 },
+    "#10": { db: 1.270, wt: 4.303 },
+    "#11": { db: 1.410, wt: 5.313 },
+    "#14": { db: 1.693, wt: 7.65 },
+    "#18": { db: 2.257, wt: 13.60 }
+  };
+  var SMALL_BARS = ["#3", "#4", "#5", "#6"]; // 25 denominator group
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  /* ================= weight takeoff ================= */
+  var items = []; // { bar, qty, len }
+
+  function barSelectHtml(sel) {
+    return "<select class='it-bar'>" + Object.keys(BARS).map(function (b) {
+      return "<option value='" + b + "'" + (b === sel ? " selected" : "") + ">" + b + "</option>";
+    }).join("") + "</select>";
+  }
+
+  function renderItems() {
+    var body = $("item-body");
+    body.innerHTML = "";
+    items.forEach(function (it, idx) {
+      var tr = document.createElement("tr");
+      var wt = (it.qty > 0 && it.len > 0) ? it.qty * it.len * BARS[it.bar].wt : null;
+      tr.innerHTML =
+        "<td>" + barSelectHtml(it.bar) + "</td>" +
+        "<td><input class='it-qty' type='number' min='0' step='1' value='" + (it.qty || "") + "'></td>" +
+        "<td><input class='it-len' type='number' min='0' step='any' value='" + (it.len || "") + "'></td>" +
+        "<td class='wt'>" + fmt(wt, 0) + "</td>" +
+        "<td><button type='button' class='it-del' aria-label='Remove line'>×</button></td>";
+      tr.querySelector(".it-bar").addEventListener("change", function () { items[idx].bar = this.value; refreshItems(); });
+      tr.querySelector(".it-qty").addEventListener("input", function () { items[idx].qty = parseFloat(this.value) || 0; refreshTotals(); });
+      tr.querySelector(".it-len").addEventListener("input", function () { items[idx].len = parseFloat(this.value) || 0; refreshTotals(); });
+      tr.querySelector(".it-del").addEventListener("click", function () { items.splice(idx, 1); refreshItems(); });
+      body.appendChild(tr);
+    });
+    refreshTotals(true);
+  }
+
+  function refreshItems() { renderItems(); saveState(); }
+
+  function refreshTotals(skipRowRender) {
+    var total = 0, any = false;
+    items.forEach(function (it, idx) {
+      if (it.qty > 0 && it.len > 0) {
+        var w = it.qty * it.len * BARS[it.bar].wt;
+        total += w;
+        any = true;
+        if (!skipRowRender) {
+          var cell = $("item-body").rows[idx].querySelector(".wt");
+          if (cell) cell.textContent = fmt(w, 0);
+        }
+      } else if (!skipRowRender) {
+        var c = $("item-body").rows[idx].querySelector(".wt");
+        if (c) c.textContent = "—";
+      }
+    });
+    $("wt-results").hidden = !any;
+    if (any) {
+      $("r-lbs").textContent = fmt(total, 0) + " lb";
+      $("r-tons").textContent = fmt(total / 2000, 2) + " tons";
+      $("r-waste").textContent = fmt(total * 1.05, 0) + " lb (" + fmt(total * 1.05 / 2000, 2) + " tons)";
+    }
+    saveState();
+  }
+
+  $("add-row").addEventListener("click", function () {
+    items.push({ bar: "#4", qty: 0, len: 0 });
+    refreshItems();
+  });
+
+  /* ================= lap splice ================= */
+  (function populateLapBars() {
+    var sel = $("lap-bar");
+    Object.keys(BARS).forEach(function (b) {
+      var o = document.createElement("option");
+      o.value = b; o.textContent = b;
+      if (b === "#5") o.selected = true;
+      sel.appendChild(o);
+    });
+  })();
+
+  $("fc-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("fc").hidden = false;
+    } else {
+      $("fc").hidden = true;
+      $("fc").value = this.value;
+    }
+    calcLap();
+  });
+
+  function calcLap() {
+    var bar = $("lap-bar").value;
+    var fc = parseFloat($("fc").value);
+    var fy = parseFloat($("fy").value);
+    var psiT = parseFloat($("topbar").value);
+    var psiE = parseFloat($("epoxy").value);
+    var lambda = parseFloat($("lambda").value);
+    var caseSel = $("casesel").value;
+    var out = $("lap-results");
+    if (!isFinite(fc) || fc <= 0) { out.hidden = true; saveState(); return; }
+
+    var b = BARS[bar];
+    var msgs = [];
+
+    var psiProduct = Math.min(psiT * psiE, 1.7);
+    var sqrtFc = Math.min(Math.sqrt(fc), 100); // code cap
+    if (Math.sqrt(fc) > 100) msgs.push("√f′c is capped at 100 psi for development calcs — extra strength above 10,000 psi doesn't shorten the lap.");
+
+    var denom = SMALL_BARS.indexOf(bar) !== -1 ? 25 : 20;
+    var ld = (fy * psiProduct / (denom * lambda * sqrtFc)) * b.db;
+    if (caseSel === "2") ld = ld * 1.5;
+    ld = Math.max(ld, 12);
+
+    var classA = Math.max(ld, 12);
+    var classB = Math.max(1.3 * ld, 12);
+
+    $("r-db").textContent = b.db.toFixed(3) + " in";
+    $("r-ld").textContent = fmt(Math.ceil(ld), 0) + " in (" + fmt(ld / b.db, 0) + " db)";
+    $("r-classa").textContent = fmt(Math.ceil(classA), 0) + " in (" + fmt(Math.ceil(classA) / 12, 2) + " ft)";
+    $("r-classb").textContent = fmt(Math.ceil(classB), 0) + " in (" + fmt(Math.ceil(classB) / 12, 2) + " ft)";
+
+    if (bar === "#14" || bar === "#18") {
+      msgs.push(bar + " bars cannot be lap spliced per ACI — mechanical or welded splices only. Development length shown is still valid for anchorage.");
+    }
+    if (fy > 60000) {
+      msgs.push("Grade 80 shown — confirm against the bar tags and drawings; many jobs mix grades.");
+    }
+    var warn = $("lap-warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var LAP_FIELDS = ["lap-bar","fc-preset","fc","fy","casesel","topbar","epoxy","lambda"];
+  function saveState() {
+    try {
+      var state = { items: items };
+      LAP_FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.items)) {
+        items = state.items.filter(function (it) { return it && BARS[it.bar]; });
+      }
+      LAP_FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["fc-preset"] === "custom") $("fc").hidden = false;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  LAP_FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", calcLap);
+    $(id).addEventListener("change", calcLap);
+  });
+
+  loadState();
+  if (items.length === 0) items.push({ bar: "#4", qty: 0, len: 0 });
+  renderItems();
+  calcLap();
+})();
+</script>
+</body>
+</html>

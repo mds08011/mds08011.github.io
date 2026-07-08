@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compaction Quick-Check Calculator</title>
+<meta name="description" content="Offline field calculator for checking nuclear gauge readings against Proctor values: dry density, percent compaction, moisture deviation, and the wet density needed to pass. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --fail-bg: #fdecec;
+    --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --fail-bg: #33191a;
+      --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Compaction Quick-Check Calculator</h1>
+<p class="subtitle">Checks a density gauge reading against the Proctor: dry density, percent compaction, moisture deviation from optimum, and the wet density the operator needs to hit. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This checks arithmetic, not soil. The correct Proctor curve for the material actually in the trench, oversize (rock) correction, gauge calibration, and probe depth are all upstream of this math — and the testing agency's report is the document of record. This tool is for arguing productively at the trench, not for acceptance.
+</div>
+
+<fieldset>
+  <legend>Gauge Reading</legend>
+  <div class="row">
+    <div>
+      <label for="input-mode">Gauge output
+        <select id="input-mode">
+          <option value="wet">Wet density + moisture %</option>
+          <option value="dry">Dry density + moisture %</option>
+        </select>
+      </label>
+      <p class="small">Most gauges display both — enter whichever pair you trust.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="density"><span id="density-label">Wet density (pcf)</span>
+        <input type="number" id="density" min="0" step="any" placeholder="e.g. 128.4">
+      </label>
+    </div>
+    <div>
+      <label for="moisture">Moisture content (%)
+        <input type="number" id="moisture" min="0" step="any" placeholder="e.g. 11.2">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Proctor &amp; Spec</legend>
+  <div class="row">
+    <div>
+      <label for="proctor">Max dry density (pcf)
+        <input type="number" id="proctor" min="0" step="any" placeholder="e.g. 122.5">
+      </label>
+      <p class="small">From the lab Proctor for this material — confirm the curve number matches the soil in the hole.</p>
+    </div>
+    <div>
+      <label for="optimum">Optimum moisture (%)
+        <input type="number" id="optimum" min="0" step="any" placeholder="e.g. 12.0">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="req">Required compaction (%)
+        <select id="req-preset">
+          <option value="90">90%</option>
+          <option value="92">92%</option>
+          <option value="95" selected>95%</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="req" min="0" step="any" value="95" hidden>
+      </label>
+    </div>
+    <div>
+      <label for="mtol">Moisture tolerance (± % of optimum) — optional
+        <input type="number" id="mtol" min="0" step="any" placeholder="e.g. 2">
+      </label>
+      <p class="small">Enter if the spec has a moisture window (e.g. optimum ±2%). Leave blank if it only specs density.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Dry density</td><td class="val" id="r-dry">—</td></tr>
+    <tr><td>Percent compaction</td><td class="val" id="r-pct">—</td></tr>
+    <tr><td>Margin vs. required</td><td class="val" id="r-margin">—</td></tr>
+    <tr><td>Moisture vs. optimum</td><td class="val" id="r-moist">—</td></tr>
+    <tr id="r-need-row"><td>Wet density needed at this moisture</td><td class="val" id="r-need">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p>Dry density from a wet reading:</p>
+  <p><code>γ_dry = γ_wet / (1 + w/100)</code></p>
+  <p>Percent compaction:</p>
+  <p><code>RC = γ_dry / γ_dry,max × 100</code></p>
+  <p>Wet density required to pass at the current moisture (the number to give the roller operator):</p>
+  <p><code>γ_wet,req = (RC_req/100) × γ_dry,max × (1 + w/100)</code></p>
+</details>
+
+<details>
+  <summary>Why moisture matters even when the density passes</summary>
+  <ul>
+    <li>Wet of optimum in clays: the lift may pass density today and pump under the next lift or the pipe zone tomorrow. Most specs with a moisture window exist for this reason.</li>
+    <li>Dry of optimum: some soils (especially clays) hit density dry but stay in a brittle, high-suction state that collapses on wetting — a real problem under slabs and structures.</li>
+    <li>If the reading is far from optimum, the honest question is whether the material can even reach the required density at that moisture — check where the gauge moisture sits on the Proctor curve.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>When percent compaction comes back over 100%</summary>
+  <p>Not physically impossible (field compaction energy can exceed the standard Proctor), but over ~102–103% deserves suspicion before celebration:</p>
+  <ul>
+    <li>Wrong Proctor curve for the material actually in the hole — the most common cause.</li>
+    <li>Oversize particles: gravel and cobbles read dense. If more than ~5% of the material is retained on the ¾-in. sieve, an oversize correction (ASTM D4718) applies and the raw comparison is invalid.</li>
+    <li>Standard (D698) vs. modified (D1557) Proctor mix-up — modified max densities run several pcf higher.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ASTM D698 / D1557 — Standard and Modified Proctor laboratory compaction. <span class="small">https://www.astm.org/</span></li>
+  <li>ASTM D6938 — In-place density and water content by nuclear methods.</li>
+  <li>ASTM D4718 — Correction of unit weight and water content for soils containing oversize particles.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "compaction.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("input-mode").addEventListener("change", function () {
+    $("density-label").textContent = this.value === "wet" ? "Wet density (pcf)" : "Dry density (pcf)";
+    recalc();
+  });
+  $("req-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("req").hidden = false;
+    } else {
+      $("req").hidden = true;
+      $("req").value = this.value;
+    }
+    recalc();
+  });
+
+  function recalc() {
+    var dens = num("density");
+    var w = num("moisture", true);
+    var proctor = num("proctor");
+    var optimum = num("optimum");
+    var req = num("req");
+    var mtol = opt("mtol");
+    var mode = $("input-mode").value;
+    var out = $("results");
+
+    if (!dens || w === null || !proctor || !optimum || !req) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var dry = mode === "wet" ? dens / (1 + w / 100) : dens;
+    var rc = dry / proctor * 100;
+    var margin = rc - req;
+    var mDev = w - optimum;
+
+    var densityPass = rc >= req;
+    var moisturePass = mtol === null ? true : Math.abs(mDev) <= mtol;
+    var pass = densityPass && moisturePass;
+
+    $("verdict").textContent = pass
+      ? "PASS — " + fmt(rc, 1) + "% compaction"
+      : "FAIL — " + (!densityPass ? fmt(rc, 1) + "% compaction (needs " + fmt(req, 0) + "%)" : "moisture out of tolerance");
+    out.classList.toggle("fail", !pass);
+
+    $("r-dry").textContent = fmt(dry, 1) + " pcf";
+    $("r-pct").textContent = fmt(rc, 1) + " %";
+    $("r-margin").textContent = (margin >= 0 ? "+" : "") + fmt(margin, 1) + " %";
+    $("r-moist").textContent = (mDev >= 0 ? "+" : "") + fmt(mDev, 1) + " % " +
+      (mDev > 0 ? "(wet of optimum)" : mDev < 0 ? "(dry of optimum)" : "(at optimum)") +
+      (mtol !== null ? (moisturePass ? " — within ±" + fmt(mtol, 1) + "%" : " — OUTSIDE ±" + fmt(mtol, 1) + "%") : "");
+
+    /* wet density needed at current moisture */
+    var needRow = $("r-need-row");
+    if (!densityPass && mode === "wet") {
+      var needWet = (req / 100) * proctor * (1 + w / 100);
+      needRow.hidden = false;
+      $("r-need").textContent = fmt(needWet, 1) + " pcf (" + fmt(needWet - dens, 1) + " pcf short)";
+    } else if (!densityPass) {
+      var needDry = (req / 100) * proctor;
+      needRow.hidden = false;
+      $("r-need").textContent = fmt(needDry, 1) + " pcf dry (" + fmt(needDry - dry, 1) + " pcf short)";
+    } else {
+      needRow.hidden = true;
+    }
+
+    /* warnings */
+    var msgs = [];
+    if (rc > 103) {
+      msgs.push("Over 103% compaction — before celebrating, confirm the Proctor curve matches this material and whether an oversize (rock) correction applies.");
+    }
+    if (mtol === null && Math.abs(mDev) > 3) {
+      msgs.push("Moisture is more than 3% from optimum. Even if the spec has no moisture window, material this far " +
+        (mDev > 0 ? "wet may pump under load" : "dry may not be compactable to spec and can collapse on wetting") + ".");
+    }
+    if (!densityPass && mDev > 2) {
+      msgs.push("Failing density while wet of optimum — more roller passes may just pump it. Consider drying/discing before re-rolling.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["input-mode","density","moisture","proctor","optimum","req-preset","req","mtol"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["req-preset"] === "custom") $("req").hidden = false;
+      $("density-label").textContent = $("input-mode").value === "wet" ? "Wet density (pcf)" : "Dry density (pcf)";
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

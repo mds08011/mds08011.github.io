@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bypass Pumping TDH Calculator (Hazen-Williams)</title>
+<meta name="description" content="Offline field calculator for temporary bypass pumping: Hazen-Williams friction loss, velocity checks, and total dynamic head with a system curve table. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td, .results th { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; text-align: left; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  table.curve { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.curve th, table.curve td {
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+  }
+  table.curve th { background: var(--panel); }
+  table.curve tr.design td { font-weight: 700; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Bypass Pumping TDH Calculator</h1>
+<p class="subtitle">Hazen-Williams friction loss and total dynamic head for temporary bypass pumping and forcemain sizing. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is a field arithmetic aid for sizing temporary pumps and discharge lines, not a substitute for the approved bypass plan or the pump supplier's system analysis. Hazen-Williams applies to full-pipe, turbulent water flow at ordinary temperatures; it does not model sludge, high-solids flow, or air entrainment.
+</div>
+
+<fieldset>
+  <legend>Flow &amp; Discharge Piping</legend>
+  <div class="row">
+    <div>
+      <label for="flow">Design flow — total (GPM)
+        <input type="number" id="flow" min="0" step="any" placeholder="e.g. 1200">
+      </label>
+    </div>
+    <div>
+      <label for="lines">Parallel discharge lines
+        <input type="number" id="lines" min="1" step="1" value="1">
+      </label>
+      <p class="small">Flow is split equally per line; friction is computed per line.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="dia">Pipe inside diameter (in)
+        <input type="number" id="dia" min="0" step="any" placeholder="e.g. 7.921">
+      </label>
+      <p class="small">Use actual ID, not nominal — for HDPE the DR controls (see notes below).</p>
+    </div>
+    <div>
+      <label for="len">Line length, one line (ft)
+        <input type="number" id="len" min="0" step="any" placeholder="e.g. 1800">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="cfactor">Hazen-Williams C
+        <select id="cfactor-preset">
+          <option value="150">HDPE / new smooth plastic — C = 150</option>
+          <option value="140">Lay-flat / rubber discharge hose — C = 140</option>
+          <option value="120">Steel, in fair condition — C = 120</option>
+          <option value="100">Old / rough pipe — C = 100</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="cfactor" min="1" max="160" step="any" value="150" hidden>
+      </label>
+    </div>
+    <div>
+      <label for="minor">Minor loss allowance (% of friction)
+        <input type="number" id="minor" min="0" step="any" value="10">
+      </label>
+      <p class="small">Lump allowance for fittings, valves, and the discharge connection. 10–15% is typical for a reasonably direct temporary line; increase for lots of bends.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Static Head</legend>
+  <div class="row">
+    <div>
+      <label for="suction">Suction lift (ft)
+        <input type="number" id="suction" min="0" step="any" value="0">
+      </label>
+      <p class="small">Vertical distance from water surface down in the wet well / manhole up to the pump. Enter 0 for submersible or flooded-suction pumps.</p>
+    </div>
+    <div>
+      <label for="staticd">Discharge static head (ft)
+        <input type="number" id="staticd" min="0" step="any" value="0">
+      </label>
+      <p class="small">Elevation of discharge point minus elevation of the pump. Can be negative for a downhill discharge.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results at Design Flow</h3>
+  <table>
+    <tr><td>Flow per line</td><td class="val" id="r-flowline">—</td></tr>
+    <tr><td>Total flow</td><td class="val" id="r-flowtotal">—</td></tr>
+    <tr><td>Velocity in line</td><td class="val" id="r-vel">—</td></tr>
+    <tr><td>Friction slope</td><td class="val" id="r-slope">—</td></tr>
+    <tr><td>Friction loss (one line)</td><td class="val" id="r-fric">—</td></tr>
+    <tr><td>Minor losses</td><td class="val" id="r-minor">—</td></tr>
+    <tr><td>Total static head</td><td class="val" id="r-static">—</td></tr>
+    <tr class="total"><td>Total dynamic head (TDH)</td><td class="val" id="r-tdh">—</td></tr>
+    <tr><td>TDH in psi</td><td class="val" id="r-psi">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+
+  <h3>System Curve Points</h3>
+  <p class="small">Overlay these on the rental pump's published curve. The operating point is where the curves cross — if the pump curve is above the system curve at design flow, the pump will deliver at least the design flow.</p>
+  <table class="curve">
+    <thead>
+      <tr><th>% Design</th><th>Total GPM</th><th>Velocity (ft/s)</th><th>TDH (ft)</th></tr>
+    </thead>
+    <tbody id="curve-body"></tbody>
+  </table>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Hazen-Williams friction loss</summary>
+  <p>Friction slope in feet of head per 100 ft of pipe, US customary GPM/inch form:</p>
+  <p><code>h_f = 0.2083 × (100/C)^1.85 × Q^1.85 / d^4.8655</code></p>
+  <p>where <code>Q</code> is flow in GPM in the individual line and <code>d</code> is actual inside diameter in inches. Total friction is the slope times line length divided by 100. Minor losses are applied as a percentage allowance on top of pipe friction.</p>
+</details>
+
+<details>
+  <summary>Velocity and TDH</summary>
+  <p>Velocity: <code>V = 0.4085 × Q / d²</code> (ft/s, Q in GPM, d in inches).</p>
+  <p>Total dynamic head: <code>TDH = suction lift + discharge static head + friction + minor losses</code>. Conversion to pressure: <code>psi = ft × 0.4331</code>.</p>
+</details>
+
+<details>
+  <summary>HDPE actual inside diameters (common bypass sizes, IPS)</summary>
+  <p>Nominal size is the OD basis for IPS HDPE; the wall (set by DR) eats into the bore. Approximate IDs in inches:</p>
+  <table class="curve">
+    <thead><tr><th>Nominal (IPS)</th><th>OD</th><th>DR 17</th><th>DR 11</th></tr></thead>
+    <tbody>
+      <tr><td>4 in</td><td>4.500</td><td>3.94</td><td>3.63</td></tr>
+      <tr><td>6 in</td><td>6.625</td><td>5.80</td><td>5.35</td></tr>
+      <tr><td>8 in</td><td>8.625</td><td>7.55</td><td>6.96</td></tr>
+      <tr><td>10 in</td><td>10.750</td><td>9.41</td><td>8.68</td></tr>
+      <tr><td>12 in</td><td>12.750</td><td>11.16</td><td>10.29</td></tr>
+    </tbody>
+  </table>
+  <p>IDs computed as <code>OD − 2 × (OD/DR)</code>, ignoring the small manufacturing tolerance. Verify against the pipe supplier's submittal for the actual material on site.</p>
+</details>
+
+<details>
+  <summary>Velocity guidance for sewage bypass</summary>
+  <ul>
+    <li><strong>Minimum:</strong> keep velocity at or above roughly 2 ft/s (many specs say 2.5–3.5 ft/s) at the flow that actually runs most of the day, or solids settle in the temporary line and you get grease/rag accumulation and slug discharges.</li>
+    <li><strong>Maximum:</strong> above roughly 8–10 ft/s, friction losses climb steeply, fused joints and restrained fittings see high thrust, and hose whip at the discharge becomes a hazard. It is usually cheaper to go up a pipe size than to buy the head.</li>
+    <li>Bypass systems sized for peak flow often run at a fraction of peak most of the time — check the velocity at average flow, not just peak.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Hazen-Williams empirical formula — standard form per Ten-State Standards and common hydraulics references (e.g. Lindeburg, <em>Civil Engineering Reference Manual</em>).</li>
+  <li>Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> — HDPE dimensions and C-factor guidance. <span class="small">https://plasticpipe.org/</span></li>
+  <li>Manufacturer pump curves — always verify the operating point against the published curve for the specific rental unit.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "hwbypass.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero, allowNeg) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowNeg && v < 0) return null;
+    if (!allowZero && v === 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  function frictionSlope(qGpm, dIn, c) {
+    // ft per 100 ft
+    return 0.2083 * Math.pow(100 / c, 1.85) * Math.pow(qGpm, 1.85) / Math.pow(dIn, 4.8655);
+  }
+  function velocity(qGpm, dIn) {
+    return 0.4085 * qGpm / (dIn * dIn);
+  }
+
+  /* ---------- C-factor preset ---------- */
+  $("cfactor-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("cfactor").hidden = false;
+    } else {
+      $("cfactor").hidden = true;
+      $("cfactor").value = this.value;
+    }
+    recalc();
+  });
+
+  function calcTDH(totalGpm, lines, dIn, lenFt, c, minorPct, suction, staticD) {
+    var qLine = totalGpm / lines;
+    var slope = frictionSlope(qLine, dIn, c);
+    var fric = slope * lenFt / 100;
+    var minor = fric * minorPct / 100;
+    var stat = suction + staticD;
+    return {
+      qLine: qLine,
+      vel: velocity(qLine, dIn),
+      slope: slope,
+      fric: fric,
+      minor: minor,
+      stat: stat,
+      tdh: stat + fric + minor
+    };
+  }
+
+  function recalc() {
+    var flow = num("flow");
+    var lines = num("lines");
+    var dIn = num("dia");
+    var lenFt = num("len");
+    var c = num("cfactor");
+    var minorPct = num("minor", true);
+    var suction = num("suction", true);
+    var staticD = num("staticd", true, true);
+    var out = $("results");
+
+    if (!flow || !lines || !dIn || !lenFt || !c || minorPct === null || suction === null || staticD === null) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+    lines = Math.max(1, Math.round(lines));
+
+    var r = calcTDH(flow, lines, dIn, lenFt, c, minorPct, suction, staticD);
+
+    $("r-flowline").textContent = fmt(r.qLine, 0) + " GPM";
+    $("r-flowtotal").textContent = fmt(flow, 0) + " GPM (" + fmt(flow * 1440 / 1e6, 2) + " MGD)";
+    $("r-vel").textContent = fmt(r.vel, 2) + " ft/s";
+    $("r-slope").textContent = fmt(r.slope, 2) + " ft / 100 ft";
+    $("r-fric").textContent = fmt(r.fric, 1) + " ft";
+    $("r-minor").textContent = fmt(r.minor, 1) + " ft (" + fmt(minorPct, 0) + "%)";
+    $("r-static").textContent = fmt(r.stat, 1) + " ft";
+    $("r-tdh").textContent = fmt(r.tdh, 1) + " ft";
+    $("r-psi").textContent = fmt(r.tdh * 0.4331, 1) + " psi";
+
+    /* warnings */
+    var msgs = [];
+    if (r.vel < 2) msgs.push("Velocity is below 2 ft/s — solids will settle in a sewage bypass line at this flow.");
+    if (r.vel > 10) msgs.push("Velocity exceeds 10 ft/s — friction dominates; consider a larger diameter or an additional parallel line.");
+    if (suction > 20) msgs.push("Suction lift over 20 ft is at or beyond the practical limit for most surface-mounted trash pumps — check the pump's NPSH/priming capability or use a submersible.");
+    if (r.stat < 0 && Math.abs(r.stat) > r.fric + r.minor) msgs.push("Net static head is negative and exceeds friction — the line may siphon; check for open-channel flow and air entrainment in the downhill run.");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    /* system curve table */
+    var body = $("curve-body");
+    body.innerHTML = "";
+    [50, 75, 100, 125, 150].forEach(function (pct) {
+      var q = flow * pct / 100;
+      var p = calcTDH(q, lines, dIn, lenFt, c, minorPct, suction, staticD);
+      var tr = document.createElement("tr");
+      if (pct === 100) tr.className = "design";
+      tr.innerHTML = "<td>" + pct + "%</td><td>" + fmt(q, 0) + "</td><td>" +
+        fmt(p.vel, 2) + "</td><td>" + fmt(p.tdh, 1) + "</td>";
+      body.appendChild(tr);
+    });
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["flow","lines","dia","len","cfactor-preset","cfactor","minor","suction","staticd"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["cfactor-preset"] === "custom") $("cfactor").hidden = false;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

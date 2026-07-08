@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sewer Air Test &amp; Manhole Vacuum Test Timer</title>
+<meta name="description" content="Offline field calculator for low-pressure air testing of gravity sewer (UNI-B-6 / ASTM F1417 method) and manhole vacuum testing (ASTM C1244), with a built-in countdown timer. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --danger-bg: #fdecec;
+    --danger-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --danger-bg: #33191a;
+      --danger-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+  .tabs button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  section[role="tabpanel"] { display: none; }
+  section[role="tabpanel"].active { display: block; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .danger {
+    background: var(--danger-bg);
+    border-left: 4px solid var(--danger-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  /* timer */
+  .timer {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    text-align: center;
+  }
+  .timer .display {
+    font-size: 3.2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    line-height: 1.1;
+  }
+  .timer.expired { border-color: var(--danger-border); background: var(--danger-bg); }
+  .timer .controls { margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+  .timer button {
+    padding: 0.5rem 1.1rem;
+    font-size: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .timer button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>Sewer Air Test &amp; Manhole Vacuum Test Timer</h1>
+<p class="subtitle">Required hold times for low-pressure air testing of gravity sewer and vacuum testing of manholes, with a countdown timer. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="danger">
+  <strong>Safety — read before pressurizing anything:</strong> Compressed air in a plugged pipe stores real energy; plug blowouts have killed people. Brace or restrain all plugs against the thrust, never position anyone in a manhole or in line with a plug while the line is pressurized, relieve pressure before touching plugs, and read the gauge from grade. Air testing is a no-entry operation, full stop.
+</div>
+
+<div class="warn">
+  <strong>Which table governs:</strong> The times below are computed from the widely used UNI-B-6 / ASTM F1417 time formula (pipe) and the commonly published ASTM C1244 table (manholes). Standards get revised and specs sometimes adopt modified tables — where your contract documents include a test table, that table governs over this tool.
+</div>
+
+<div class="tabs" role="tablist" aria-label="Test type">
+  <button role="tab" aria-selected="true" data-tab="air">Gravity Sewer Air Test</button>
+  <button role="tab" aria-selected="false" data-tab="vac">Manhole Vacuum Test</button>
+</div>
+
+<!-- ======================= AIR TEST ======================= -->
+<section id="panel-air" role="tabpanel" class="active">
+  <fieldset>
+    <legend>Low-Pressure Air Test — UNI-B-6 / ASTM F1417 Method</legend>
+    <div class="row">
+      <div>
+        <label for="air-dia">Pipe diameter (in)
+          <input type="number" id="air-dia" min="0" step="any" placeholder="e.g. 8">
+        </label>
+      </div>
+      <div>
+        <label for="air-len">Test section length (ft)
+          <input type="number" id="air-len" min="0" step="any" placeholder="e.g. 350">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="air-drop">Allowable pressure drop
+          <select id="air-drop">
+            <option value="1.0">1.0 psig (3.5 → 2.5)</option>
+            <option value="0.5">0.5 psig (3.5 → 3.0)</option>
+          </select>
+        </label>
+        <p class="small">Use whichever the spec calls out. Times for the 0.5 psig method are half the 1.0 psig times.</p>
+      </div>
+      <div>
+        <label for="air-gw">Avg. groundwater above pipe crown (ft) — optional
+          <input type="number" id="air-gw" min="0" step="any" value="0">
+        </label>
+        <p class="small">Gauge pressures must be raised 0.433 psi per foot of groundwater above the crown.</p>
+      </div>
+    </div>
+    <div class="results" id="air-results" hidden>
+      <h3>Test Parameters</h3>
+      <table>
+        <tr><td>Pressurize to (then stabilize ≥ 2 min)</td><td class="val" id="air-p-init">—</td></tr>
+        <tr><td>Start timing at</td><td class="val" id="air-p-start">—</td></tr>
+        <tr><td>Fail if pressure reaches</td><td class="val" id="air-p-end">—</td></tr>
+        <tr><td>Minimum hold time</td><td class="val" id="air-time">—</td></tr>
+      </table>
+      <p class="small" id="air-note"></p>
+      <div class="danger" id="air-warn" hidden></div>
+    </div>
+  </fieldset>
+</section>
+
+<!-- ======================= VACUUM TEST ======================= -->
+<section id="panel-vac" role="tabpanel">
+  <fieldset>
+    <legend>Manhole Vacuum Test — ASTM C1244 Method</legend>
+    <div class="row">
+      <div>
+        <label for="vac-dia">Manhole diameter
+          <select id="vac-dia">
+            <option value="30">30 in</option>
+            <option value="33">33 in</option>
+            <option value="36">36 in</option>
+            <option value="42">42 in</option>
+            <option value="48" selected>48 in</option>
+            <option value="54">54 in</option>
+            <option value="60">60 in</option>
+            <option value="66">66 in</option>
+            <option value="72">72 in</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label for="vac-depth">Manhole depth (ft)
+          <input type="number" id="vac-depth" min="0" step="any" placeholder="e.g. 14">
+        </label>
+        <p class="small">Depths between table rows are rounded up to the next 2-ft increment (conservative). Depths over 30 ft are extrapolated — verify against the standard.</p>
+      </div>
+    </div>
+    <div class="results" id="vac-results" hidden>
+      <h3>Test Parameters</h3>
+      <table>
+        <tr><td>Draw vacuum to</td><td class="val">10 in. Hg</td></tr>
+        <tr><td>Time the drop from / to</td><td class="val">10 → 9 in. Hg</td></tr>
+        <tr><td>Minimum hold time (pass if ≥)</td><td class="val" id="vac-time">—</td></tr>
+      </table>
+      <div class="warn" id="vac-warn" hidden></div>
+    </div>
+  </fieldset>
+</section>
+
+<!-- ======================= TIMER ======================= -->
+<div class="timer" id="timer">
+  <div class="display" id="timer-display">--:--</div>
+  <div class="small" id="timer-caption">Set the timer from a calculated hold time above.</div>
+  <div class="controls">
+    <button type="button" class="primary" id="timer-set">Set from result</button>
+    <button type="button" id="timer-start">Start</button>
+    <button type="button" id="timer-pause" disabled>Pause</button>
+    <button type="button" id="timer-reset">Reset</button>
+  </div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Air test hold time formula</summary>
+  <p>The UNI-B-6 / ASTM F1417 time for a 1.0 psig drop, based on an allowable air loss of 0.0015 cfm per square foot of internal pipe surface:</p>
+  <p><code>T = 0.085 · D · K / Q</code> seconds, where <code>K = 0.000419 · D · L</code> (but not less than 1.0) and <code>Q = 0.0015</code></p>
+  <p>with D in inches and L in feet. For K = 1 (short/small sections) this reduces to <code>T = 56.7 · D</code> seconds — the familiar "minimum time" column (e.g. 7 min 34 s for 8-in. pipe at 1.0 psig). Beyond the threshold length <code>L = 2387/D</code> ft, time grows with <code>D²·L</code>. Times for the 0.5 psig drop method are exactly half.</p>
+</details>
+
+<details>
+  <summary>Groundwater adjustment</summary>
+  <p>Groundwater above the pipe pushes back against the escaping air, so all gauge pressures are raised by the equivalent head: <code>0.433 psi per foot</code> of average groundwater height above the pipe crown. The tool adjusts the pressurization, start, and fail pressures accordingly. When the required adjusted test pressure approaches <strong>9 psig</strong>, air testing is generally not advised (plug thrust and safety) — dewater, or test by another method (low-pressure exfiltration, CCTV plus joint testing per the spec).</p>
+</details>
+
+<details>
+  <summary>Vacuum test table</summary>
+  <p>ASTM C1244 tests the assembled manhole (including joints and boots, lift holes plugged) at 10 in. Hg of vacuum; the manhole passes if the vacuum takes at least the tabulated time to drop to 9 in. Hg. Times scale with manhole volume — larger diameter and deeper barrels get longer times. The tool reproduces the commonly published table (8–30 ft depth, 30–72 in. diameter), rounds intermediate depths up to the next row, and linearly extrapolates beyond 30 ft with a warning.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Let the air section stabilize at least 2 minutes (air temperature equalizing with the pipe wall causes pressure wander that looks like a leak). Bleed back down to the start pressure before timing.</li>
+    <li>Wet the pipe interior on a hot day if the spec allows — a hot dry pipe absorbing moisture from compressed air can fail a section that is actually tight.</li>
+    <li>A section that holds better than required passes early: the test is over as soon as the hold time elapses with less than the allowable drop.</li>
+    <li>For the vacuum test, a manhole that fails usually leaks at the chimney/frame joint, a boot, or an unplugged lift hole — soap the suspects before condemning the barrel.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ASTM F1417 — Standard Practice for Installation Acceptance of Plastic Non-pressure Sewer Lines Using Low-Pressure Air. <span class="small">https://www.astm.org/</span></li>
+  <li>Uni-Bell UNI-B-6 — Recommended Practice for Low-Pressure Air Testing of Installed Sewer Pipe. <span class="small">https://www.uni-bell.org/</span></li>
+  <li>ASTM C828 (clay) and C924 (concrete) — companion low-pressure air test methods.</li>
+  <li>ASTM C1244 — Standard Test Method for Concrete Sewer Manholes by the Negative Air Pressure (Vacuum) Test.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "airvactest.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmtSec(totalSec) {
+    if (totalSec === null || !isFinite(totalSec)) return "—";
+    totalSec = Math.ceil(totalSec);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + " min " + (s < 10 ? "0" : "") + s + " sec";
+  }
+  function fmtClock(totalSec) {
+    totalSec = Math.max(0, Math.ceil(totalSec));
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  var currentHoldSec = null; // last computed hold time for the active tab
+
+  /* ---------- tabs ---------- */
+  var tabs = document.querySelectorAll(".tabs button");
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabs.forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+      btn.setAttribute("aria-selected", "true");
+      document.querySelectorAll("section[role='tabpanel']").forEach(function (s) {
+        s.classList.remove("active");
+      });
+      $("panel-" + btn.dataset.tab).classList.add("active");
+      recalcAll();
+    });
+  });
+  function activeTab() {
+    return document.querySelector(".tabs button[aria-selected='true']").dataset.tab;
+  }
+
+  /* ---------- air test ---------- */
+  function airHoldSeconds(dIn, lFt) {
+    var K = Math.max(1, 0.000419 * dIn * lFt);
+    return 0.085 * dIn * K / 0.0015; // seconds, 1.0 psig drop
+  }
+
+  function calcAir() {
+    var d = num("air-dia"), L = num("air-len"), gw = num("air-gw", true);
+    var drop = parseFloat($("air-drop").value);
+    var out = $("air-results");
+    if (!d || !L || gw === null) { out.hidden = true; return null; }
+
+    var t = airHoldSeconds(d, L);
+    if (drop === 0.5) t = t / 2;
+
+    var adj = 0.433 * gw;
+    var pInit = 4.0 + adj;
+    var pStart = 3.5 + adj;
+    var pEnd = pStart - drop;
+
+    $("air-p-init").textContent = pInit.toFixed(1) + " psig";
+    $("air-p-start").textContent = pStart.toFixed(1) + " psig";
+    $("air-p-end").textContent = pEnd.toFixed(1) + " psig";
+    $("air-time").textContent = fmtSec(t);
+
+    var threshold = 2387 / d;
+    $("air-note").textContent = L <= threshold
+      ? "Section is at or below the minimum-time length for this diameter (" + Math.round(threshold) + " ft) — the diameter-based minimum time governs."
+      : "Section exceeds the minimum-time length for this diameter (" + Math.round(threshold) + " ft) — time is length-governed.";
+
+    var warn = $("air-warn");
+    if (pInit > 9.0) {
+      warn.hidden = false;
+      warn.textContent = "Adjusted test pressure exceeds 9 psig — air testing is generally not advised at this groundwater level. Dewater to lower the groundwater, or test the section by an alternative spec-approved method.";
+    } else {
+      warn.hidden = true;
+    }
+    out.hidden = false;
+    return t;
+  }
+
+  /* ---------- vacuum test (commonly published ASTM C1244 table) ---------- */
+  var VAC_DIAMS = [30, 33, 36, 42, 48, 54, 60, 66, 72];
+  var VAC_DEPTHS = [8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30];
+  var VAC_TIMES = [
+    /* 8 */ [11, 12, 14, 17, 20, 23, 26, 29, 33],
+    /*10 */ [14, 15, 18, 21, 25, 29, 33, 36, 41],
+    /*12 */ [17, 18, 21, 25, 30, 35, 39, 43, 49],
+    /*14 */ [20, 21, 25, 30, 35, 41, 46, 51, 57],
+    /*16 */ [23, 24, 29, 34, 40, 46, 52, 58, 67],
+    /*18 */ [26, 27, 32, 38, 45, 52, 59, 65, 73],
+    /*20 */ [28, 30, 35, 42, 50, 57, 65, 72, 81],
+    /*22 */ [31, 33, 39, 46, 55, 63, 72, 79, 89],
+    /*24 */ [33, 36, 42, 51, 59, 68, 78, 86, 97],
+    /*26 */ [36, 39, 46, 55, 64, 74, 85, 93, 105],
+    /*28 */ [39, 42, 49, 59, 69, 80, 91, 100, 113],
+    /*30 */ [42, 45, 53, 63, 74, 85, 98, 107, 121]
+  ];
+
+  function calcVac() {
+    var depth = num("vac-depth");
+    var dia = parseInt($("vac-dia").value, 10);
+    var out = $("vac-results");
+    if (!depth) { out.hidden = true; return null; }
+
+    var col = VAC_DIAMS.indexOf(dia);
+    var msgs = [];
+    var t;
+
+    if (depth <= VAC_DEPTHS[0]) {
+      t = VAC_TIMES[0][col];
+    } else if (depth <= VAC_DEPTHS[VAC_DEPTHS.length - 1]) {
+      // round depth UP to next table row (conservative)
+      var rowIdx = 0;
+      for (var i = 0; i < VAC_DEPTHS.length; i++) {
+        if (VAC_DEPTHS[i] >= depth) { rowIdx = i; break; }
+      }
+      t = VAC_TIMES[rowIdx][col];
+    } else {
+      // extrapolate beyond 30 ft using the last 2-ft increment
+      var last = VAC_TIMES[VAC_TIMES.length - 1][col];
+      var prev = VAC_TIMES[VAC_TIMES.length - 2][col];
+      var perFt = (last - prev) / 2;
+      t = Math.ceil(last + perFt * (depth - 30));
+      msgs.push("Depth exceeds the published table (30 ft) — time is extrapolated. Verify against the current edition of C1244 or the spec.");
+    }
+
+    $("vac-time").textContent = fmtSec(t);
+    var warn = $("vac-warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    return t;
+  }
+
+  function recalcAll() {
+    var tAir = calcAir();
+    var tVac = calcVac();
+    currentHoldSec = activeTab() === "air" ? tAir : tVac;
+    saveState();
+  }
+
+  /* ---------- countdown timer ---------- */
+  var timerRemaining = 0;   // seconds
+  var timerSetValue = 0;
+  var timerInterval = null;
+  var timerEndAt = null;
+
+  function timerRender() {
+    $("timer-display").textContent = fmtClock(timerRemaining);
+  }
+  function timerTick() {
+    timerRemaining = (timerEndAt - Date.now()) / 1000;
+    if (timerRemaining <= 0) {
+      timerRemaining = 0;
+      clearInterval(timerInterval);
+      timerInterval = null;
+      $("timer").classList.add("expired");
+      $("timer-caption").textContent = "Hold time complete — if the pressure/vacuum drop is within the allowable, the section passes.";
+      $("timer-pause").disabled = true;
+      beep();
+    }
+    timerRender();
+  }
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+      o.start(); o.stop(ctx.currentTime + 1.2);
+    } catch (e) { /* no audio — the flashing border will have to do */ }
+  }
+
+  $("timer-set").addEventListener("click", function () {
+    if (currentHoldSec === null) {
+      $("timer-caption").textContent = "Enter test inputs above first — nothing to set.";
+      return;
+    }
+    clearInterval(timerInterval); timerInterval = null;
+    $("timer").classList.remove("expired");
+    timerSetValue = Math.ceil(currentHoldSec);
+    timerRemaining = timerSetValue;
+    $("timer-caption").textContent = "Set to " + fmtSec(timerSetValue) + " (" +
+      (activeTab() === "air" ? "air test" : "vacuum test") + "). Start the countdown when the gauge hits the start pressure/vacuum.";
+    $("timer-pause").disabled = true;
+    timerRender();
+  });
+  $("timer-start").addEventListener("click", function () {
+    if (timerRemaining <= 0) return;
+    if (timerInterval) return;
+    $("timer").classList.remove("expired");
+    timerEndAt = Date.now() + timerRemaining * 1000;
+    timerInterval = setInterval(timerTick, 200);
+    $("timer-pause").disabled = false;
+  });
+  $("timer-pause").addEventListener("click", function () {
+    clearInterval(timerInterval); timerInterval = null;
+    $("timer-pause").disabled = true;
+  });
+  $("timer-reset").addEventListener("click", function () {
+    clearInterval(timerInterval); timerInterval = null;
+    $("timer").classList.remove("expired");
+    timerRemaining = timerSetValue;
+    $("timer-pause").disabled = true;
+    timerRender();
+  });
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["air-dia","air-len","air-drop","air-gw","vac-dia","vac-depth"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      state._tab = activeTab();
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state._tab) {
+        var btn = document.querySelector(".tabs button[data-tab='" + state._tab + "']");
+        if (btn) btn.click();
+      }
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalcAll);
+    $(id).addEventListener("change", recalcAll);
+  });
+
+  loadState();
+  recalcAll();
+  timerRender();
+})();
+</script>
+</body>
+</html>

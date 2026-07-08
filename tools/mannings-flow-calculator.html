@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manning's Flow Calculator (Partially Full Pipe &amp; Open Channel)</title>
+<meta name="description" content="Offline field calculator for gravity flow: Manning's equation for partially full circular pipe, rectangular, and trapezoidal channels. Solves flow from depth or normal depth from flow. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Manning's Flow Calculator</h1>
+<p class="subtitle">Gravity flow in partially full circular pipe, rectangular, and trapezoidal channels. Solves flow from a measured depth, or normal depth from a design flow. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Manning's equation gives <em>normal depth</em> — steady, uniform flow on a constant slope well away from controls. Measurements taken near a drop, gate, junction, bend, or backwater condition will not match. Take the depth reading in a straight run several diameters from any structure.
+</div>
+
+<fieldset>
+  <legend>Geometry &amp; Roughness</legend>
+  <div class="row">
+    <div>
+      <label for="shape">Section shape
+        <select id="shape">
+          <option value="circ">Circular pipe (partially full)</option>
+          <option value="rect">Rectangular channel</option>
+          <option value="trap">Trapezoidal channel</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="solve">Solve for
+        <select id="solve">
+          <option value="flow">Flow, from measured depth</option>
+          <option value="depth">Normal depth, from design flow</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="row" id="circ-geom">
+    <div>
+      <label for="dia">Pipe inside diameter (in)
+        <input type="number" id="dia" min="0" step="any" placeholder="e.g. 12">
+      </label>
+    </div>
+  </div>
+
+  <div class="row" id="chan-geom" hidden>
+    <div>
+      <label for="bwidth">Bottom width (ft)
+        <input type="number" id="bwidth" min="0" step="any" placeholder="e.g. 2.0">
+      </label>
+    </div>
+    <div id="zslope-wrap" hidden>
+      <label for="zslope">Side slope, z (ft horizontal per ft vertical)
+        <input type="number" id="zslope" min="0" step="any" value="1.5">
+      </label>
+    </div>
+    <div>
+      <label for="chandepth">Channel depth (ft)
+        <input type="number" id="chandepth" min="0" step="any" placeholder="e.g. 3.0">
+      </label>
+      <p class="small">Used as the solver's upper bound and for the freeboard check.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="slope">Slope
+        <input type="number" id="slope" min="0" step="any" placeholder="e.g. 0.4">
+      </label>
+    </div>
+    <div>
+      <label for="slope-unit">Slope units
+        <select id="slope-unit">
+          <option value="pct">% (ft per 100 ft)</option>
+          <option value="ftft">ft/ft</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="n-preset">Manning's n
+        <select id="n-preset">
+          <option value="0.010">Smooth plastic (PVC/HDPE) — n = 0.010</option>
+          <option value="0.013" selected>Concrete or clay pipe — n = 0.013</option>
+          <option value="0.013c">Finished concrete channel — n = 0.013</option>
+          <option value="0.024">Corrugated metal — n = 0.024</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="nval" min="0.005" max="0.2" step="any" value="0.013" hidden>
+      </label>
+      <p class="small">Many sewer specs mandate a design n (often 0.013) regardless of material — use what the spec says.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend id="known-legend">Measured Depth</legend>
+  <div class="row">
+    <div id="depth-wrap">
+      <label for="depth"><span id="depth-label">Depth of flow (in)</span>
+        <input type="number" id="depth" min="0" step="any" placeholder="e.g. 4.5">
+      </label>
+    </div>
+    <div id="flow-wrap" hidden>
+      <label for="qtarget">Design flow (GPM)
+        <input type="number" id="qtarget" min="0" step="any" placeholder="e.g. 450">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr id="r-depth-row"><td>Normal depth</td><td class="val" id="r-depth">—</td></tr>
+    <tr id="r-dD-row"><td>d/D ratio</td><td class="val" id="r-dD">—</td></tr>
+    <tr><td>Flow area</td><td class="val" id="r-area">—</td></tr>
+    <tr><td>Wetted perimeter</td><td class="val" id="r-wp">—</td></tr>
+    <tr><td>Hydraulic radius</td><td class="val" id="r-hr">—</td></tr>
+    <tr><td>Velocity</td><td class="val" id="r-vel">—</td></tr>
+    <tr><td>Flow</td><td class="val" id="r-q">—</td></tr>
+    <tr id="r-fr-row"><td>Froude number / regime</td><td class="val" id="r-fr">—</td></tr>
+    <tr id="r-full-row"><td>Full-pipe capacity (d/D = 1.0)</td><td class="val" id="r-qfull">—</td></tr>
+    <tr id="r-fb-row" hidden><td>Freeboard remaining</td><td class="val" id="r-fb">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Manning's equation</summary>
+  <p><code>Q = (1.486/n) · A · R^(2/3) · S^(1/2)</code> (US customary; Q in cfs, A in ft², R in ft, S in ft/ft)</p>
+  <p>Velocity is <code>V = Q/A</code>. Conversions: 1 cfs = 448.83 GPM = 0.6463 MGD.</p>
+</details>
+
+<details>
+  <summary>Circular segment geometry</summary>
+  <p>For flow depth <code>y</code> in a pipe of diameter <code>D</code>, with central angle <code>θ = 2·acos(1 − 2y/D)</code> (radians):</p>
+  <p><code>A = (D²/8)(θ − sin θ)</code> &nbsp;&nbsp; <code>P = Dθ/2</code> &nbsp;&nbsp; <code>R = A/P</code> &nbsp;&nbsp; top width <code>T = D·sin(θ/2)</code></p>
+  <p>Rectangular: <code>A = b·y</code>, <code>P = b + 2y</code>. Trapezoidal with side slope z: <code>A = (b + z·y)·y</code>, <code>P = b + 2y√(1+z²)</code>, <code>T = b + 2z·y</code>.</p>
+</details>
+
+<details>
+  <summary>Normal depth solver</summary>
+  <p>Manning's can't be inverted for depth in closed form for these sections, so the tool bisects: it evaluates <code>Q(y)</code> at the interval midpoint and halves toward the target until the depth converges (40 iterations ≈ machine precision, a few microseconds in JS).</p>
+  <p>For circular pipe, discharge <em>peaks</em> at about d/D ≈ 0.94 and then decreases toward full — the last sliver of depth adds wetted perimeter faster than area. The solver searches only up to the peak; a target flow above the peak is reported as exceeding gravity capacity (the pipe would surcharge).</p>
+</details>
+
+<details>
+  <summary>Froude number and flow regime</summary>
+  <p><code>Fr = V / √(g·A/T)</code>, where <code>A/T</code> is the hydraulic depth. Fr &lt; 1 is subcritical (tranquil, downstream control), Fr &gt; 1 is supercritical (rapid, upstream control). Between roughly 0.9 and 1.1 the surface is unstable and wavy — depth measurements in that band are unreliable, and designers generally avoid it.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Self-cleansing: most sewer specs require ≥2.0 ft/s at design flow (Ten-State). The tool flags velocities below 2.0.</li>
+    <li>Measure depth off the invert, not the top of any grease/grit layer — and if there is a grit layer, your effective geometry isn't the design geometry.</li>
+    <li>Slope should be the constructed invert slope between structures (from the record drawings or your level run), not the ground surface.</li>
+    <li>Comparing computed flow against a meter? Manning's on a single depth reading is ±10–20% at best. Good enough to catch a pump running or an inflow problem; not good enough to bill anyone.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Chow, <em>Open-Channel Hydraulics</em> — Manning's equation and section geometry.</li>
+  <li>Recommended Standards for Wastewater Facilities ("Ten-State Standards") — minimum velocity and design n. <span class="small">https://www.broadagencyannouncement.com/ten-states-standards/ (verify current host)</span></li>
+  <li>FHWA HDS-4, <em>Introduction to Highway Hydraulics</em> — normal depth and Froude number reference.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "mannings.v1";
+  var KN = 1.486;
+  var G = 32.174;
+  var GPM_PER_CFS = 448.831;
+  var MGD_PER_CFS = 0.646317;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  /* ---------- section geometry: all lengths in feet ---------- */
+  function circSection(yFt, dFt) {
+    var ratio = Math.min(Math.max(yFt / dFt, 0), 1);
+    var theta = 2 * Math.acos(1 - 2 * ratio);
+    var A = (dFt * dFt / 8) * (theta - Math.sin(theta));
+    var P = dFt * theta / 2;
+    var T = dFt * Math.sin(theta / 2);
+    return { A: A, P: P, T: T };
+  }
+  function rectSection(yFt, bFt) {
+    return { A: bFt * yFt, P: bFt + 2 * yFt, T: bFt };
+  }
+  function trapSection(yFt, bFt, z) {
+    return {
+      A: (bFt + z * yFt) * yFt,
+      P: bFt + 2 * yFt * Math.sqrt(1 + z * z),
+      T: bFt + 2 * z * yFt
+    };
+  }
+
+  function manningsQ(sec, n, S) {
+    if (sec.A <= 0 || sec.P <= 0) return 0;
+    var R = sec.A / sec.P;
+    return (KN / n) * sec.A * Math.pow(R, 2 / 3) * Math.sqrt(S); // cfs
+  }
+
+  /* bisection: qFunc monotonic increasing on [lo, hi] */
+  function solveDepth(qTargetCfs, qFunc, lo, hi) {
+    if (qFunc(hi) < qTargetCfs) return null; // exceeds capacity of interval
+    for (var i = 0; i < 60; i++) {
+      var mid = (lo + hi) / 2;
+      if (qFunc(mid) < qTargetCfs) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /* ---------- UI wiring ---------- */
+  $("shape").addEventListener("change", updateVisibility);
+  $("solve").addEventListener("change", updateVisibility);
+  $("n-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("nval").hidden = false;
+    } else {
+      $("nval").hidden = true;
+      $("nval").value = parseFloat(this.value); // "0.013c" parses to 0.013
+    }
+    recalc();
+  });
+
+  function updateVisibility() {
+    var shape = $("shape").value;
+    var solve = $("solve").value;
+    $("circ-geom").hidden = shape !== "circ";
+    $("chan-geom").hidden = shape === "circ";
+    $("zslope-wrap").hidden = shape !== "trap";
+    $("depth-wrap").hidden = solve !== "flow";
+    $("flow-wrap").hidden = solve !== "depth";
+    $("known-legend").textContent = solve === "flow" ? "Measured Depth" : "Design Flow";
+    $("depth-label").textContent = shape === "circ" ? "Depth of flow (in)" : "Depth of flow (ft)";
+    recalc();
+  }
+
+  function recalc() {
+    var shape = $("shape").value;
+    var solve = $("solve").value;
+    var S = num("slope");
+    var n = num("nval");
+    var out = $("results");
+    if (S === null || !n) { out.hidden = true; saveState(); return; }
+    if ($("slope-unit").value === "pct") S = S / 100;
+    if (S <= 0) { out.hidden = true; saveState(); return; }
+
+    var secOf, maxY, dFt = null, bFt = null, z = 0, chanDepth = null;
+    if (shape === "circ") {
+      var dIn = num("dia");
+      if (!dIn) { out.hidden = true; saveState(); return; }
+      dFt = dIn / 12;
+      secOf = function (y) { return circSection(y, dFt); };
+      maxY = 0.938 * dFt; // discharge peak for the solver
+    } else {
+      bFt = num("bwidth");
+      chanDepth = num("chandepth");
+      if (!bFt || !chanDepth) { out.hidden = true; saveState(); return; }
+      if (shape === "trap") {
+        z = num("zslope", true);
+        if (z === null) { out.hidden = true; saveState(); return; }
+        secOf = function (y) { return trapSection(y, bFt, z); };
+      } else {
+        secOf = function (y) { return rectSection(y, bFt); };
+      }
+      maxY = chanDepth;
+    }
+    var qFunc = function (y) { return manningsQ(secOf(y), n, S); };
+
+    var yFt, msgs = [];
+    if (solve === "flow") {
+      var depthIn = num("depth");
+      if (!depthIn) { out.hidden = true; saveState(); return; }
+      yFt = shape === "circ" ? depthIn / 12 : depthIn;
+      if (shape === "circ" && yFt > dFt) {
+        msgs.push("Entered depth exceeds the pipe diameter — capped at full pipe. A surcharged pipe is pressure flow; Manning's no longer applies.");
+        yFt = dFt;
+      }
+      if (shape !== "circ" && yFt > chanDepth) {
+        msgs.push("Entered depth exceeds the channel depth — the channel is overtopping.");
+      }
+    } else {
+      var qGpm = num("qtarget");
+      if (!qGpm) { out.hidden = true; saveState(); return; }
+      var qCfs = qGpm / GPM_PER_CFS;
+      yFt = solveDepth(qCfs, qFunc, 1e-6, maxY);
+      if (yFt === null) {
+        if (shape === "circ") {
+          msgs.push("Design flow exceeds the pipe's gravity capacity (peak at d/D ≈ 0.94 is " +
+            fmt(qFunc(maxY) * GPM_PER_CFS, 0) + " GPM). The pipe will surcharge at this flow.");
+        } else {
+          msgs.push("Design flow exceeds channel capacity at the entered channel depth (" +
+            fmt(qFunc(maxY) * GPM_PER_CFS, 0) + " GPM). The channel will overtop.");
+        }
+        yFt = maxY;
+      }
+    }
+
+    var sec = secOf(yFt);
+    var R = sec.A > 0 ? sec.A / sec.P : 0;
+    var qCfsOut = manningsQ(sec, n, S);
+    var V = sec.A > 0 ? qCfsOut / sec.A : 0;
+
+    /* depth row */
+    $("r-depth-row").hidden = false;
+    $("r-depth").textContent = shape === "circ"
+      ? fmt(yFt * 12, 2) + " in"
+      : fmt(yFt, 2) + " ft";
+
+    /* d/D + full capacity for circular */
+    $("r-dD-row").hidden = shape !== "circ";
+    $("r-full-row").hidden = shape !== "circ";
+    if (shape === "circ") {
+      var dD = yFt / dFt;
+      var qFull = manningsQ(circSection(dFt, dFt), n, S);
+      $("r-dD").textContent = fmt(dD, 3) + " (" + fmt(qCfsOut / qFull * 100, 0) + "% of full-pipe Q)";
+      $("r-qfull").textContent = fmt(qFull * GPM_PER_CFS, 0) + " GPM (" + fmt(qFull, 2) + " cfs)";
+      if (dD > 0.93 && solve === "flow") {
+        msgs.push("d/D above ~0.93 — flow near the crown is unstable and the pipe is at the edge of surcharging; treat results with suspicion.");
+      }
+    }
+
+    /* freeboard for channels */
+    $("r-fb-row").hidden = shape === "circ";
+    if (shape !== "circ") {
+      var fb = chanDepth - yFt;
+      $("r-fb").textContent = fmt(fb, 2) + " ft";
+      if (fb < 0.5 && fb >= 0 && msgs.length === 0) {
+        msgs.push("Less than 0.5 ft of freeboard remaining — many specs require more; check yours.");
+      }
+    }
+
+    $("r-area").textContent = fmt(sec.A, 3) + " ft²";
+    $("r-wp").textContent = fmt(sec.P, 3) + " ft";
+    $("r-hr").textContent = fmt(R, 3) + " ft";
+    $("r-vel").textContent = fmt(V, 2) + " ft/s";
+    $("r-q").textContent = fmt(qCfsOut * GPM_PER_CFS, 0) + " GPM  |  " +
+      fmt(qCfsOut, 2) + " cfs  |  " + fmt(qCfsOut * MGD_PER_CFS, 3) + " MGD";
+
+    /* Froude */
+    var nearCrown = shape === "circ" && yFt / dFt > 0.98;
+    $("r-fr-row").hidden = nearCrown;
+    if (!nearCrown && sec.T > 0) {
+      var Fr = V / Math.sqrt(G * sec.A / sec.T);
+      var regime = Fr < 0.9 ? "subcritical" : Fr > 1.1 ? "supercritical" : "near-critical (unstable)";
+      $("r-fr").textContent = fmt(Fr, 2) + " — " + regime;
+      if (Fr >= 0.9 && Fr <= 1.1) {
+        msgs.push("Flow is near critical — the water surface will be wavy and depth readings unreliable here.");
+      }
+    }
+
+    if (V > 0 && V < 2.0) {
+      msgs.push("Velocity below 2.0 ft/s — under the usual self-cleansing minimum; expect solids deposition at this flow.");
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["shape","solve","dia","bwidth","zslope","chandepth","slope","slope-unit","n-preset","nval","depth","qtarget"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["n-preset"] === "custom") $("nval").hidden = false;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  updateVisibility();
+})();
+</script>
+</body>
+</html>

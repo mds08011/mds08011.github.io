@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Working Day Contract Time Tracker</title>
+<meta name="description" content="Offline tracker for working-day construction contracts: current contract day, days remaining, projected completion, with a persistent no-work day log and computed federal holidays. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --fail-bg: #fdecec;
+    --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --fail-bg: #33191a;
+      --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="date"], input[type="text"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+  label.inline { display: flex; align-items: center; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  table.log { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.log th, table.log td {
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.5rem;
+    text-align: left;
+    font-size: 0.92rem;
+  }
+  table.log th { background: var(--panel); }
+  table.log button {
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Working Day Contract Time Tracker</h1>
+<p class="subtitle">Tracks charged working days against a working-day contract, with a persistent log of non-charged days (weather, suspensions) and computed federal holidays. Runs entirely offline; everything persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The owner's official day count (usually kept by the RE/inspector on the daily reports) is the contractual record — this tracker exists so you notice a discrepancy the week it happens instead of at the end of the job. Day-counting conventions (whether NTP is day 1, which holidays count, what qualifies as a chargeable day) come from the General Conditions; set the toggles to match yours.</p>
+</div>
+
+<fieldset>
+  <legend>Contract Setup</legend>
+  <div class="row">
+    <div>
+      <label for="ntp">NTP / time-commencement date
+        <input type="date" id="ntp">
+      </label>
+    </div>
+    <div>
+      <label for="duration">Contract duration (working days)
+        <input type="number" id="duration" min="1" step="1" placeholder="e.g. 240">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="ntp-conv">Day 1 convention
+        <select id="ntp-conv">
+          <option value="ntp">NTP date is Day 1 (if a working day)</option>
+          <option value="after">Day 1 is the first working day AFTER NTP</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label class="inline" for="holidays" style="margin-top:1.9rem;">
+        <input type="checkbox" id="holidays" checked> Skip federal holidays (observed)
+      </label>
+      <p class="small">Some contracts define their own holiday list — log any extras as no-work days below.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>No-Work Day Log (weather days, suspensions)</legend>
+  <div class="row">
+    <div>
+      <label for="log-date">Date
+        <input type="date" id="log-date">
+      </label>
+    </div>
+    <div>
+      <label for="log-note">Note (optional)
+        <input type="text" id="log-note" maxlength="60" placeholder="e.g. rain, site flooded">
+      </label>
+    </div>
+  </div>
+  <button type="button" class="add" id="log-add">+ Log no-work day</button>
+  <table class="log" id="log-table" hidden>
+    <thead><tr><th>Date</th><th>Day</th><th>Note</th><th></th></tr></thead>
+    <tbody id="log-body"></tbody>
+  </table>
+  <p class="small" id="log-summary"></p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Today</td><td class="val" id="r-today">—</td></tr>
+    <tr><td>Charged working days to date</td><td class="val" id="r-charged">—</td></tr>
+    <tr><td>Working days remaining</td><td class="val" id="r-remaining">—</td></tr>
+    <tr><td>Percent of contract time used</td><td class="val" id="r-pct">—</td></tr>
+    <tr><td>Projected completion date</td><td class="val" id="r-completion">—</td></tr>
+    <tr><td>Calendar days elapsed since NTP</td><td class="val" id="r-calendar">—</td></tr>
+    <tr><td>No-work days logged (otherwise chargeable)</td><td class="val" id="r-nowork">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all data</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Counting rules</summary>
+  <p>The tracker walks the calendar from NTP to today. A date is <em>charged</em> if it is Monday–Friday, not an observed federal holiday (if the toggle is on), and not in the no-work log. Days remaining = duration − charged. The projected completion date walks forward from today, counting future weekdays that aren't holidays until the remaining count runs out — it can't foresee future weather days, so real completion drifts later as you log them.</p>
+</details>
+
+<details>
+  <summary>Federal holidays (computed, not hardcoded)</summary>
+  <p>The eleven federal holidays are generated for any year: fixed dates (New Year's, Juneteenth, Independence Day, Veterans Day, Christmas) with Saturday→Friday / Sunday→Monday observation shifts, and floating dates (MLK 3rd Mon Jan, Washington's Birthday 3rd Mon Feb, Memorial last Mon May, Labor 1st Mon Sep, Columbus 2nd Mon Oct, Thanksgiving 4th Thu Nov). No lookup table to go stale.</p>
+</details>
+
+<details>
+  <summary>Why log no-work days the day they happen</summary>
+  <ul>
+    <li>Weather day disputes are won with contemporaneous records: your daily report, photos of standing water, and a log entry dated that day. A reconstructed list at month 9 is worth a fraction of that.</li>
+    <li>If your count and the RE's count diverge, the earlier you catch it the smaller the argument. Compare at every pay application.</li>
+    <li>A weather day is usually only non-chargeable if it actually prevented work on the controlling operation — a rainout on a day you were doing interior electrical may still be charged. Log the note field with what was prevented.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Contract General Conditions — definition of working day, chargeable day, and the holiday list (governing document).</li>
+  <li>5 U.S.C. § 6103 — federal holidays. <span class="small">https://www.law.cornell.edu/uscode/text/5/6103</span></li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. All data is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "workingdays.v1";
+  var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 0;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  /* parse YYYY-MM-DD as a LOCAL date (new Date(string) would parse as UTC) */
+  function parseLocal(iso) {
+    if (!iso) return null;
+    var p = iso.split("-");
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function isoOf(d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+  function fmtDate(d) {
+    return DOW[d.getDay()] + " " + d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+  function addDays(d, n) {
+    var x = new Date(d.getTime());
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+
+  /* ---------- federal holidays, computed per year ---------- */
+  function nthWeekday(year, month, weekday, n) { // month 0-based
+    var d = new Date(year, month, 1);
+    var offset = (weekday - d.getDay() + 7) % 7;
+    return new Date(year, month, 1 + offset + (n - 1) * 7);
+  }
+  function lastWeekday(year, month, weekday) {
+    var d = new Date(year, month + 1, 0); // last day of month
+    var offset = (d.getDay() - weekday + 7) % 7;
+    return new Date(year, month, d.getDate() - offset);
+  }
+  function observed(d) { // Sat -> Fri, Sun -> Mon
+    if (d.getDay() === 6) return addDays(d, -1);
+    if (d.getDay() === 0) return addDays(d, 1);
+    return d;
+  }
+  var holidayCache = {};
+  function holidaySet(year) {
+    if (holidayCache[year]) return holidayCache[year];
+    var list = [
+      observed(new Date(year, 0, 1)),        // New Year's Day
+      nthWeekday(year, 0, 1, 3),             // MLK — 3rd Mon Jan
+      nthWeekday(year, 1, 1, 3),             // Washington's Birthday — 3rd Mon Feb
+      lastWeekday(year, 4, 1),               // Memorial Day — last Mon May
+      observed(new Date(year, 5, 19)),       // Juneteenth
+      observed(new Date(year, 6, 4)),        // Independence Day
+      nthWeekday(year, 8, 1, 1),             // Labor Day — 1st Mon Sep
+      nthWeekday(year, 9, 1, 2),             // Columbus Day — 2nd Mon Oct
+      observed(new Date(year, 10, 11)),      // Veterans Day
+      nthWeekday(year, 10, 4, 4),            // Thanksgiving — 4th Thu Nov
+      observed(new Date(year, 11, 25))       // Christmas
+    ];
+    var set = {};
+    list.forEach(function (d) { set[isoOf(d)] = true; });
+    /* New Year's observed of NEXT year can land on Dec 31 of this year */
+    var nextNY = observed(new Date(year + 1, 0, 1));
+    if (nextNY.getFullYear() === year) set[isoOf(nextNY)] = true;
+    holidayCache[year] = set;
+    return set;
+  }
+  function isHoliday(d) {
+    return !!holidaySet(d.getFullYear())[isoOf(d)];
+  }
+
+  /* ---------- no-work day log ---------- */
+  var log = []; // { date: "YYYY-MM-DD", note: "" }
+
+  function renderLog() {
+    log.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var body = $("log-body");
+    body.innerHTML = "";
+    log.forEach(function (entry, idx) {
+      var d = parseLocal(entry.date);
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td"); td1.textContent = entry.date;
+      var td2 = document.createElement("td"); td2.textContent = d ? DOW[d.getDay()] : "?";
+      var td3 = document.createElement("td"); td3.textContent = entry.note || "";
+      var td4 = document.createElement("td");
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.textContent = "×"; btn.setAttribute("aria-label", "Remove entry");
+      btn.addEventListener("click", function () { log.splice(idx, 1); renderLog(); recalc(); });
+      td4.appendChild(btn);
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+      body.appendChild(tr);
+    });
+    $("log-table").hidden = log.length === 0;
+    $("log-summary").textContent = log.length ? log.length + " no-work day" + (log.length > 1 ? "s" : "") + " logged." : "";
+  }
+
+  $("log-add").addEventListener("click", function () {
+    var date = $("log-date").value;
+    if (!date || !parseLocal(date)) return;
+    if (log.some(function (e) { return e.date === date; })) return; // no duplicates
+    log.push({ date: date, note: $("log-note").value.trim() });
+    $("log-note").value = "";
+    renderLog();
+    recalc();
+  });
+
+  /* ---------- day counting ---------- */
+  function isChargeable(d, skipHolidays, logSet) {
+    var dow = d.getDay();
+    if (dow === 0 || dow === 6) return false;
+    if (skipHolidays && isHoliday(d)) return false;
+    if (logSet[isoOf(d)]) return false;
+    return true;
+  }
+
+  function recalc() {
+    var ntp = parseLocal($("ntp").value);
+    var duration = parseInt($("duration").value, 10);
+    var skipHolidays = $("holidays").checked;
+    var conv = $("ntp-conv").value;
+    var out = $("results");
+
+    if (!ntp || !isFinite(duration) || duration <= 0) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var logSet = {};
+    var noWorkChargeable = 0;
+    log.forEach(function (e) { logSet[e.date] = true; });
+
+    var today = new Date();
+    today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    var start = conv === "after" ? addDays(ntp, 1) : ntp;
+
+    /* charged days from start through today */
+    var charged = 0;
+    var d = new Date(start.getTime());
+    var guard = 0;
+    while (d <= today && guard++ < 40000) {
+      if (isChargeable(d, skipHolidays, logSet)) charged++;
+      /* count logged no-work days that would otherwise have been charged */
+      var dow = d.getDay();
+      if (logSet[isoOf(d)] && dow !== 0 && dow !== 6 && !(skipHolidays && isHoliday(d))) noWorkChargeable++;
+      d = addDays(d, 1);
+    }
+
+    var remaining = duration - charged;
+
+    /* projected completion: walk forward until remaining runs out */
+    var completion = null;
+    if (remaining > 0) {
+      var need = remaining;
+      var f = today < start ? new Date(start.getTime()) : addDays(today, today >= start ? 1 : 0);
+      if (today < start) f = new Date(start.getTime());
+      guard = 0;
+      while (need > 0 && guard++ < 40000) {
+        if (isChargeable(f, skipHolidays, logSet)) {
+          need--;
+          if (need === 0) completion = new Date(f.getTime());
+        }
+        f = addDays(f, 1);
+      }
+    }
+
+    var pct = charged / duration * 100;
+    var calDays = Math.round((today - ntp) / 86400000);
+
+    if (ntp > today) {
+      $("verdict").textContent = "NTP is in the future — day counting begins " + fmtDate(start);
+      out.classList.remove("fail");
+    } else if (remaining < 0) {
+      $("verdict").textContent = "OVER CONTRACT TIME — " + fmt(-remaining) + " working days beyond duration";
+      out.classList.add("fail");
+    } else {
+      $("verdict").textContent = "Contract Day " + fmt(charged) + " of " + fmt(duration);
+      out.classList.remove("fail");
+    }
+
+    $("r-today").textContent = fmtDate(today);
+    $("r-charged").textContent = fmt(Math.max(charged, 0));
+    $("r-remaining").textContent = remaining >= 0 ? fmt(remaining) : "0 (" + fmt(-remaining) + " over)";
+    $("r-pct").textContent = fmt(pct, 1) + " %";
+    $("r-completion").textContent = completion ? fmtDate(completion) : (remaining <= 0 ? "time expired" : "—");
+    $("r-calendar").textContent = ntp <= today ? fmt(calDays) : "—";
+    $("r-nowork").textContent = fmt(noWorkChargeable);
+
+    var msgs = [];
+    if (remaining >= 0 && duration > 0 && remaining / duration < 0.1 && charged > 0) {
+      msgs.push("Less than 10% of contract time remains. If the work isn't tracking to finish, the time extension request should already be in motion — with the no-work day log attached.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["ntp","duration","ntp-conv"];
+  function saveState() {
+    try {
+      var state = { log: log, holidays: $("holidays").checked };
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.log)) {
+        log = state.log.filter(function (e) { return e && parseLocal(e.date); });
+      }
+      if (typeof state.holidays === "boolean") $("holidays").checked = state.holidays;
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    if (log.length > 0 && !window.confirm("This clears the contract setup AND the entire no-work day log. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+  $("holidays").addEventListener("change", recalc);
+
+  loadState();
+  renderLog();
+  recalc();
+})();
+</script>
+</body>
+</html>

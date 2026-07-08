@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump Affinity Law Calculator</title>
+<meta name="description" content="Offline field calculator for VFD startup troubleshooting: scales pump flow, head, and power to a new speed or impeller trim using the affinity laws, with a speed table. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.speed { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.speed th, table.speed td {
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+  }
+  table.speed th { background: var(--panel); }
+  table.speed tr.sel td { font-weight: 700; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Pump Affinity Law Calculator</h1>
+<p class="subtitle">Scales a centrifugal pump's flow, head, and power from a rated condition to a new speed or impeller trim. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Read this before arguing with the pump:</strong> The affinity laws shift the <em>pump curve</em>, not the operating point. The pump actually runs where the shifted curve crosses the <em>system curve</em>. If the system has significant static head, the operating point does not slide along an affinity line — flow falls off faster than <code>Q ∝ N</code> as speed drops, and below some speed the pump develops too little head to move any water at all. Use this tool to answer "what is this pump capable of at this speed," then check it against the system.
+</div>
+
+<fieldset>
+  <legend>Rated Condition (from the approved pump curve)</legend>
+  <div class="row">
+    <div>
+      <label for="mode">Scaling variable
+        <select id="mode">
+          <option value="hz">Speed — VFD frequency (Hz)</option>
+          <option value="rpm">Speed — shaft RPM</option>
+          <option value="trim">Impeller trim — diameter (in)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="n1"><span id="n1-label">Rated frequency (Hz)</span>
+        <input type="number" id="n1" min="0" step="any" value="60">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="q1">Rated flow (GPM)
+        <input type="number" id="q1" min="0" step="any" placeholder="e.g. 800">
+      </label>
+    </div>
+    <div>
+      <label for="h1">Rated head (ft)
+        <input type="number" id="h1" min="0" step="any" placeholder="e.g. 95">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="p1">Rated power (BHP) — optional
+        <input type="number" id="p1" min="0" step="any" placeholder="e.g. 30">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>New Condition</legend>
+  <div class="row">
+    <div>
+      <label for="n2"><span id="n2-label">Operating frequency (Hz)</span>
+        <input type="number" id="n2" min="0" step="any" placeholder="e.g. 45">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Scaled Condition</h3>
+  <table>
+    <tr><td>Speed ratio</td><td class="val" id="r-ratio">—</td></tr>
+    <tr><td>Flow (Q ∝ N)</td><td class="val" id="r-q2">—</td></tr>
+    <tr><td>Head (H ∝ N²)</td><td class="val" id="r-h2">—</td></tr>
+    <tr id="r-p2-row"><td>Power (P ∝ N³)</td><td class="val" id="r-p2">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+
+  <h3>Speed Table</h3>
+  <p class="small">The rated point scaled across the operating range. Compare the head column against the system's static head — below the speed where pump head drops under static, the pump moves nothing.</p>
+  <table class="speed">
+    <thead>
+      <tr><th id="th-speed">Hz</th><th>%</th><th>Flow (GPM)</th><th>Head (ft)</th><th id="th-power">BHP</th></tr>
+    </thead>
+    <tbody id="speed-body"></tbody>
+  </table>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The affinity laws</summary>
+  <p>For a centrifugal pump at constant impeller diameter, with <code>r = N₂/N₁</code>:</p>
+  <p><code>Q₂ = Q₁ · r</code> &nbsp;&nbsp; <code>H₂ = H₁ · r²</code> &nbsp;&nbsp; <code>P₂ = P₁ · r³</code></p>
+  <p>The same ratios apply approximately to impeller trim at constant speed, with <code>r = D₂/D₁</code>. Trim predictions degrade for cuts beyond roughly 10–15% of the full diameter and for very low specific-speed pumps — check the manufacturer's trim curves.</p>
+  <p>Since VFD frequency is proportional to synchronous speed, Hz ratios and RPM ratios are interchangeable for a fixed pole count (ignoring the small change in induction motor slip).</p>
+</details>
+
+<details>
+  <summary>Field troubleshooting pattern</summary>
+  <ul>
+    <li>Pump underperforming at 60 Hz against the curve → possible wrong rotation (3-phase pumps run backward at roughly half flow and head — swap two leads), plugged impeller, excessive wear ring clearance, air entrainment, or a closed/failed valve.</li>
+    <li>Pump underperforming at reduced speed but the affinity-scaled numbers match what you measured → the pump is fine; the operating point moved because the system curve, not the pump, controls.</li>
+    <li>Amp draw noticeably above the <code>r³</code>-scaled expectation → check for mechanical drag, binding, or pumping denser/thicker fluid than water.</li>
+    <li>Verify actual speed at the drive keypad, not the setpoint — some drives display commanded rather than actual frequency depending on the parameter shown.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Low-speed cautions</summary>
+  <ul>
+    <li>Head falls with the square of speed. If system static head is a large share of rated head, useful flow disappears well before the drive reaches minimum speed.</li>
+    <li>Extended running at low speed reduces motor cooling (shaft-mounted fans slow down too) and can drop velocity below solids-carrying minimums in wastewater service.</li>
+    <li>Many drives and pump manufacturers set a minimum speed (commonly 40–60% for wastewater) for exactly these reasons — check the approved O&amp;M data before running below it.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Hydraulic Institute — ANSI/HI standards on pump performance and variable speed operation. <span class="small">https://www.pumps.org/</span></li>
+  <li>Karassik et al., <em>Pump Handbook</em> — affinity law derivation and trim limitations.</li>
+  <li>Manufacturer performance curves for the specific pump — affinity scaling of a single point is no substitute for the published family of speed curves when they exist.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "affinity.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var MODE_LABELS = {
+    hz:   { n1: "Rated frequency (Hz)", n2: "Operating frequency (Hz)", th: "Hz", def1: 60 },
+    rpm:  { n1: "Rated speed (RPM)", n2: "Operating speed (RPM)", th: "RPM", def1: 1780 },
+    trim: { n1: "Full impeller diameter (in)", n2: "Trimmed diameter (in)", th: "Dia (in)", def1: "" }
+  };
+
+  $("mode").addEventListener("change", function () {
+    var m = MODE_LABELS[this.value];
+    $("n1-label").textContent = m.n1;
+    $("n2-label").textContent = m.n2;
+    $("th-speed").textContent = m.th;
+    if (m.def1 !== "") $("n1").value = m.def1;
+    recalc();
+  });
+
+  function recalc() {
+    var n1 = num("n1"), n2 = num("n2"), q1 = num("q1"), h1 = num("h1"), p1 = num("p1");
+    var mode = $("mode").value;
+    var out = $("results");
+
+    if (!n1 || !n2 || !q1 || !h1) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var r = n2 / n1;
+    $("r-ratio").textContent = fmt(r, 3) + " (" + fmt(r * 100, 1) + "%)";
+    $("r-q2").textContent = fmt(q1 * r, 0) + " GPM";
+    $("r-h2").textContent = fmt(h1 * r * r, 1) + " ft";
+    $("r-p2-row").hidden = !p1;
+    if (p1) $("r-p2").textContent = fmt(p1 * r * r * r, 1) + " BHP";
+
+    /* warnings */
+    var msgs = [];
+    if (mode !== "trim" && r < 0.45) {
+      msgs.push("Below roughly 45% speed most pumps are outside their allowable operating range — check the manufacturer's minimum speed.");
+    }
+    if (mode === "trim" && r < 0.85) {
+      msgs.push("Trim exceeds ~15% of full diameter — affinity scaling is unreliable this far; use the manufacturer's trim curves.");
+    }
+    if (r > 1.05) {
+      msgs.push("Running above the rated " + (mode === "trim" ? "diameter" : "speed") +
+        " — power rises with the cube; confirm the motor is not overloaded and the drive/pump are rated for it.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    /* speed table */
+    var body = $("speed-body");
+    body.innerHTML = "";
+    var steps = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
+    var rSel = Math.round(r * 100) / 100;
+    var inserted = false;
+    var rows = steps.slice();
+    if (steps.indexOf(rSel) === -1 && rSel > 0 && rSel < 1.2) {
+      rows.push(rSel);
+      rows.sort(function (a, b) { return a - b; });
+      inserted = true;
+    }
+    rows.forEach(function (rt) {
+      var tr = document.createElement("tr");
+      if (inserted ? rt === rSel : Math.abs(rt - r) < 0.005) tr.className = "sel";
+      tr.innerHTML =
+        "<td>" + fmt(n1 * rt, mode === "trim" ? 2 : 1) + "</td>" +
+        "<td>" + fmt(rt * 100, 0) + "</td>" +
+        "<td>" + fmt(q1 * rt, 0) + "</td>" +
+        "<td>" + fmt(h1 * rt * rt, 1) + "</td>" +
+        "<td>" + (p1 ? fmt(p1 * rt * rt * rt, 1) : "—") + "</td>";
+      body.appendChild(tr);
+    });
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["mode","n1","n2","q1","h1","p1"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      var m = MODE_LABELS[$("mode").value];
+      $("n1-label").textContent = m.n1;
+      $("n2-label").textContent = m.n2;
+      $("th-speed").textContent = m.th;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

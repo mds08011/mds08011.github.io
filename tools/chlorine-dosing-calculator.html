@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chlorine Dosing &amp; Disinfection Calculator (AWWA C651/C652)</title>
+<meta name="description" content="Offline field calculator for pipeline and tank disinfection dosing, batch solution mixing, and dechlorination chemical quantities. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+  .tabs button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  section[role="tabpanel"] { display: none; }
+  section[role="tabpanel"].active { display: block; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Chlorine Dosing &amp; Disinfection Calculator</h1>
+<p class="subtitle">Field aid for pipeline (AWWA C651) and tank (AWWA C652) disinfection dosing, batch solution mixing, and dechlorination quantities. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is a field arithmetic aid, not a disinfection plan. Doses, contact times, residual requirements, flushing, and bacteriological sampling are governed by the contract specifications, the approved disinfection plan, and the referenced AWWA standards. Verify concentrated hypochlorite handling against the SDS.
+</div>
+
+<div class="tabs" role="tablist" aria-label="Calculator mode">
+  <button role="tab" aria-selected="true" data-tab="pipe">Pipeline (C651)</button>
+  <button role="tab" aria-selected="false" data-tab="tank">Tank / Structure (C652)</button>
+  <button role="tab" aria-selected="false" data-tab="batch">Batch Solution</button>
+  <button role="tab" aria-selected="false" data-tab="neutral">Dechlorination</button>
+</div>
+
+<!-- ======================= PIPELINE ======================= -->
+<section id="panel-pipe" role="tabpanel" class="active">
+  <fieldset>
+    <legend>Pipeline Disinfection — AWWA C651</legend>
+    <div class="row">
+      <div>
+        <label for="pipe-method">Method
+          <select id="pipe-method">
+            <option value="continuous">Continuous feed — 25 mg/L, 24 hr hold</option>
+            <option value="slug">Slug — 100 mg/L, ≥3 hr contact</option>
+            <option value="tablet">Tablet — 25 mg/L, 24 hr hold</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="pipe-dia">Pipe inside diameter (in)
+          <input type="number" id="pipe-dia" min="0" step="any" placeholder="e.g. 12">
+        </label>
+      </div>
+      <div>
+        <label for="pipe-len">Segment length (ft)
+          <input type="number" id="pipe-len" min="0" step="any" placeholder="e.g. 1200">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="pipe-dose">Target dose (mg/L)
+          <input type="number" id="pipe-dose" min="0" step="any" value="25">
+        </label>
+        <p class="small">Prefilled by method; edit if the spec requires a different dose.</p>
+      </div>
+      <div>
+        <label for="pipe-source">Chlorine source
+          <select id="pipe-source">
+            <option value="hypo">Sodium hypochlorite (liquid)</option>
+            <option value="calhypo">Calcium hypochlorite (granular)</option>
+          </select>
+        </label>
+        <label for="pipe-strength">Source strength (% available Cl₂)
+          <input type="number" id="pipe-strength" min="0.1" max="100" step="any" value="12.5">
+        </label>
+      </div>
+    </div>
+    <div class="results" id="pipe-results" hidden>
+      <h3>Results</h3>
+      <table>
+        <tr><td>Segment water volume</td><td class="val" id="pipe-vol">—</td></tr>
+        <tr><td>Available chlorine required</td><td class="val" id="pipe-lbs">—</td></tr>
+        <tr id="pipe-hypo-row"><td>Sodium hypochlorite to inject</td><td class="val" id="pipe-hypo">—</td></tr>
+        <tr id="pipe-calhypo-row" hidden><td>Calcium hypochlorite to dissolve</td><td class="val" id="pipe-calhypo">—</td></tr>
+        <tr id="pipe-tab-row" hidden><td>5-g cal-hypo tablets (65%)</td><td class="val" id="pipe-tabs">—</td></tr>
+      </table>
+      <div class="warn" id="pipe-warn" hidden></div>
+    </div>
+  </fieldset>
+</section>
+
+<!-- ======================= TANK ======================= -->
+<section id="panel-tank" role="tabpanel">
+  <fieldset>
+    <legend>Tank / Structure Disinfection — AWWA C652</legend>
+    <div class="row">
+      <div>
+        <label for="tank-method">Method
+          <select id="tank-method">
+            <option value="m1">Method 1 — Fill full tank at 10 mg/L, 24 hr hold</option>
+            <option value="m3">Method 3 — Chlorinate bottom 5% at 50 mg/L, 6 hr, then fill</option>
+          </select>
+        </label>
+        <p class="small">Method 2 (200 mg/L surface spray) is a batch-solution problem — use the Batch Solution tab to mix spray solution.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="tank-vol">Tank volume (gal)
+          <input type="number" id="tank-vol" min="0" step="any" placeholder="e.g. 500000">
+        </label>
+      </div>
+      <div>
+        <label for="tank-dose">Target dose (mg/L)
+          <input type="number" id="tank-dose" min="0" step="any" value="10">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="tank-source">Chlorine source
+          <select id="tank-source">
+            <option value="hypo">Sodium hypochlorite (liquid)</option>
+            <option value="calhypo">Calcium hypochlorite (granular)</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label for="tank-strength">Source strength (% available Cl₂)
+          <input type="number" id="tank-strength" min="0.1" max="100" step="any" value="12.5">
+        </label>
+      </div>
+    </div>
+    <div class="results" id="tank-results" hidden>
+      <h3>Results</h3>
+      <table>
+        <tr id="tank-dosevol-row" hidden><td>Volume to be dosed (5% of tank)</td><td class="val" id="tank-dosevol">—</td></tr>
+        <tr><td>Available chlorine required</td><td class="val" id="tank-lbs">—</td></tr>
+        <tr id="tank-hypo-row"><td>Sodium hypochlorite required</td><td class="val" id="tank-hypo">—</td></tr>
+        <tr id="tank-calhypo-row" hidden><td>Calcium hypochlorite required</td><td class="val" id="tank-calhypo">—</td></tr>
+      </table>
+      <div class="warn" id="tank-warn" hidden></div>
+    </div>
+  </fieldset>
+</section>
+
+<!-- ======================= BATCH ======================= -->
+<section id="panel-batch" role="tabpanel">
+  <fieldset>
+    <legend>Batch Solution Mixer</legend>
+    <p class="small">Mix a known volume of solution to a target concentration — e.g. 200 mg/L spray solution for C652 Method 2, or 1–5% solution for swabbing per C651.</p>
+    <div class="row">
+      <div>
+        <label for="batch-vol">Batch volume (gal)
+          <input type="number" id="batch-vol" min="0" step="any" placeholder="e.g. 50">
+        </label>
+      </div>
+      <div>
+        <label for="batch-dose">Target concentration (mg/L)
+          <input type="number" id="batch-dose" min="0" step="any" value="200">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="batch-source">Chlorine source
+          <select id="batch-source">
+            <option value="hypo">Sodium hypochlorite (liquid)</option>
+            <option value="calhypo">Calcium hypochlorite (granular)</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label for="batch-strength">Source strength (% available Cl₂)
+          <input type="number" id="batch-strength" min="0.1" max="100" step="any" value="12.5">
+        </label>
+      </div>
+    </div>
+    <div class="results" id="batch-results" hidden>
+      <h3>Results</h3>
+      <table>
+        <tr><td>Available chlorine required</td><td class="val" id="batch-lbs">—</td></tr>
+        <tr id="batch-hypo-row"><td>Sodium hypochlorite per batch</td><td class="val" id="batch-hypo">—</td></tr>
+        <tr id="batch-calhypo-row" hidden><td>Calcium hypochlorite per batch</td><td class="val" id="batch-calhypo">—</td></tr>
+      </table>
+    </div>
+  </fieldset>
+</section>
+
+<!-- ======================= NEUTRALIZATION ======================= -->
+<section id="panel-neutral" role="tabpanel">
+  <fieldset>
+    <legend>Dechlorination of Flush Water</legend>
+    <p class="small">Stoichiometric chemical quantity to neutralize the chlorine residual in heavily chlorinated water before discharge, per the neutralization table in AWWA C651. Field practice is to add modest excess and verify residual is non-detect before release.</p>
+    <div class="row">
+      <div>
+        <label for="neu-vol">Water volume to dechlorinate (gal)
+          <input type="number" id="neu-vol" min="0" step="any" placeholder="e.g. 25000">
+        </label>
+      </div>
+      <div>
+        <label for="neu-res">Chlorine residual (mg/L)
+          <input type="number" id="neu-res" min="0" step="any" placeholder="e.g. 25">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="neu-chem">Neutralizing chemical
+          <select id="neu-chem">
+            <option value="so2">Sulfur dioxide (SO₂)</option>
+            <option value="bisulfite">Sodium bisulfite (NaHSO₃)</option>
+            <option value="sulfite">Sodium sulfite (Na₂SO₃)</option>
+            <option value="thiosulfate" selected>Sodium thiosulfate (Na₂S₂O₃·5H₂O)</option>
+            <option value="ascorbic">Ascorbic acid</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="results" id="neu-results" hidden>
+      <h3>Results</h3>
+      <table>
+        <tr><td>Chemical required (stoichiometric)</td><td class="val" id="neu-lbs">—</td></tr>
+      </table>
+      <div class="warn">Discharge of chlorinated or dechlorinated water is subject to the project SWPPP / discharge permit. Confirm receiving-water requirements before releasing.</div>
+    </div>
+  </fieldset>
+</section>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Pipe and tank volume</summary>
+  <p>Pipe segment volume in gallons:</p>
+  <p><code>V = (π/4) × (d/12)² × L × 7.4805</code></p>
+  <p>where <code>d</code> is inside diameter in inches and <code>L</code> is length in feet. This is equivalent to the common field shortcut <code>V ≈ 0.0408 · d² · L</code>. Tank volume is entered directly in gallons.</p>
+</details>
+
+<details>
+  <summary>Available chlorine mass ("pounds formula")</summary>
+  <p><code>lbs Cl₂ = V (MG) × dose (mg/L) × 8.34</code></p>
+  <p>The 8.34 constant is the weight of one gallon of water in pounds; dosing 1 mg/L into one million gallons requires 8.34 lb of available chlorine.</p>
+</details>
+
+<details>
+  <summary>Converting to product quantity</summary>
+  <p>Liquid sodium hypochlorite (trade percent ≈ lb available Cl₂ per gal ÷ 8.34):</p>
+  <p><code>gal hypo = lbs Cl₂ / (8.34 × strength%/100)</code></p>
+  <p>At 12.5% that is ≈ 1.04 lb available chlorine per gallon. Note that hypochlorite degrades in storage and heat — if the drum is old, the true strength is lower and the quantity should be increased accordingly (or the actual strength tested).</p>
+  <p>Granular calcium hypochlorite:</p>
+  <p><code>lbs cal-hypo = lbs Cl₂ / (strength%/100)</code>, typically 65% available chlorine.</p>
+  <p>Tablet method: each standard 5-g tablet at 65% carries ≈ 3.25 g available chlorine; the count shown is <code>ceil(mg required / 3250)</code>. AWWA C651 also publishes a prescriptive tablets-per-pipe-section table — where the spec invokes that table, the table governs.</p>
+</details>
+
+<details>
+  <summary>Dechlorination quantities</summary>
+  <p>Per the AWWA C651 neutralization table, pounds of chemical required to neutralize 1 mg/L of chlorine residual in 100,000 gal of water:</p>
+  <ul>
+    <li>Sulfur dioxide — 0.8 lb</li>
+    <li>Sodium bisulfite — 1.2 lb</li>
+    <li>Sodium sulfite — 1.4 lb</li>
+    <li>Sodium thiosulfate (pentahydrate) — 1.2 lb</li>
+    <li>Ascorbic acid — 2.1 lb</li>
+  </ul>
+  <p>Quantity scales linearly with volume and residual. These are stoichiometric values; reaction kinetics (thiosulfate in particular is slow at low pH) mean field crews typically add excess and verify with a residual test kit.</p>
+</details>
+
+<details>
+  <summary>Method requirements cheat sheet (verify against current standard edition)</summary>
+  <ul>
+    <li><strong>C651 continuous feed:</strong> ≥25 mg/L entering the pipe, retained 24 hr, residual ≥10 mg/L throughout the segment at the end of the hold.</li>
+    <li><strong>C651 slug:</strong> ≥100 mg/L slug moved through the pipe so every point gets ≥3 hr exposure; residual leaving the far end ≥50 mg/L.</li>
+    <li><strong>C651 tablet:</strong> 25 mg/L equivalent, 24 hr hold. Only permitted where the pipe stays clean and dry during construction; generally limited to smaller diameters (≤24 in.) and prohibited on solvent-welded or threaded-joint pipe because tablets can't be placed after assembly.</li>
+    <li><strong>C652 Method 1:</strong> fill entire tank to overflow at ≥10 mg/L, hold 24 hr (residual ≥10 mg/L at end of hold is the common acceptance).</li>
+    <li><strong>C652 Method 3:</strong> chlorinate water in the bottom ~5% of tank volume to ≥50 mg/L, hold ≥6 hr, then fill to overflow and hold ≥24 hr with a detectable/spec-required residual.</li>
+    <li><strong>After any method:</strong> flush to a spec-allowed residual, dechlorinate the discharge as required, then bacteriological sampling per the standard and the owner's requirements before the facility goes into service.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>AWWA C651 — Disinfecting Water Mains. <span class="small">https://www.awwa.org/</span></li>
+  <li>AWWA C652 — Disinfection of Water-Storage Facilities.</li>
+  <li>AWWA C653 — Disinfection of Water Treatment Plants (for structures/channels within plant sites).</li>
+  <li>AWWA C655 — Field Dechlorination.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "cl2calc.v1";
+  var GAL_PER_CUFT = 7.480519;
+  var LB_PER_GAL_WATER = 8.34;
+  var MG_PER_TABLET = 3250; // 5-g tablet at 65% available chlorine
+
+  // lbs of chemical per 1 mg/L residual per 100,000 gal (AWWA C651 table)
+  var NEUTRAL_RATES = {
+    so2: 0.8,
+    bisulfite: 1.2,
+    sulfite: 1.4,
+    thiosulfate: 1.2,
+    ascorbic: 2.1
+  };
+
+  var DEFAULT_DOSE = { continuous: 25, slug: 100, tablet: 25, m1: 10, m3: 50 };
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function lbsChlorine(volGal, doseMgL) {
+    return (volGal / 1e6) * doseMgL * LB_PER_GAL_WATER;
+  }
+  function hypoGal(lbsCl, strengthPct) {
+    return lbsCl / (LB_PER_GAL_WATER * (strengthPct / 100));
+  }
+  function calHypoLbs(lbsCl, strengthPct) {
+    return lbsCl / (strengthPct / 100);
+  }
+
+  /* ---------- tabs ---------- */
+  var tabs = document.querySelectorAll(".tabs button");
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabs.forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+      btn.setAttribute("aria-selected", "true");
+      document.querySelectorAll("section[role='tabpanel']").forEach(function (s) {
+        s.classList.remove("active");
+      });
+      $("panel-" + btn.dataset.tab).classList.add("active");
+      saveState();
+    });
+  });
+
+  /* ---------- source strength auto-default ---------- */
+  function wireSourceDefault(sourceId, strengthId) {
+    $(sourceId).addEventListener("change", function () {
+      $(strengthId).value = this.value === "calhypo" ? 65 : 12.5;
+      recalcAll();
+    });
+  }
+  wireSourceDefault("pipe-source", "pipe-strength");
+  wireSourceDefault("tank-source", "tank-strength");
+  wireSourceDefault("batch-source", "batch-strength");
+
+  /* ---------- method dose auto-default ---------- */
+  $("pipe-method").addEventListener("change", function () {
+    $("pipe-dose").value = DEFAULT_DOSE[this.value];
+    if (this.value === "tablet") {
+      $("pipe-source").value = "calhypo";
+      $("pipe-strength").value = 65;
+    }
+    recalcAll();
+  });
+  $("tank-method").addEventListener("change", function () {
+    $("tank-dose").value = DEFAULT_DOSE[this.value];
+    recalcAll();
+  });
+
+  /* ---------- pipeline ---------- */
+  function calcPipe() {
+    var d = num("pipe-dia"), L = num("pipe-len"), dose = num("pipe-dose"), str = num("pipe-strength");
+    var method = $("pipe-method").value;
+    var source = $("pipe-source").value;
+    var out = $("pipe-results");
+    if (!d || !L || !dose || !str) { out.hidden = true; return; }
+
+    var volGal = (Math.PI / 4) * Math.pow(d / 12, 2) * L * GAL_PER_CUFT;
+    var lbs = lbsChlorine(volGal, dose);
+
+    $("pipe-vol").textContent = fmt(volGal, 0) + " gal";
+    $("pipe-lbs").textContent = fmt(lbs, 2) + " lb";
+
+    var isTablet = method === "tablet";
+    $("pipe-hypo-row").hidden = source !== "hypo" || isTablet;
+    $("pipe-calhypo-row").hidden = source !== "calhypo" || isTablet;
+    $("pipe-tab-row").hidden = !isTablet;
+
+    if (isTablet) {
+      var tabs = Math.ceil((lbs * 453592) / MG_PER_TABLET);
+      $("pipe-tabs").textContent = fmt(tabs, 0) + " tablets";
+    } else if (source === "hypo") {
+      $("pipe-hypo").textContent = fmt(hypoGal(lbs, str), 1) + " gal at " + str + "%";
+    } else {
+      $("pipe-calhypo").textContent = fmt(calHypoLbs(lbs, str), 1) + " lb at " + str + "%";
+    }
+
+    var warn = $("pipe-warn");
+    var msgs = [];
+    if (isTablet && d > 24) msgs.push("Tablet method is generally limited to pipe ≤24 in. diameter — check the spec.");
+    if (method === "slug" && dose < 100) msgs.push("C651 slug method requires ≥100 mg/L.");
+    if (method === "continuous" && dose < 25) msgs.push("C651 continuous feed requires ≥25 mg/L.");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+  }
+
+  /* ---------- tank ---------- */
+  function calcTank() {
+    var vol = num("tank-vol"), dose = num("tank-dose"), str = num("tank-strength");
+    var method = $("tank-method").value;
+    var source = $("tank-source").value;
+    var out = $("tank-results");
+    if (!vol || !dose || !str) { out.hidden = true; return; }
+
+    var doseVol = method === "m3" ? vol * 0.05 : vol;
+    var lbs = lbsChlorine(doseVol, dose);
+
+    $("tank-dosevol-row").hidden = method !== "m3";
+    $("tank-dosevol").textContent = fmt(doseVol, 0) + " gal";
+    $("tank-lbs").textContent = fmt(lbs, 2) + " lb";
+    $("tank-hypo-row").hidden = source !== "hypo";
+    $("tank-calhypo-row").hidden = source !== "calhypo";
+    if (source === "hypo") {
+      $("tank-hypo").textContent = fmt(hypoGal(lbs, str), 1) + " gal at " + str + "%";
+    } else {
+      $("tank-calhypo").textContent = fmt(calHypoLbs(lbs, str), 1) + " lb at " + str + "%";
+    }
+
+    var warn = $("tank-warn");
+    var msgs = [];
+    if (method === "m1" && dose < 10) msgs.push("C652 Method 1 requires ≥10 mg/L in the full tank.");
+    if (method === "m3" && dose < 50) msgs.push("C652 Method 3 requires ≥50 mg/L in the bottom 5% volume.");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+  }
+
+  /* ---------- batch ---------- */
+  function calcBatch() {
+    var vol = num("batch-vol"), dose = num("batch-dose"), str = num("batch-strength");
+    var source = $("batch-source").value;
+    var out = $("batch-results");
+    if (!vol || !dose || !str) { out.hidden = true; return; }
+
+    var lbs = lbsChlorine(vol, dose);
+    $("batch-lbs").textContent = fmt(lbs, 3) + " lb";
+    $("batch-hypo-row").hidden = source !== "hypo";
+    $("batch-calhypo-row").hidden = source !== "calhypo";
+    if (source === "hypo") {
+      var g = hypoGal(lbs, str);
+      var txt = fmt(g, 3) + " gal";
+      if (g < 1) txt += " (" + fmt(g * 128, 1) + " fl oz)";
+      $("batch-hypo").textContent = txt + " at " + str + "%";
+    } else {
+      var lb = calHypoLbs(lbs, str);
+      var t = fmt(lb, 3) + " lb";
+      if (lb < 1) t += " (" + fmt(lb * 453.6, 0) + " g)";
+      $("batch-calhypo").textContent = t + " at " + str + "%";
+    }
+    out.hidden = false;
+  }
+
+  /* ---------- neutralization ---------- */
+  function calcNeutral() {
+    var vol = num("neu-vol"), res = num("neu-res");
+    var chem = $("neu-chem").value;
+    var out = $("neu-results");
+    if (!vol || !res) { out.hidden = true; return; }
+    var lbs = NEUTRAL_RATES[chem] * res * (vol / 100000);
+    var txt = fmt(lbs, 2) + " lb";
+    if (lbs < 1) txt += " (" + fmt(lbs * 453.6, 0) + " g)";
+    $("neu-lbs").textContent = txt;
+    out.hidden = false;
+  }
+
+  function recalcAll() {
+    calcPipe(); calcTank(); calcBatch(); calcNeutral(); saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = [
+    "pipe-method","pipe-dia","pipe-len","pipe-dose","pipe-source","pipe-strength",
+    "tank-method","tank-vol","tank-dose","tank-source","tank-strength",
+    "batch-vol","batch-dose","batch-source","batch-strength",
+    "neu-vol","neu-res","neu-chem"
+  ];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      state._tab = document.querySelector(".tabs button[aria-selected='true']").dataset.tab;
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state._tab) {
+        var btn = document.querySelector(".tabs button[data-tab='" + state._tab + "']");
+        if (btn) btn.click();
+      }
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalcAll);
+    $(id).addEventListener("change", recalcAll);
+  });
+
+  loadState();
+  recalcAll();
+})();
+</script>
+</body>
+</html>

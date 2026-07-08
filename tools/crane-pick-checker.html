@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crane Pick Percent-of-Capacity Checker</title>
+<meta name="description" content="Offline field calculator for equipment sets: sums gross load including rigging and block, checks against chart capacity at pick and set radii, and flags the critical lift threshold. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --fail-bg: #fdecec;
+    --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --fail-bg: #33191a;
+      --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .danger {
+    background: var(--fail-bg);
+    border-left: 4px solid var(--fail-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Crane Pick Percent-of-Capacity Checker</h1>
+<p class="subtitle">Sums the gross load, checks it against chart capacity at the pick and set radii, and tells you whether you're in standard-pick or critical-lift-plan territory. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="danger">
+  <strong>This is not a lift plan.</strong> It is a sanity check for the OAC meeting and the pre-task plan. The load chart for the specific crane in its actual configuration (boom length, counterweight, outrigger position, on-rubber vs. on-outriggers) governs, and the chart's General Notes are part of the chart. Ground bearing, wind, two-crane picks, and personnel platforms are all outside this tool. The qualified lift director makes the call, not the phone.
+</div>
+
+<fieldset>
+  <legend>Gross Load Buildup</legend>
+  <div class="row">
+    <div>
+      <label for="load">Load weight (lb)
+        <input type="number" id="load" min="0" step="any" placeholder="e.g. 14500">
+      </label>
+      <p class="small">From the submittal / shipping papers — verified, not guessed. Include skids and shipping steel if they ride up.</p>
+    </div>
+    <div>
+      <label for="rigging">Rigging (slings, shackles, spreader) (lb)
+        <input type="number" id="rigging" min="0" step="any" value="0">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="block">Block / headache ball (lb)
+        <input type="number" id="block" min="0" step="any" value="0">
+      </label>
+      <p class="small">Most charts require deducting the hook block and ball — it hangs on the boom whether you like it or not.</p>
+    </div>
+    <div>
+      <label for="other">Other deductions (jib erected/stowed, aux line, etc.) (lb)
+        <input type="number" id="other" min="0" step="any" value="0">
+      </label>
+      <p class="small">Per the chart's deduction table for the configuration.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Chart Capacity</legend>
+  <div class="row">
+    <div>
+      <label for="cap-pick">Chart capacity at PICK radius (lb)
+        <input type="number" id="cap-pick" min="0" step="any" placeholder="e.g. 39000">
+      </label>
+      <label for="rad-pick">Pick radius (ft) — for the record
+        <input type="number" id="rad-pick" min="0" step="any" placeholder="e.g. 35">
+      </label>
+    </div>
+    <div>
+      <label for="cap-set">Chart capacity at SET radius (lb) — optional
+        <input type="number" id="cap-set" min="0" step="any" placeholder="leave blank if same">
+      </label>
+      <label for="rad-set">Set radius (ft)
+        <input type="number" id="rad-set" min="0" step="any" placeholder="e.g. 52">
+      </label>
+      <p class="small">If the crane swings the load out to set it, the larger radius almost always governs. Enter both and the tool checks the worst case.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="threshold">Critical lift threshold (% of capacity)
+        <select id="threshold-preset">
+          <option value="75" selected>75% (common spec value)</option>
+          <option value="80">80%</option>
+          <option value="90">90%</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="threshold" min="1" max="100" step="any" value="75" hidden>
+      </label>
+      <p class="small">From the contract specs / owner's safety requirements — not a universal number.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Gross load</td><td class="val" id="r-gross">—</td></tr>
+    <tr><td>Percent of capacity — pick radius</td><td class="val" id="r-pct-pick">—</td></tr>
+    <tr id="r-set-row" hidden><td>Percent of capacity — set radius</td><td class="val" id="r-pct-set">—</td></tr>
+    <tr><td>Governing condition</td><td class="val" id="r-govern">—</td></tr>
+    <tr><td>Margin to chart capacity</td><td class="val" id="r-margin">—</td></tr>
+  </table>
+  <div class="danger" id="danger" hidden></div>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math (it's division, done honestly)</summary>
+  <p><code>Gross load = load + rigging + block/ball + other deductions</code></p>
+  <p><code>% of capacity = gross load / chart capacity at radius × 100</code></p>
+  <p>The whole game is in the inputs: an "18,000 lb pump" that is actually 18,000 lb dry, plus a 900 lb spreader, 400 lb of slings and shackles, and a 1,200 lb block, checked at the <em>set</em> radius instead of the pick radius, is a different lift than the one in your head.</p>
+</details>
+
+<details>
+  <summary>What "critical lift" usually triggers</summary>
+  <p>Above the contract's threshold (commonly 75% of chart capacity, or any two-crane pick, or picks over energized lines / occupied facilities), most specs require a written critical lift plan: crane configuration and chart page, rigging diagram with capacities, verified load weight, ground bearing analysis under the outrigger floats, and sign-off by a qualified person before the pick. Below the threshold, standard pre-lift documentation applies. Either way the operator retains stop-work authority.</p>
+</details>
+
+<details>
+  <summary>Common ways this check goes wrong in the field</summary>
+  <ul>
+    <li>Reading the chart for the wrong configuration — full counterweight vs. reduced, outriggers full vs. intermediate, over-the-rear vs. 360°.</li>
+    <li>Radius measured to the wrong point. Radius is from the center of rotation to the hook, not from the outrigger or the tracks — and it grows as the boom deflects under load.</li>
+    <li>Forgetting the load will swing to a larger radius to reach the set point.</li>
+    <li>Weights from memory. Get the bill of lading, the submittal, or weigh it.</li>
+    <li>Wet/soft ground under one float. Percent of capacity is meaningless if an outrigger punches through — matting and ground bearing are their own check.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>OSHA 29 CFR 1926 Subpart CC — Cranes and Derricks in Construction. <span class="small">https://www.osha.gov/</span></li>
+  <li>ASME B30.5 — Mobile and Locomotive Cranes. <span class="small">https://www.asme.org/</span></li>
+  <li>The load chart in the cab of the specific crane, including its General Notes — the actual governing document.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "cranepick.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 0;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("threshold-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("threshold").hidden = false;
+    } else {
+      $("threshold").hidden = true;
+      $("threshold").value = this.value;
+    }
+    recalc();
+  });
+
+  function recalc() {
+    var load = num("load");
+    var rigging = num("rigging", true);
+    var block = num("block", true);
+    var other = num("other", true);
+    var capPick = num("cap-pick");
+    var capSet = num("cap-set"); // optional
+    var threshold = num("threshold");
+    var out = $("results");
+
+    if (!load || rigging === null || block === null || other === null || !capPick || !threshold) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var gross = load + rigging + block + other;
+    var pctPick = gross / capPick * 100;
+    var pctSet = capSet ? gross / capSet * 100 : null;
+
+    var governPct = pctSet !== null ? Math.max(pctPick, pctSet) : pctPick;
+    var governCap = pctSet !== null && pctSet > pctPick ? capSet : capPick;
+    var governLabel = pctSet !== null && pctSet > pctPick
+      ? "set radius" + ($("rad-set").value ? " (" + $("rad-set").value + " ft)" : "")
+      : "pick radius" + ($("rad-pick").value ? " (" + $("rad-pick").value + " ft)" : "");
+
+    $("r-gross").textContent = fmt(gross) + " lb (" + fmt(gross / 2000, 2) + " tons)";
+    $("r-pct-pick").textContent = fmt(pctPick, 1) + " %";
+    $("r-set-row").hidden = pctSet === null;
+    if (pctSet !== null) $("r-pct-set").textContent = fmt(pctSet, 1) + " %";
+    $("r-govern").textContent = governLabel + " — " + fmt(governPct, 1) + " %";
+    $("r-margin").textContent = fmt(governCap - gross) + " lb";
+
+    var verdict = $("verdict");
+    var danger = $("danger");
+    var warn = $("warn");
+    danger.hidden = true;
+    warn.hidden = true;
+    out.classList.remove("fail");
+
+    if (governPct > 100) {
+      verdict.textContent = "OVER CAPACITY — " + fmt(governPct, 1) + "%";
+      out.classList.add("fail");
+      danger.hidden = false;
+      danger.textContent = "The gross load exceeds chart capacity at the governing radius. This pick does not happen with this crane in this configuration. Bigger crane, shorter radius, more counterweight, or lighter load.";
+    } else if (governPct >= threshold) {
+      verdict.textContent = "CRITICAL LIFT — " + fmt(governPct, 1) + "% (threshold " + fmt(threshold, 0) + "%)";
+      warn.hidden = false;
+      warn.textContent = "Above the critical lift threshold: a written critical lift plan and qualified-person sign-off are required per most specs before this pick. Budget the paperwork time now, not the morning of.";
+    } else {
+      verdict.textContent = "STANDARD PICK — " + fmt(governPct, 1) + "% of capacity";
+      if (governPct >= threshold - 5) {
+        warn.hidden = false;
+        warn.textContent = "Within 5 points of the critical threshold. Boom deflection, a longer sling set, or the set radius growing a couple of feet could push this over — leave margin or plan it as critical anyway.";
+      }
+    }
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["load","rigging","block","other","cap-pick","rad-pick","cap-set","rad-set","threshold-preset","threshold"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["threshold-preset"] === "custom") $("threshold").hidden = false;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

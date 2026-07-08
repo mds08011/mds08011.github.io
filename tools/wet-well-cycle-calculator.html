@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wet Well Cycle Time &amp; Pump Starts Calculator</title>
+<meta name="description" content="Offline field calculator for lift station commissioning: effective wet well volume, pump cycle time, worst-case starts per hour, and minimum required volume. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wet Well Cycle Time &amp; Pump Starts Calculator</h1>
+<p class="subtitle">Effective volume, pump cycle time, and worst-case starts per hour for lift station commissioning. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is a field arithmetic aid for a single lead pump cycling between fixed on/off levels with constant pump output. VFD-driven stations that modulate speed to track inflow, and stagger/lag pump interaction, are outside this simple model. The motor manufacturer's allowable starts govern.
+</div>
+
+<fieldset>
+  <legend>Wet Well Geometry</legend>
+  <div class="row">
+    <div>
+      <label for="shape">Shape
+        <select id="shape">
+          <option value="rect">Rectangular</option>
+          <option value="circ">Circular</option>
+          <option value="direct">Enter volume directly</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-inputs">
+    <div>
+      <label for="ww-len">Length (ft)
+        <input type="number" id="ww-len" min="0" step="any" placeholder="e.g. 8">
+      </label>
+    </div>
+    <div>
+      <label for="ww-wid">Width (ft)
+        <input type="number" id="ww-wid" min="0" step="any" placeholder="e.g. 6">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="circ-inputs" hidden>
+    <div>
+      <label for="ww-dia">Inside diameter (ft)
+        <input type="number" id="ww-dia" min="0" step="any" placeholder="e.g. 8">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="level-inputs">
+    <div>
+      <label for="lvl-on">Lead pump ON level (ft)
+        <input type="number" id="lvl-on" step="any" placeholder="e.g. 4.5">
+      </label>
+    </div>
+    <div>
+      <label for="lvl-off">Pump OFF level (ft)
+        <input type="number" id="lvl-off" step="any" placeholder="e.g. 2.0">
+      </label>
+      <p class="small">Any consistent datum works — only the difference matters.</p>
+    </div>
+  </div>
+  <div class="row" id="direct-inputs" hidden>
+    <div>
+      <label for="ww-vol">Effective volume between ON and OFF (gal)
+        <input type="number" id="ww-vol" min="0" step="any" placeholder="e.g. 900">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Pump &amp; Inflow</legend>
+  <div class="row">
+    <div>
+      <label for="qpump">Pump capacity (GPM)
+        <input type="number" id="qpump" min="0" step="any" placeholder="e.g. 350">
+      </label>
+      <p class="small">Actual field capacity if you have it (drawdown test), otherwise the curve point.</p>
+    </div>
+    <div>
+      <label for="qin">Current inflow (GPM) — optional
+        <input type="number" id="qin" min="0" step="any" placeholder="leave blank for worst case only">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="npumps">Alternating pumps sharing starts
+        <input type="number" id="npumps" min="1" step="1" value="2">
+      </label>
+      <p class="small">Duplex with alternation = 2. Each pump sees total starts ÷ this number.</p>
+    </div>
+    <div>
+      <label for="maxstarts">Allowable starts per hour, per pump
+        <input type="number" id="maxstarts" min="1" step="any" value="6">
+      </label>
+      <p class="small">From the motor/pump manufacturer. 10–15 is common for small submersibles; 4–6 for larger motors; soft starters and VFDs change the picture.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Effective Volume</h3>
+  <table>
+    <tr><td>Volume between ON and OFF levels</td><td class="val" id="r-vol">—</td></tr>
+  </table>
+
+  <h3>Worst Case (inflow = ½ pump capacity)</h3>
+  <table>
+    <tr><td>Minimum cycle time</td><td class="val" id="r-tmin">—</td></tr>
+    <tr><td>Maximum starts per hour (station)</td><td class="val" id="r-maxstarts">—</td></tr>
+    <tr><td>Maximum starts per hour (per pump, alternating)</td><td class="val" id="r-maxstarts-pump">—</td></tr>
+  </table>
+
+  <h3 id="r-atinflow-h" hidden>At Entered Inflow</h3>
+  <table id="r-atinflow-t" hidden>
+    <tr><td>Fill time</td><td class="val" id="r-fill">—</td></tr>
+    <tr><td>Pump-down time</td><td class="val" id="r-pumpdown">—</td></tr>
+    <tr><td>Cycle time</td><td class="val" id="r-cycle">—</td></tr>
+    <tr><td>Starts per hour (station / per pump)</td><td class="val" id="r-starts">—</td></tr>
+  </table>
+
+  <h3>Sizing Check</h3>
+  <table>
+    <tr><td>Minimum effective volume for allowable starts</td><td class="val" id="r-vreq">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Cycle time</summary>
+  <p>For a lead pump cycling between fixed levels with effective volume <code>V</code> (gal), pump capacity <code>Q_p</code> (GPM), and inflow <code>Q_i</code> (GPM):</p>
+  <p><code>t_cycle = V/Q_i + V/(Q_p − Q_i)</code> (minutes)</p>
+  <p>Fill time is the first term; pump-down time is the second. Starts per hour = 60 / t_cycle.</p>
+</details>
+
+<details>
+  <summary>Worst case and minimum volume</summary>
+  <p>Cycle time is shortest when inflow equals exactly half the pump capacity. Substituting <code>Q_i = Q_p/2</code>:</p>
+  <p><code>t_min = 4V/Q_p</code> (minutes) &nbsp;→&nbsp; max starts/hr = <code>15·Q_p/V</code></p>
+  <p>Rearranged for design, the minimum effective volume to keep the station at or below <code>N</code> allowable starts per hour (with alternation credit for <code>n</code> pumps):</p>
+  <p><code>V_min = 15·Q_p/(N·n)</code> (gal)</p>
+  <p>With duplex alternation each pump sees half the station starts, which is why alternation effectively doubles the allowable station cycling.</p>
+</details>
+
+<details>
+  <summary>Why this matters at startup</summary>
+  <ul>
+    <li>Short-cycling overheats motor windings — each across-the-line start dumps heat into the rotor and stator that takes minutes to dissipate. Exceeding the manufacturer's starts/hr is a warranty problem and eventually a winding failure.</li>
+    <li>During commissioning the wet well is often tested with clean water at artificially low inflow from a hydrant or temp line. If the fill valve happens to sit near half of pump capacity, you are unknowingly running the worst-case cycling scenario — watch the starts.</li>
+    <li>If actual float/transducer setpoints in the field differ from the design levels, the effective volume changes and this whole calculation shifts. Verify setpoints against the approved control narrative before drawing conclusions.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Metcalf &amp; Eddy, <em>Wastewater Engineering: Collection and Pumping of Wastewater</em> — wet well sizing and cycle time derivation.</li>
+  <li>Hydraulic Institute — intake design and pump cycling guidance. <span class="small">https://www.pumps.org/</span></li>
+  <li>Motor manufacturer data sheets — allowable starts per hour for the specific motor on site.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "wetwellcycle.v1";
+  var GAL_PER_CUFT = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function raw(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function fmtTime(min) {
+    if (min === null || !isFinite(min)) return "—";
+    if (min < 1) return fmt(min * 60, 0) + " sec";
+    var m = Math.floor(min);
+    var s = Math.round((min - m) * 60);
+    if (s === 60) { m += 1; s = 0; }
+    return m + " min " + (s < 10 ? "0" : "") + s + " sec";
+  }
+
+  /* ---------- shape switching ---------- */
+  $("shape").addEventListener("change", function () {
+    var v = this.value;
+    $("rect-inputs").hidden = v !== "rect";
+    $("circ-inputs").hidden = v !== "circ";
+    $("level-inputs").hidden = v === "direct";
+    $("direct-inputs").hidden = v !== "direct";
+    recalc();
+  });
+
+  function effectiveVolume() {
+    var shape = $("shape").value;
+    if (shape === "direct") return num("ww-vol");
+    var on = raw("lvl-on"), off = raw("lvl-off");
+    if (on === null || off === null) return null;
+    var depth = Math.abs(on - off);
+    if (depth <= 0) return null;
+    var area;
+    if (shape === "rect") {
+      var L = num("ww-len"), W = num("ww-wid");
+      if (!L || !W) return null;
+      area = L * W;
+    } else {
+      var D = num("ww-dia");
+      if (!D) return null;
+      area = Math.PI / 4 * D * D;
+    }
+    return area * depth * GAL_PER_CUFT;
+  }
+
+  function recalc() {
+    var V = effectiveVolume();
+    var Qp = num("qpump");
+    var Qi = num("qin", true); // optional; null if blank
+    var n = num("npumps");
+    var Nallow = num("maxstarts");
+    var out = $("results");
+
+    if (!V || !Qp || !n || !Nallow) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+    n = Math.max(1, Math.round(n));
+
+    $("r-vol").textContent = fmt(V, 0) + " gal (" + fmt(V / GAL_PER_CUFT, 0) + " cu ft)";
+
+    /* worst case */
+    var tmin = 4 * V / Qp; // minutes
+    var maxStarts = 60 / tmin;
+    $("r-tmin").textContent = fmtTime(tmin);
+    $("r-maxstarts").textContent = fmt(maxStarts, 1) + " starts/hr";
+    $("r-maxstarts-pump").textContent = fmt(maxStarts / n, 1) + " starts/hr";
+
+    /* at entered inflow */
+    var hasInflow = Qi !== null && Qi > 0;
+    var msgs = [];
+    $("r-atinflow-h").hidden = !hasInflow;
+    $("r-atinflow-t").hidden = !hasInflow;
+    if (hasInflow) {
+      if (Qi >= Qp) {
+        msgs.push("Entered inflow meets or exceeds pump capacity — the lead pump cannot draw the well down and the level will rise until the lag pump or alarm activates.");
+        $("r-fill").textContent = fmtTime(V / Qi);
+        $("r-pumpdown").textContent = "never (Q_in ≥ Q_pump)";
+        $("r-cycle").textContent = "—";
+        $("r-starts").textContent = "—";
+      } else {
+        var tf = V / Qi;
+        var tp = V / (Qp - Qi);
+        var tc = tf + tp;
+        var sph = 60 / tc;
+        $("r-fill").textContent = fmtTime(tf);
+        $("r-pumpdown").textContent = fmtTime(tp);
+        $("r-cycle").textContent = fmtTime(tc);
+        $("r-starts").textContent = fmt(sph, 1) + " / " + fmt(sph / n, 1) + " starts/hr";
+      }
+    }
+
+    /* sizing check */
+    var Vreq = 15 * Qp / (Nallow * n);
+    $("r-vreq").textContent = fmt(Vreq, 0) + " gal at " + fmt(Nallow, 0) +
+      " starts/hr × " + n + " alternating pump" + (n > 1 ? "s" : "");
+
+    /* warnings */
+    if (maxStarts / n > Nallow) {
+      msgs.push("Worst-case starts per pump (" + fmt(maxStarts / n, 1) +
+        "/hr) exceed the allowable " + fmt(Nallow, 0) +
+        "/hr. Effective volume is short by about " + fmt(Vreq - V, 0) +
+        " gal — widen the ON/OFF band, raise the ON setpoint, or confirm the motor rating.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["shape","ww-len","ww-wid","ww-dia","lvl-on","lvl-off","ww-vol","qpump","qin","npumps","maxstarts"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("shape").dispatchEvent(new Event("change"));
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>
