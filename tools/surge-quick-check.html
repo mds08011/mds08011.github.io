@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surge (Water Hammer) Quick-Check Calculator</title>
+<meta name="description" content="Offline field calculator for transient pressure: Joukowsky surge from a velocity change, wave speed presets by pipe material, critical valve closure time, and total pressure vs. pipe rating. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Surge (Water Hammer) Quick-Check Calculator</h1>
+<p class="subtitle">Joukowsky transient pressure from a velocity change, the critical closure time for the line, and total pressure against the pipe's rating. The back-of-envelope for "can we just close this valve, or does it need to be slow?" Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Joukowsky is the instantaneous worst case for a single velocity change in a simple line — it doesn't model column separation and rejoinder (which can exceed Joukowsky), air pockets, pump trip dynamics, surge tanks, or relief valves. It's a screening number: if the screen fails or the system is complex (long forcemains, high spots, check valve slam history), the answer is a real transient analysis, not a bigger factor of safety on this formula.
+</div>
+
+<fieldset>
+  <legend>Pipe &amp; Flow</legend>
+  <div class="row">
+    <div>
+      <label for="mat">Pipe material (wave speed preset)
+        <select id="mat">
+          <option value="4000">Ductile iron — a ≈ 4,000 ft/s</option>
+          <option value="3500">Steel — a ≈ 3,500 ft/s</option>
+          <option value="3200">Concrete pressure pipe — a ≈ 3,200 ft/s</option>
+          <option value="1400">PVC (C900) — a ≈ 1,400 ft/s</option>
+          <option value="900">HDPE — a ≈ 900 ft/s</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="wavespeed" min="100" step="any" value="4000" hidden>
+      </label>
+      <p class="small">Wave speed varies with D/t ratio and restraint — presets are typical mid-range values; the design report's value governs if one exists.</p>
+    </div>
+    <div>
+      <label for="dv">Velocity change ΔV (ft/s)
+        <input type="number" id="dv" min="0" step="any" placeholder="e.g. 5">
+      </label>
+      <p class="small">For a full stoppage (valve slam, pump trip with check slam), ΔV = the flowing velocity.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="plen">Pipeline length to the reflection point (ft)
+        <input type="number" id="plen" min="0" step="any" placeholder="e.g. 2600">
+      </label>
+      <p class="small">From the closing valve/pump to the nearest free surface (tank, wet well, reservoir).</p>
+    </div>
+    <div>
+      <label for="wp">Working pressure at the point of interest (psi)
+        <input type="number" id="wp" min="0" step="any" placeholder="e.g. 85">
+      </label>
+      <label for="rating">Pipe pressure rating / class (psi)
+        <input type="number" id="rating" min="0" step="any" placeholder="e.g. 150">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Joukowsky surge head</td><td class="val" id="r-head">—</td></tr>
+    <tr><td>Joukowsky surge pressure</td><td class="val" id="r-surge">—</td></tr>
+    <tr class="total"><td>Total pressure (working + surge)</td><td class="val" id="r-total">—</td></tr>
+    <tr><td>Percent of pipe rating</td><td class="val" id="r-pct">—</td></tr>
+    <tr><td>Critical closure time (2L/a)</td><td class="val" id="r-crit">—</td></tr>
+    <tr><td>Suggested minimum closure time (~10 × 2L/a)</td><td class="val" id="r-slow">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The Joukowsky equation</summary>
+  <p><code>ΔH = a · ΔV / g</code> (feet of head) &nbsp; → &nbsp; <code>ΔP = 0.433 · ΔH</code> (psi)</p>
+  <p>With a = 4,000 ft/s and g = 32.2, every 1 ft/s of velocity destroyed instantly costs about 124 ft (54 psi). That's the whole reason surge control exists: velocity is cheap to create and expensive to stop.</p>
+</details>
+
+<details>
+  <summary>Critical closure time — why 2L/a matters</summary>
+  <p>The pressure wave travels to the nearest free surface and reflects back in <code>t_c = 2L/a</code>. Any closure faster than this is "instantaneous" as far as the pipe is concerned and produces the full Joukowsky rise. Closures much slower than 2L/a let the reflection relieve pressure as the valve closes, and the surge drops roughly in proportion. A practical field rule is to make controlled closures at least ~10× the critical time; the tool prints both numbers.</p>
+  <p>Note the trap: a "slow" 30-second closure on a 5-mile forcemain (t_c ≈ 13 s for DIP) is only ~2× critical — not actually slow.</p>
+</details>
+
+<details>
+  <summary>Material notes</summary>
+  <ul>
+    <li><strong>HDPE</strong> is the forgiving one twice over: low wave speed (low surge per ft/s) and its pressure ratings (PE4710) allow occasional surge to 2.0× and recurring surge to 1.5× the pressure class. That's a materially different acceptance basis than rigid pipe — check the PPI handbook and the spec.</li>
+    <li><strong>PVC</strong> ratings are more sensitive to cyclic surge (fatigue); recurring surge on PVC forcemains is a design issue, not just a peak-pressure issue.</li>
+    <li><strong>Negative surge</strong> matters too: the down-swing after a pump trip can pull the line below atmospheric at high points — column separation, and the rejoin slam can exceed the initial Joukowsky rise. Vacuum relief at high points exists for this.</li>
+    <li>Check valve slam is the everyday version of all this: the valve that closes <em>after</em> reverse flow establishes converts that reverse velocity to surge. Fast-closing or controlled checks are the fix.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>AWWA M51 — Air Valves: Air-Release, Air/Vacuum, and Combination. <span class="small">https://www.awwa.org/</span></li>
+  <li>Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> — HDPE surge allowances. <span class="small">https://plasticpipe.org/</span></li>
+  <li>Wylie &amp; Streeter, <em>Fluid Transients in Systems</em> — the real analysis when the screen fails.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "surge.v1";
+  var G = 32.174;
+  var PSI_PER_FT = 0.433;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function fmtSec(s) {
+    if (s === null || !isFinite(s)) return "—";
+    if (s < 60) return fmt(s, 1) + " sec";
+    return fmt(s / 60, 1) + " min (" + fmt(s, 0) + " sec)";
+  }
+
+  $("mat").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("wavespeed").hidden = false;
+    } else {
+      $("wavespeed").hidden = true;
+      $("wavespeed").value = this.value;
+    }
+    recalc();
+  });
+
+  function recalc() {
+    var a = num("wavespeed");
+    var dv = num("dv");
+    var L = opt("plen");
+    var wp = num("wp", true);
+    var rating = opt("rating");
+    var out = $("results");
+
+    if (!a || !dv) { out.hidden = true; saveState(); return; }
+
+    var dH = a * dv / G;
+    var dP = dH * PSI_PER_FT;
+
+    $("r-head").textContent = fmt(dH, 0) + " ft";
+    $("r-surge").textContent = fmt(dP, 0) + " psi";
+
+    var msgs = [];
+    out.classList.remove("fail");
+
+    if (wp !== null) {
+      var total = wp + dP;
+      $("r-total").textContent = fmt(total, 0) + " psi";
+      if (rating !== null) {
+        var pct = total / rating * 100;
+        $("r-pct").textContent = fmt(pct, 0) + " % of " + fmt(rating, 0) + " psi rating";
+        if (pct > 100) {
+          $("verdict").textContent = "EXCEEDS RATING — " + fmt(total, 0) + " psi vs. " + fmt(rating, 0) + " psi";
+          out.classList.add("fail");
+          msgs.push("An instantaneous stoppage overpressures this pipe. Slow the closure well past the critical time, add surge control, or confirm the pipe's occasional-surge allowance covers it (HDPE and some PVC/DIP ratings include one — check the applicable standard).");
+        } else if (pct > 85) {
+          $("verdict").textContent = "TIGHT — " + fmt(pct, 0) + "% of rating on full surge";
+          msgs.push("Within rating but thin. Recurring surges at this level are a fatigue concern on thermoplastic pipe even when a single event passes.");
+        } else {
+          $("verdict").textContent = "Within rating — " + fmt(pct, 0) + "% on full Joukowsky surge";
+        }
+      } else {
+        $("r-pct").textContent = "—";
+        $("verdict").textContent = "Total pressure on full surge: " + fmt(total, 0) + " psi";
+      }
+    } else {
+      $("r-total").textContent = "—";
+      $("r-pct").textContent = "—";
+      $("verdict").textContent = "Joukowsky surge: " + fmt(dP, 0) + " psi (" + fmt(dH, 0) + " ft)";
+    }
+
+    if (L !== null) {
+      var tc = 2 * L / a;
+      $("r-crit").textContent = fmtSec(tc);
+      $("r-slow").textContent = fmtSec(10 * tc);
+    } else {
+      $("r-crit").textContent = "enter pipeline length";
+      $("r-slow").textContent = "—";
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["mat","wavespeed","dv","plen","wp","rating"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["mat"] === "custom") $("wavespeed").hidden = false;
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

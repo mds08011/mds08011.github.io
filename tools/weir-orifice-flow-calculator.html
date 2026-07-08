@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weir &amp; Orifice Flow Calculator</title>
+<meta name="description" content="Offline field calculator for temporary flow measurement: V-notch, rectangular, and Cipolletti weirs plus submerged orifice, with head measurement guidance. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Weir &amp; Orifice Flow Calculator</h1>
+<p class="subtitle">Temporary flow measurement during startup and testing: sharp-crested V-notch, rectangular, and Cipolletti weirs, plus submerged orifice. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> These formulas assume a properly built and installed sharp-crested weir with a free (aerated) nappe, or a clean sharp-edged orifice, and head measured correctly. A plywood weir with a rough edge, a drowned nappe, or a tape measure held at the crest reads confidently and wrong. Good field accuracy is ±5% under ideal conditions; treat results accordingly.
+</div>
+
+<fieldset>
+  <legend>Device</legend>
+  <div class="row">
+    <div>
+      <label for="device">Type
+        <select id="device">
+          <option value="v90">V-notch weir, 90°</option>
+          <option value="v60">V-notch weir, 60°</option>
+          <option value="v45">V-notch weir, 45°</option>
+          <option value="rectC">Rectangular weir, contracted (Francis)</option>
+          <option value="rectS">Rectangular weir, suppressed (full channel width)</option>
+          <option value="cip">Cipolletti (trapezoidal) weir</option>
+          <option value="orif">Submerged orifice</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="head-inputs">
+    <div>
+      <label for="head"><span id="head-label">Head above notch vertex (in)</span>
+        <input type="number" id="head" min="0" step="any" placeholder="e.g. 4.5">
+      </label>
+      <p class="small" id="head-note">Measure the water surface upstream of the weir, at least 4× the head back from the crest — not at the crest, where drawdown has already started.</p>
+    </div>
+    <div id="crest-wrap" hidden>
+      <label for="crest">Crest length L (ft)
+        <input type="number" id="crest" min="0" step="any" placeholder="e.g. 2.0">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="orif-inputs" hidden>
+    <div>
+      <label for="oarea">Orifice area (sq in)
+        <input type="number" id="oarea" min="0" step="any" placeholder="e.g. 28.3">
+      </label>
+      <p class="small">Circular: area = 0.785 × d². Enter net open area.</p>
+    </div>
+    <div>
+      <label for="odh">Differential head across orifice (in)
+        <input type="number" id="odh" min="0" step="any" placeholder="e.g. 6">
+      </label>
+      <label for="ocd">Discharge coefficient C<sub>d</sub>
+        <input type="number" id="ocd" min="0.1" max="1" step="any" value="0.61">
+      </label>
+      <p class="small">0.61 for a sharp-edged orifice; rounded entrances run higher.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Flow</td><td class="val" id="r-q">—</td></tr>
+    <tr id="r-formula-row"><td>Formula used</td><td class="val" id="r-formula" style="font-weight:400;">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Weir formulas (US units: Q in cfs, h and L in ft)</summary>
+  <ul>
+    <li>90° V-notch (USBR): <code>Q = 2.49 · h^2.48</code></li>
+    <li>V-notch, other angles: <code>Q = 2.5 · tan(θ/2) · h^2.5</code> (standard field form)</li>
+    <li>Rectangular, contracted (Francis): <code>Q = 3.33 · (L − 0.2h) · h^1.5</code></li>
+    <li>Rectangular, suppressed: <code>Q = 3.33 · L · h^1.5</code></li>
+    <li>Cipolletti: <code>Q = 3.367 · L · h^1.5</code> (the 1:4 side slopes compensate for end contractions)</li>
+    <li>Submerged orifice: <code>Q = C_d · A · √(2gΔh)</code></li>
+  </ul>
+  <p>Conversions: 1 cfs = 448.83 GPM = 0.6463 MGD.</p>
+</details>
+
+<details>
+  <summary>Conditions the formulas assume (the accuracy fine print)</summary>
+  <ul>
+    <li><strong>Head range:</strong> most sharp-crested weir formulas are rated for roughly 0.2–2.0 ft of head. Below ~0.2 ft, surface tension and nappe clinging dominate and accuracy falls apart — the tool warns.</li>
+    <li><strong>Free nappe:</strong> air must circulate under the falling sheet of water. A nappe that clings to the downstream face over-reads. Suppressed rectangular weirs need vents.</li>
+    <li><strong>Approach conditions:</strong> low approach velocity (weir pool, not a flume), crest well above the downstream water surface (no submergence), and the crest at least ~2× the head above the upstream channel bottom.</li>
+    <li><strong>Contracted weirs:</strong> the Francis end-contraction correction assumes the notch is well away from the channel sides (≥ 2h each side).</li>
+    <li><strong>Sharp crest:</strong> the upstream edge should be a true sharp edge (¼-in. plate chamfered downstream, or angle iron) — a 2× lumber crest is a broad-crested weir with a different, mushier coefficient.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Choosing a device in the field</summary>
+  <ul>
+    <li>V-notch for low/variable flows (best sensitivity at low Q — a 90° notch reads roughly 0.9 to 450 GPM over 1–12 in. of head).</li>
+    <li>Rectangular or Cipolletti for higher flows where a V-notch would need excessive head.</li>
+    <li>Submerged orifice where there isn't enough drop for a weir to run free.</li>
+    <li>For anything that needs defensible accuracy over days (billing, permit reporting), rent a flume or a proper meter — a temporary weir is a startup verification device.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>USBR, <em>Water Measurement Manual</em> — weir and orifice formulas, installation conditions. <span class="small">https://www.usbr.gov/tsc/techreferences/mands/wmm/</span></li>
+  <li>ISO 1438 — Hydrometry: thin-plate weirs.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "weirflow.v1";
+  var GPM_PER_CFS = 448.831;
+  var MGD_PER_CFS = 0.646317;
+  var G2 = 64.348; // 2g
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("device").addEventListener("change", function () {
+    var v = this.value;
+    var isOrif = v === "orif";
+    var needsCrest = v === "rectC" || v === "rectS" || v === "cip";
+    $("head-inputs").hidden = isOrif;
+    $("orif-inputs").hidden = !isOrif;
+    $("crest-wrap").hidden = !needsCrest;
+    $("head-label").textContent = v.indexOf("v") === 0
+      ? "Head above notch vertex (in)"
+      : "Head above crest (in)";
+    recalc();
+  });
+
+  function recalc() {
+    var device = $("device").value;
+    var out = $("results");
+    var qCfs = null, formula = "";
+    var msgs = [];
+
+    if (device === "orif") {
+      var A = num("oarea"), dh = num("odh"), cd = num("ocd");
+      if (!A || !dh || !cd) { out.hidden = true; saveState(); return; }
+      var Aft = A / 144, dhFt = dh / 12;
+      qCfs = cd * Aft * Math.sqrt(G2 * dhFt);
+      formula = "Q = " + cd + " · A · √(2gΔh)";
+      if (dhFt < 0.1) msgs.push("Differential head under ~1.2 in — reading is very sensitive to measurement error at this range.");
+    } else {
+      var hIn = num("head");
+      if (!hIn) { out.hidden = true; saveState(); return; }
+      var h = hIn / 12;
+
+      if (device === "v90") {
+        qCfs = 2.49 * Math.pow(h, 2.48);
+        formula = "Q = 2.49 · h^2.48 (USBR, 90°)";
+      } else if (device === "v60" || device === "v45") {
+        var theta = device === "v60" ? 60 : 45;
+        qCfs = 2.5 * Math.tan(theta / 2 * Math.PI / 180) * Math.pow(h, 2.5);
+        formula = "Q = 2.5 · tan(" + theta + "°/2) · h^2.5";
+      } else {
+        var L = num("crest");
+        if (!L) { out.hidden = true; saveState(); return; }
+        if (device === "rectC") {
+          var Leff = L - 0.2 * h;
+          if (Leff <= 0) {
+            msgs.push("Head is too large relative to crest length for the Francis contraction correction — this weir is undersized for the flow.");
+            out.hidden = true; saveState(); return;
+          }
+          qCfs = 3.33 * Leff * Math.pow(h, 1.5);
+          formula = "Q = 3.33 · (L − 0.2h) · h^1.5 (Francis)";
+          if (h > L / 3) msgs.push("Head exceeds L/3 — outside the Francis formula's comfortable range; accuracy degrades.");
+        } else if (device === "rectS") {
+          qCfs = 3.33 * L * Math.pow(h, 1.5);
+          formula = "Q = 3.33 · L · h^1.5 (suppressed)";
+          msgs.push("Suppressed weirs need nappe ventilation — confirm air can get under the falling sheet or the reading runs high.");
+        } else {
+          qCfs = 3.367 * L * Math.pow(h, 1.5);
+          formula = "Q = 3.367 · L · h^1.5 (Cipolletti)";
+        }
+      }
+
+      if (h < 0.2) msgs.push("Head under 0.2 ft (2.4 in) — below the rated range of sharp-crested weir formulas; surface tension effects make the reading unreliable.");
+      if (h > 2.0) msgs.push("Head over 2.0 ft — above the typical rated range; verify the device geometry supports it.");
+    }
+
+    $("r-q").textContent = fmt(qCfs * GPM_PER_CFS, 0) + " GPM  |  " +
+      fmt(qCfs, 3) + " cfs  |  " + fmt(qCfs * MGD_PER_CFS, 3) + " MGD";
+    $("r-formula").textContent = formula;
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["device","head","crest","oarea","odh","ocd"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("device").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

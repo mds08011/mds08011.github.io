@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mandrel (Deflection) Test Sizing Calculator</title>
+<meta name="description" content="Offline field calculator for flexible sewer pipe deflection testing: required mandrel diameter from base ID and allowable deflection, and the deflection a given mandrel actually checks. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  table.ids { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.ids th, table.ids td { border: 1px solid var(--border); padding: 0.35rem 0.5rem; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+  table.ids th { background: var(--panel); }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Mandrel (Deflection) Test Sizing Calculator</h1>
+<p class="subtitle">Required mandrel diameter for flexible sewer pipe deflection acceptance testing, and the inverse — the deflection a given mandrel actually verifies. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The base (average) inside diameter is the whole ballgame, and it comes from the pipe standard's table (accounting for OD and wall tolerances) or the manufacturer's submittal — not from the nominal size, and not from measuring one pipe end with a tape. Where the spec includes a mandrel table, the spec's table governs. Presets below are commonly published D3034 values; verify against the standard edition your spec references.
+</div>
+
+<fieldset>
+  <legend>Pipe &amp; Criterion</legend>
+  <div class="row">
+    <div>
+      <label for="preset">Base ID
+        <select id="preset">
+          <option value="custom" selected>Enter base ID directly…</option>
+          <option value="5.742">6-in PVC SDR 35 (D3034) — 5.742 in</option>
+          <option value="7.665">8-in PVC SDR 35 (D3034) — 7.665 in</option>
+          <option value="9.563">10-in PVC SDR 35 (D3034) — 9.563 in</option>
+          <option value="11.361">12-in PVC SDR 35 (D3034) — 11.361 in</option>
+          <option value="13.898">15-in PVC SDR 35 (D3034) — 13.898 in</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="baseid">Base (average) inside diameter (in)
+        <input type="number" id="baseid" min="0" step="any" placeholder="e.g. 7.665">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="defl">Allowable deflection (%)
+        <select id="defl-preset">
+          <option value="5" selected>5% (typical acceptance)</option>
+          <option value="7.5">7.5%</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="defl" min="0" max="25" step="any" value="5" hidden>
+      </label>
+    </div>
+    <div>
+      <label for="actual">Actual mandrel diameter on hand (in) — optional
+        <input type="number" id="actual" min="0" step="any" placeholder="check what a mandrel verifies">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Required mandrel diameter (min contact dia.)</td><td class="val" id="r-mandrel">—</td></tr>
+    <tr><td>Ring clearance at allowable deflection</td><td class="val" id="r-clear">—</td></tr>
+    <tr id="r-actual-row" hidden><td>Deflection the on-hand mandrel verifies</td><td class="val" id="r-actual">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p><code>D_mandrel = base ID × (1 − deflection/100)</code></p>
+  <p>Inverse: <code>deflection = (1 − D_mandrel / base ID) × 100</code></p>
+  <p>The base ID is the standard's average ID — nominal OD minus two average walls, adjusted for tolerances — which is why an "8-inch" SDR 35 mandrel at 5% is 7.28 in., not 7.60 in. Using nominal ID oversizes the mandrel and fails good pipe.</p>
+</details>
+
+<details>
+  <summary>Test rules that ride along with the size</summary>
+  <ul>
+    <li>Deflection testing is for <strong>flexible</strong> pipe (PVC, HDPE, some fiberglass) — it's a check on embedment quality, since a flexible pipe deflects to whatever shape its bedding allows.</li>
+    <li>The mandrel should be rigid, with an <strong>odd number of legs (typically 9)</strong> so it can't align two legs across a single flat, and pulled <strong>by hand</strong> — no winches. If it takes a comealong, the pipe fails.</li>
+    <li>Most specs require the test <strong>no sooner than 30 days</strong> after backfill (or after final backfill loads are in place) so initial deflection has developed.</li>
+    <li>Proving ring: verify the mandrel against a proving ring or micrometer before the test — mandrels get dropped and legs get bent.</li>
+    <li>A failed segment usually means re-excavation and re-compaction of haunching — which is why watching the haunch compaction during installation is cheaper than any mandrel.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Common D3034 SDR 35 base IDs (verify against the referenced edition)</summary>
+  <table class="ids">
+    <thead><tr><th>Nominal</th><th>Base ID (in)</th><th>Mandrel at 5% (in)</th></tr></thead>
+    <tbody>
+      <tr><td>6 in</td><td>5.742</td><td>5.455</td></tr>
+      <tr><td>8 in</td><td>7.665</td><td>7.282</td></tr>
+      <tr><td>10 in</td><td>9.563</td><td>9.085</td></tr>
+      <tr><td>12 in</td><td>11.361</td><td>10.793</td></tr>
+      <tr><td>15 in</td><td>13.898</td><td>13.203</td></tr>
+    </tbody>
+  </table>
+  <p>For ASTM F679 (large-diameter PVC), profile-wall pipe, and HDPE, pull the base ID from the applicable standard or the manufacturer's submittal — the tables differ by standard and cell class.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ASTM D3034 — Type PSM PVC Sewer Pipe and Fittings (dimension tables). <span class="small">https://www.astm.org/</span></li>
+  <li>ASTM D2321 — Underground Installation of Thermoplastic Pipe (installation and deflection context).</li>
+  <li>Contract specifications — governing mandrel table, deflection limit, and test timing.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "mandrel.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 3;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("preset").addEventListener("change", function () {
+    if (this.value !== "custom") {
+      $("baseid").value = this.value;
+    }
+    recalc();
+  });
+  $("defl-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("defl").hidden = false;
+    } else {
+      $("defl").hidden = true;
+      $("defl").value = this.value;
+    }
+    recalc();
+  });
+
+  function recalc() {
+    var baseId = num("baseid");
+    var defl = num("defl");
+    var actual = opt("actual");
+    var out = $("results");
+
+    if (!baseId || !defl) { out.hidden = true; saveState(); return; }
+
+    var mandrel = baseId * (1 - defl / 100);
+    $("r-mandrel").textContent = fmt(mandrel, 3) + " in at " + fmt(defl, 1) + "% of base ID " + fmt(baseId, 3) + " in";
+    $("r-clear").textContent = fmt(baseId - mandrel, 3) + " in on the diameter";
+
+    var msgs = [];
+    $("r-actual-row").hidden = actual === null;
+    if (actual !== null) {
+      var actDefl = (1 - actual / baseId) * 100;
+      $("r-actual").textContent = fmt(actDefl, 2) + " % (" + fmt(actual, 3) + " in vs. base " + fmt(baseId, 3) + " in)";
+      if (actual >= baseId) {
+        msgs.push("The on-hand mandrel is as large as (or larger than) the base ID — it won't pass through undeflected pipe. Wrong mandrel or wrong base ID.");
+      } else if (actDefl > defl + 0.25) {
+        msgs.push("The on-hand mandrel checks " + fmt(actDefl, 1) + "% — LESS strict than the required " + fmt(defl, 1) + "%. Pipe can pass this mandrel and still exceed the spec deflection.");
+      } else if (actDefl < defl - 0.25) {
+        msgs.push("The on-hand mandrel checks " + fmt(actDefl, 1) + "% — stricter than required. Fine for a pass; a failure with this mandrel doesn't necessarily fail the spec.");
+      }
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["preset","baseid","defl-preset","defl","actual"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["defl-preset"] === "custom") $("defl").hidden = false;
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

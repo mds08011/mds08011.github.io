@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trench Excavation &amp; Backfill Quantity Calculator</title>
+<meta name="description" content="Offline field calculator for pipeline trenching: excavation, bedding, pipe zone, native backfill, spoil haul-off with swell, import tonnage, and truckloads. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.75rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Trench Excavation &amp; Backfill Quantity Calculator</h1>
+<p class="subtitle">Neat-line and order quantities for pipeline trenching: excavation, bedding, pipe zone, native backfill, spoil haul-off with swell, import tonnage, and truckloads. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Neat-line quantities assume a rectangular trench prism at the average dimensions entered. Sloped or benched excavations, potholes, trench boxes over-cut, and appurtenance excavations (manholes, valve clusters, thrust blocks) are on top of these numbers. Pay quantities are per the contract's measurement rules — this tool is for ordering material and scheduling trucks, not for the pay estimate.
+</div>
+
+<fieldset>
+  <legend>Trench &amp; Pipe</legend>
+  <div class="row">
+    <div>
+      <label for="tlen">Trench length (ft)
+        <input type="number" id="tlen" min="0" step="any" placeholder="e.g. 400">
+      </label>
+    </div>
+    <div>
+      <label for="twid">Trench width (ft)
+        <input type="number" id="twid" min="0" step="any" placeholder="e.g. 3.0">
+      </label>
+      <p class="small">Typical spec: pipe OD + 12–24 in. Use the actual dig width including trench box allowance.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="tdep">Average trench depth (ft)
+        <input type="number" id="tdep" min="0" step="any" placeholder="e.g. 8.5">
+      </label>
+    </div>
+    <div>
+      <label for="pod">Pipe outside diameter (in)
+        <input type="number" id="pod" min="0" step="any" placeholder="e.g. 13.20">
+      </label>
+      <p class="small">Actual OD — e.g. 12-in. DIP is 13.20 in., 12-in. PVC C900 is 13.20 in., 12-in. SDR-35 is 12.50 in.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Bedding &amp; Pipe Zone</legend>
+  <div class="row">
+    <div>
+      <label for="bed">Bedding depth below pipe (in)
+        <input type="number" id="bed" min="0" step="any" value="6">
+      </label>
+    </div>
+    <div>
+      <label for="zone">Pipe zone height above pipe crown (in)
+        <input type="number" id="zone" min="0" step="any" value="12">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="native">Backfill above pipe zone
+        <select id="native">
+          <option value="native">Native material (reused)</option>
+          <option value="import">Imported material</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Ordering Factors</legend>
+  <div class="row">
+    <div>
+      <label for="compf">Import compaction/waste allowance (%)
+        <input type="number" id="compf" min="0" step="any" value="15">
+      </label>
+      <p class="small">Loose delivered material compacts into the trench — 10–25% over neat-line is typical depending on material and how tight the crew places it.</p>
+    </div>
+    <div>
+      <label for="swell">Spoil swell factor (%)
+        <input type="number" id="swell" min="0" step="any" value="20">
+      </label>
+      <p class="small">Bank CY bulks when excavated — 15–25% for most soils, more for clay.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="tpcy">Import material density (tons/CY, compacted-equivalent)
+        <input type="number" id="tpcy" min="0" step="any" value="1.4">
+      </label>
+      <p class="small">≈1.35–1.5 for crushed rock and sand — the supplier's conversion governs the ticket.</p>
+    </div>
+    <div>
+      <label for="truck">Truck capacity (CY)
+        <input type="number" id="truck" min="0" step="any" value="12">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Neat-Line Quantities</h3>
+  <table>
+    <tr><td>Excavation (bank)</td><td class="val" id="r-exc">—</td></tr>
+    <tr><td>Pipe displacement</td><td class="val" id="r-pipe">—</td></tr>
+    <tr><td>Bedding</td><td class="val" id="r-bed">—</td></tr>
+    <tr><td>Pipe zone (net of pipe)</td><td class="val" id="r-zone">—</td></tr>
+    <tr><td>Backfill above pipe zone</td><td class="val" id="r-upper">—</td></tr>
+  </table>
+
+  <h3>Order &amp; Haul Quantities</h3>
+  <table>
+    <tr><td>Import to order (with allowance)</td><td class="val" id="r-import">—</td></tr>
+    <tr><td>Import tonnage</td><td class="val" id="r-tons">—</td></tr>
+    <tr><td>Import truckloads</td><td class="val" id="r-imploads">—</td></tr>
+    <tr><td>Spoil to haul off (loose, with swell)</td><td class="val" id="r-spoil">—</td></tr>
+    <tr><td>Spoil truckloads</td><td class="val" id="r-spoilloads">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The prism math</summary>
+  <p>All volumes are the trench width × length × the relevant vertical slice, in bank (in-place) measure:</p>
+  <ul>
+    <li>Excavation: <code>W × D × L</code></li>
+    <li>Bedding: <code>W × t_bed × L</code></li>
+    <li>Pipe zone: <code>W × (OD + h_zone) × L − V_pipe</code>, where the pipe displaces <code>π/4 × (OD/12)² × L</code></li>
+    <li>Upper backfill: excavation − bedding slice − pipe zone slice</li>
+  </ul>
+  <p>Conversion: 27 cf = 1 CY.</p>
+</details>
+
+<details>
+  <summary>Bank vs. loose vs. compacted — the three cubic yards</summary>
+  <p>The same dirt is three different volumes, and mixing them up is how orders go wrong:</p>
+  <ul>
+    <li><strong>Bank CY:</strong> in the ground, undisturbed — what the neat-line numbers are.</li>
+    <li><strong>Loose CY:</strong> in the truck — bank × (1 + swell). This is what the hauling gets priced and scheduled on.</li>
+    <li><strong>Compacted CY:</strong> back in the trench at spec density — for import, order more than neat-line because the loose delivered yard compacts smaller and some gets wasted. That's the compaction/waste allowance.</li>
+  </ul>
+  <p>Spoil to haul: if native is reused above the pipe zone, the spoil is the material displaced by pipe + bedding + pipe-zone import (in bank measure), swelled. If everything above the pipe zone is also imported, the entire excavation hauls off.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Depth varies along the run — for a long segment on grade, use the average of station depths, or split the run into reaches and run this per reach.</li>
+    <li>Trench boxes typically need 6–12 in. beyond their outside walls; if the box sets the dig width, use the box width plus over-cut, not the spec minimum.</li>
+    <li>Unsuitable subgrade at the bottom means over-excavation and extra bedding rock — a fast re-run of this tool with the deeper numbers is the change-order quantity backup.</li>
+    <li>Supplier tickets are in tons; inspectors think in CY; the trench is in bank measure. Keeping the three straight on the daily report saves the argument at the pay app.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Contract specifications — trench detail, bedding/zone materials, and measurement/payment rules (governing).</li>
+  <li>Caterpillar Performance Handbook — swell/shrink factors by material type.</li>
+  <li>Pipe manufacturer dimension tables — actual ODs by material and pressure class.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "trenchqty.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function cy(cf) { return cf / 27; }
+
+  function recalc() {
+    var L = num("tlen"), W = num("twid"), D = num("tdep"), odIn = num("pod");
+    var bedIn = num("bed", true), zoneIn = num("zone", true);
+    var compf = num("compf", true), swell = num("swell", true), tpcy = num("tpcy"), truck = num("truck");
+    var nativeReuse = $("native").value === "native";
+    var out = $("results");
+
+    if (!L || !W || !D || !odIn || bedIn === null || zoneIn === null ||
+        compf === null || swell === null || !tpcy || !truck) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var odFt = odIn / 12, bedFt = bedIn / 12, zoneFt = zoneIn / 12;
+    var msgs = [];
+
+    if (odFt >= W) {
+      msgs.push("Pipe OD is wider than the trench — check the width input.");
+    }
+    var zoneTop = bedFt + odFt + zoneFt;
+    if (zoneTop > D) {
+      msgs.push("Bedding + pipe + pipe zone (" + fmt(zoneTop, 2) +
+        " ft) exceeds the trench depth — either the trench is deeper than entered or the section doesn't fit. Quantities below cap the zone at the trench depth.");
+    }
+
+    /* neat-line volumes in cf */
+    var excCf = W * D * L;
+    var pipeCf = Math.PI / 4 * odFt * odFt * L;
+    var bedCf = W * Math.min(bedFt, D) * L;
+    var zoneSliceCf = W * Math.max(Math.min(zoneTop, D) - Math.min(bedFt, D), 0) * L;
+    var zoneCf = Math.max(zoneSliceCf - pipeCf, 0);
+    var upperCf = Math.max(excCf - bedCf - zoneSliceCf, 0);
+
+    /* import: bedding + zone, plus upper if imported */
+    var importNeatCf = bedCf + zoneCf + (nativeReuse ? 0 : upperCf);
+    var importOrderCy = cy(importNeatCf) * (1 + compf / 100);
+    var importTons = importOrderCy * tpcy;
+
+    /* spoil (bank): displaced by pipe + import placed; if all import, whole excavation goes */
+    var spoilBankCf = nativeReuse ? (pipeCf + bedCf + zoneCf) : excCf;
+    var spoilLooseCy = cy(spoilBankCf) * (1 + swell / 100);
+
+    $("r-exc").textContent = fmt(cy(excCf)) + " CY (" + fmt(excCf, 0) + " cf)";
+    $("r-pipe").textContent = fmt(cy(pipeCf)) + " CY";
+    $("r-bed").textContent = fmt(cy(bedCf)) + " CY";
+    $("r-zone").textContent = fmt(cy(zoneCf)) + " CY";
+    $("r-upper").textContent = fmt(cy(upperCf)) + " CY " + (nativeReuse ? "(native, reused)" : "(imported)");
+
+    $("r-import").textContent = fmt(importOrderCy) + " CY (neat " + fmt(cy(importNeatCf)) + " CY + " + fmt(compf, 0) + "%)";
+    $("r-tons").textContent = fmt(importTons) + " tons at " + fmt(tpcy, 2) + " t/CY";
+    $("r-imploads").textContent = fmt(Math.ceil(importOrderCy / truck), 0) + " loads at " + fmt(truck, 0) + " CY";
+    $("r-spoil").textContent = fmt(spoilLooseCy) + " CY loose (bank " + fmt(cy(spoilBankCf)) + " CY + " + fmt(swell, 0) + "%)";
+    $("r-spoilloads").textContent = fmt(Math.ceil(spoilLooseCy / truck), 0) + " loads at " + fmt(truck, 0) + " CY";
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["tlen","twid","tdep","pod","bed","zone","native","compf","swell","tpcy","truck"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

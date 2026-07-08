@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4–20 mA Signal Scaling Calculator</title>
+<meta name="description" content="Offline field calculator for instrument loop checks: converts between mA, percent, and engineering units for linear and square-root (DP flow) transmitters, with a five-point checkout table and NAMUR fault bands. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .bigval {
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin: 0.25rem 0 0.5rem 0;
+  }
+  table.pts { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.pts th, table.pts td {
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.92rem;
+  }
+  table.pts th { background: var(--panel); }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>4–20 mA Signal Scaling Calculator</h1>
+<p class="subtitle">Converts between loop current, percent of span, and engineering units for instrument loop checks — linear and square-root (DP flow) characterization, with the five-point checkout table. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This does the scaling arithmetic. The transmitter's configured range (read it from the device, don't trust the datasheet), damping, and whether square-root extraction happens in the transmitter or the PLC are configuration facts you verify on the loop — a perfect calculation against the wrong LRV/URV is still the wrong answer. Loop checks follow the approved loop sheets and the commissioning plan.
+</div>
+
+<fieldset>
+  <legend>Instrument Range</legend>
+  <div class="row">
+    <div>
+      <label for="lrv">LRV — value at 4 mA (0%)
+        <input type="number" id="lrv" step="any" value="0">
+      </label>
+    </div>
+    <div>
+      <label for="urv">URV — value at 20 mA (100%)
+        <input type="number" id="urv" step="any" placeholder="e.g. 20">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="units">Engineering units (label only)
+        <input type="text" id="units" maxlength="16" placeholder="e.g. ft, psi, GPM, MGD">
+      </label>
+    </div>
+    <div>
+      <label for="char">Characterization
+        <select id="char">
+          <option value="linear">Linear (level, pressure, temperature, mag/ultrasonic flow)</option>
+          <option value="sqrt">Square root (DP flow — orifice, venturi)</option>
+        </select>
+      </label>
+      <p class="small">Square root only if extraction is NOT already done in the transmitter — never in both places.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Convert</legend>
+  <div class="row">
+    <div>
+      <label for="conv-dir">I have…
+        <select id="conv-dir">
+          <option value="ma">a mA reading → give me the PV</option>
+          <option value="pv">a process value → give me the mA</option>
+          <option value="pct">a percent → give me both</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="conv-in"><span id="conv-label">Measured loop current (mA)</span>
+        <input type="number" id="conv-in" step="any" placeholder="e.g. 12.00">
+      </label>
+    </div>
+  </div>
+  <div class="results" id="conv-results" hidden>
+    <div class="bigval" id="conv-out">—</div>
+    <div class="small" id="conv-detail"></div>
+    <div class="warn" id="conv-warn" hidden></div>
+  </div>
+</fieldset>
+
+<div class="results" id="table-results" hidden>
+  <h3>Five-Point Checkout Table</h3>
+  <p class="small">The standard 0/25/50/75/100% stroke for the loop check — simulate at the transmitter, read at the PLC/SCADA, sign the loop sheet.</p>
+  <table class="pts">
+    <thead><tr><th>%</th><th>mA</th><th id="pv-head">PV</th></tr></thead>
+    <tbody id="pts-body"></tbody>
+  </table>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Linear scaling</summary>
+  <p><code>% = (mA − 4) / 16 × 100</code></p>
+  <p><code>PV = LRV + (mA − 4)/16 × (URV − LRV)</code> &nbsp;&nbsp; and inverted: &nbsp; <code>mA = 4 + 16 × (PV − LRV)/(URV − LRV)</code></p>
+  <p>Works for elevated and suppressed zeros (LRV ≠ 0, including negative LRV for vacuum or bidirectional flow) — the span is just URV − LRV, signed.</p>
+</details>
+
+<details>
+  <summary>Square-root (DP flow) scaling</summary>
+  <p>Differential pressure across an orifice or venturi varies with the square of flow, so when the transmitter sends raw DP as a linear signal, flow is recovered as:</p>
+  <p><code>PV = LRV + √((mA − 4)/16) × (URV − LRV)</code></p>
+  <p>The consequences on the checkout table are the part that trips people: 50% signal (12 mA) is <strong>70.7%</strong> of full flow, and 25% signal (8 mA) is 50% flow. If the SCADA readback during a loop check matches the linear column instead of the square-root column, the extraction is configured in the wrong place (or twice).</p>
+</details>
+
+<details>
+  <summary>Fault bands (NAMUR NE 43)</summary>
+  <p>Readings outside the live 4–20 range are diagnostic, not data:</p>
+  <ul>
+    <li><code>3.8 – 20.5 mA</code> — valid measuring range including linear over/under-range margin.</li>
+    <li><code>≤ 3.6 mA</code> — transmitter signaling failure (downscale), or a wiring/power problem.</li>
+    <li><code>≥ 21.0 mA</code> — transmitter signaling failure (upscale).</li>
+    <li><code>0 mA</code> — open loop: broken wire, blown fuse, dead power supply, or the meter is in the wrong spot.</li>
+  </ul>
+  <p>The tool flags any converted mA reading in these bands rather than pretending it's a process value.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Measure current in series, or read the voltage across the loop's 250 Ω resistor and divide (12.00 mA ↔ 3.000 V) — no need to break a running loop.</li>
+    <li>Confirm LRV/URV from the transmitter's own display or HART, not from the instrument index — ranges get changed during startup and the paper lags.</li>
+    <li>Level transmitters mounted below the tank connection have an elevated-zero offset; that's what a negative or nonzero LRV is for.</li>
+    <li>If SCADA and the field reading disagree by a consistent scale factor, someone scaled 0–100% where engineering units were expected (or vice versa) at the PLC — the five-point table finds this in one pass.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ISA-51.1 — Process Instrumentation Terminology (ranges, spans, elevated/suppressed zero). <span class="small">https://www.isa.org/</span></li>
+  <li>NAMUR NE 43 — Standardization of the Signal Level for Failure Information of Digital Transmitters.</li>
+  <li>Project loop sheets and instrument index — the governing configuration documents.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "maloop.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function raw(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var CONV_LABELS = {
+    ma: "Measured loop current (mA)",
+    pv: "Process value (engineering units)",
+    pct: "Percent of span (%)"
+  };
+
+  $("conv-dir").addEventListener("change", function () {
+    $("conv-label").textContent = CONV_LABELS[this.value];
+    recalc();
+  });
+
+  function pctToPv(pct, lrv, urv, isSqrt) {
+    var frac = pct / 100;
+    if (isSqrt) frac = Math.sqrt(Math.max(frac, 0));
+    return lrv + frac * (urv - lrv);
+  }
+  function pvToPct(pv, lrv, urv, isSqrt) {
+    var frac = (pv - lrv) / (urv - lrv);
+    if (isSqrt) frac = frac * frac; // invert the sqrt characterization
+    return frac * 100;
+  }
+
+  function recalc() {
+    var lrv = raw("lrv"), urv = raw("urv");
+    var isSqrt = $("char").value === "sqrt";
+    var units = $("units").value.trim() || "units";
+    var dir = $("conv-dir").value;
+    var inVal = raw("conv-in");
+    var convOut = $("conv-results");
+    var tableOut = $("table-results");
+
+    if (lrv === null || urv === null || urv === lrv) {
+      convOut.hidden = true;
+      tableOut.hidden = true;
+      saveState();
+      return;
+    }
+
+    /* five-point table (always shown once range is valid) */
+    var body = $("pts-body");
+    body.innerHTML = "";
+    $("pv-head").textContent = "PV (" + units + ")";
+    [0, 25, 50, 75, 100].forEach(function (pct) {
+      var mA = 4 + pct / 100 * 16;
+      var pv = pctToPv(pct, lrv, urv, isSqrt);
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + pct + "</td><td>" + mA.toFixed(2) + "</td><td>" + fmt(pv, 3) + "</td>";
+      body.appendChild(tr);
+    });
+    tableOut.hidden = false;
+
+    /* converter */
+    if (inVal === null) {
+      convOut.hidden = true;
+      saveState();
+      return;
+    }
+
+    var mA = null, pct = null, pv = null;
+    var msgs = [];
+
+    if (dir === "ma") {
+      mA = inVal;
+      pct = (mA - 4) / 16 * 100;
+      var frac = (mA - 4) / 16;
+      if (isSqrt && frac < 0) frac = 0;
+      pv = pctToPv(Math.max(pct, isSqrt ? 0 : pct), lrv, urv, isSqrt);
+      if (!isSqrt) pv = lrv + (mA - 4) / 16 * (urv - lrv); // allow linear below-zero readback
+      $("conv-out").textContent = fmt(pv, 3) + " " + units;
+      $("conv-detail").textContent = fmt(pct, 1) + "% of span at " + fmt(mA, 2) + " mA";
+    } else if (dir === "pv") {
+      pv = inVal;
+      pct = pvToPct(pv, lrv, urv, isSqrt);
+      mA = 4 + pct / 100 * 16;
+      $("conv-out").textContent = fmt(mA, 2) + " mA";
+      $("conv-detail").textContent = fmt(pct, 1) + "% of span for " + fmt(pv, 3) + " " + units;
+    } else {
+      pct = inVal;
+      mA = 4 + pct / 100 * 16;
+      pv = pctToPv(pct, lrv, urv, isSqrt);
+      $("conv-out").textContent = fmt(mA, 2) + " mA  /  " + fmt(pv, 3) + " " + units;
+      $("conv-detail").textContent = fmt(pct, 1) + "% of span";
+    }
+
+    /* NAMUR / range diagnostics */
+    if (mA !== null) {
+      if (mA === 0) {
+        msgs.push("0 mA is an open loop — broken wire, no power, or the meter isn't in the circuit. Not a process value.");
+      } else if (mA <= 3.6) {
+        msgs.push("At or below 3.6 mA — NAMUR failure-low band. The transmitter is signaling a fault, not a measurement.");
+      } else if (mA >= 21.0) {
+        msgs.push("At or above 21.0 mA — NAMUR failure-high band. The transmitter is signaling a fault, not a measurement.");
+      } else if (mA < 3.8 || mA > 20.5) {
+        msgs.push("Outside the 3.8–20.5 mA valid band — over/under-range. Treat the PV as saturated, not measured.");
+      }
+      if (dir !== "ma" && (pct < 0 || pct > 100)) {
+        msgs.push("That process value is outside the configured range — the loop will saturate before reaching it. If it's a real operating point, the transmitter needs re-ranging.");
+      }
+      if (isSqrt && pct !== null && pct > 0 && pct < 10 && dir === "ma") {
+        msgs.push("Below ~10% signal on a square-root loop the flow reading is mostly noise — most systems apply low-flow cutoff here for exactly that reason.");
+      }
+    }
+
+    var warn = $("conv-warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    convOut.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["lrv","urv","units","char","conv-dir","conv-in"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("conv-label").textContent = CONV_LABELS[$("conv-dir").value];
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

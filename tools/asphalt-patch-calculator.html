@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asphalt Patch Tonnage Calculator</title>
+<meta name="description" content="Offline field calculator for trench restoration paving: hot mix tonnage by course including T-patch cutback width, with waste factor and truckloads. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Asphalt Patch Tonnage Calculator</h1>
+<p class="subtitle">Hot mix tonnage for trench restoration and patches: base and surface courses, T-patch cutback per the encroachment permit, waste factor, and truckloads. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Tonnage assumes compacted, in-place density on plan dimensions. Ragged saw cuts, over-milling, subgrade undulation, and hand work around castings all eat mix beyond neat-line — that's what the waste factor is for, and on small patches it's a big percentage. Mix type, lift thicknesses, tack, and the cutback dimension come from the agency's encroachment permit / standard details, which govern.
+</div>
+
+<fieldset>
+  <legend>Patch Geometry</legend>
+  <div class="row">
+    <div>
+      <label for="mode">Patch type
+        <select id="mode">
+          <option value="trench">Trench T-patch (two courses, cutback on surface)</option>
+          <option value="simple">Simple patch (one course, plan dimensions)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="plen">Length (ft)
+        <input type="number" id="plen" min="0" step="any" placeholder="e.g. 400">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="trench-in">
+    <div>
+      <label for="twid">Trench width (ft)
+        <input type="number" id="twid" min="0" step="any" placeholder="e.g. 3.0">
+      </label>
+      <label for="cutback">Surface cutback beyond trench, EACH side (ft)
+        <input type="number" id="cutback" min="0" step="any" value="1.0">
+      </label>
+      <p class="small">The "T": many agencies require 12 in. (or more) of surface course beyond each trench edge onto undisturbed pavement.</p>
+    </div>
+    <div>
+      <label for="basedep">Base course depth (in) — trench width only
+        <input type="number" id="basedep" min="0" step="any" placeholder="e.g. 3.0">
+      </label>
+      <label for="surfdep">Surface course depth (in) — full T width
+        <input type="number" id="surfdep" min="0" step="any" placeholder="e.g. 2.0">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="simple-in" hidden>
+    <div>
+      <label for="swid">Width (ft)
+        <input type="number" id="swid" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="sdep">Compacted depth (in)
+        <input type="number" id="sdep" min="0" step="any">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Ordering</legend>
+  <div class="row">
+    <div>
+      <label for="density">Compacted density (pcf)
+        <input type="number" id="density" min="0" step="any" value="145">
+      </label>
+      <p class="small">140–150 pcf compacted is typical for dense-graded HMA; the mix design sheet has the real number.</p>
+    </div>
+    <div>
+      <label for="waste">Waste factor (%)
+        <input type="number" id="waste" min="0" step="any" value="10">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="truck">Truck capacity (tons)
+        <input type="number" id="truck" min="0" step="any" value="15">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Quantities</h3>
+  <table>
+    <tr id="r-base-row"><td>Base course</td><td class="val" id="r-base">—</td></tr>
+    <tr id="r-surf-row"><td>Surface course</td><td class="val" id="r-surf">—</td></tr>
+    <tr><td>Patch area (surface / pay)</td><td class="val" id="r-area">—</td></tr>
+    <tr class="total"><td>Total to order (with waste)</td><td class="val" id="r-total">—</td></tr>
+    <tr><td>Truckloads</td><td class="val" id="r-loads">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p><code>tons = area (sf) × depth (in) / 12 × density (pcf) / 2000</code></p>
+  <p>A convenient cross-check: at 145 pcf, one ton covers about 16.5 sf per inch of compacted depth — or ~110 lb per square yard per inch (the "110 rule" estimators use).</p>
+  <p>For the T-patch, the base course runs at trench width and the surface course at trench width plus the cutback on each side. The pay area shown is the surface (widest) footprint in SF and SY.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Small patches have brutal waste percentages — a 10-ton minimum load against a 6-ton patch is 40% "waste" no matter how careful the crew is. Batch nearby patches into one paving day.</li>
+    <li>HMA loses workability with temperature; a long haul or a slow crew on a cold day means more raked-off, unusable mix. That's waste factor too.</li>
+    <li>Confirm whether the permit measures the patch by surface area (SY) or by tonnage tickets — keep the delivery tickets either way.</li>
+    <li>Milling the cutback instead of a second saw cut usually gives a better joint and a cleaner tack surface — if the permit allows it.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Agency encroachment permit / standard trench restoration details — governing dimensions and mix requirements.</li>
+  <li>Asphalt Institute MS-22, <em>Construction of Quality Asphalt Pavements</em>. <span class="small">https://www.asphaltinstitute.org/</span></li>
+  <li>Approved mix design — actual compacted density.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "asphaltpatch.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function tons(sf, depthIn, pcf) {
+    return sf * depthIn / 12 * pcf / 2000;
+  }
+
+  $("mode").addEventListener("change", function () {
+    $("trench-in").hidden = this.value !== "trench";
+    $("simple-in").hidden = this.value !== "simple";
+    recalc();
+  });
+
+  function recalc() {
+    var mode = $("mode").value;
+    var L = num("plen");
+    var density = num("density");
+    var waste = num("waste", true);
+    var truck = num("truck");
+    var out = $("results");
+
+    if (!L || !density || waste === null || !truck) {
+      out.hidden = true; saveState(); return;
+    }
+
+    var baseT = 0, surfT = 0, surfSf = 0;
+    var msgs = [];
+
+    if (mode === "trench") {
+      var W = num("twid"), cb = num("cutback", true);
+      var bd = num("basedep", true), sd = num("surfdep");
+      if (!W || cb === null || bd === null || !sd) { out.hidden = true; saveState(); return; }
+      var surfW = W + 2 * cb;
+      baseT = tons(W * L, bd, density);
+      surfT = tons(surfW * L, sd, density);
+      surfSf = surfW * L;
+      $("r-base-row").hidden = bd === 0;
+      $("r-surf-row").hidden = false;
+      if (bd > 0) $("r-base").textContent = fmt(baseT) + " tons (" + fmt(W, 1) + " ft × " + fmt(bd, 1) + " in)";
+      $("r-surf").textContent = fmt(surfT) + " tons (" + fmt(surfW, 1) + " ft × " + fmt(sd, 1) + " in)";
+    } else {
+      var W2 = num("swid"), d2 = num("sdep");
+      if (!W2 || !d2) { out.hidden = true; saveState(); return; }
+      surfT = tons(W2 * L, d2, density);
+      surfSf = W2 * L;
+      $("r-base-row").hidden = true;
+      $("r-surf-row").hidden = false;
+      $("r-surf").textContent = fmt(surfT) + " tons (" + fmt(W2, 1) + " ft × " + fmt(d2, 1) + " in)";
+    }
+
+    var neat = baseT + surfT;
+    var order = neat * (1 + waste / 100);
+    $("r-area").textContent = fmt(surfSf, 0) + " sf (" + fmt(surfSf / 9, 0) + " SY)";
+    $("r-total").textContent = fmt(order) + " tons (neat " + fmt(neat) + " + " + fmt(waste, 0) + "%)";
+    $("r-loads").textContent = fmt(Math.ceil(order / truck), 0) + " loads at " + fmt(truck, 0) + " tons";
+
+    if (order < truck) {
+      msgs.push("Order is under one truckload — check the plant's minimum load and consider batching other patches into the same run.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["mode","plen","twid","cutback","basedep","surfdep","swid","sdep","density","waste","truck"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("mode").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

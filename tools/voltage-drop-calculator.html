@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltage Drop Quick-Check Calculator</title>
+<meta name="description" content="Offline field calculator for temporary power feeders: circular-mil voltage drop for single and three phase runs, percent drop against the 3/5% guideline, and voltage at the load. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  table.fla { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.fla th, table.fla td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+  table.fla th { background: var(--panel); }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Voltage Drop Quick-Check Calculator</h1>
+<p class="subtitle">Circular-mil voltage drop for temporary power feeders and long cord runs — bypass pumps, trailers, welders — checked against the customary 3%/5% guideline. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is a resistive (K/CM) estimate — good for sizing a temp run, silent on reactance (which matters on big conductors and long runs at low power factor), conductor ampacity, derating, and overcurrent protection. Voltage drop is a performance guideline; ampacity and protection are code requirements, and the electrician of record owns both. Motor starting draws ~6× FLA — a run that's fine running can still drop enough at start to trip contactors.
+</div>
+
+<fieldset>
+  <legend>Circuit</legend>
+  <div class="row">
+    <div>
+      <label for="phase">System
+        <select id="phase">
+          <option value="3">Three phase</option>
+          <option value="1">Single phase</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="volts">Nominal voltage (V)
+        <select id="volts-preset">
+          <option value="480" selected>480</option>
+          <option value="240">240</option>
+          <option value="208">208</option>
+          <option value="120">120</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="volts" min="1" step="any" value="480" hidden>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="amps">Load current (A)
+        <input type="number" id="amps" min="0" step="any" placeholder="e.g. 65">
+      </label>
+      <p class="small">Motor FLA reference table in the notes below.</p>
+    </div>
+    <div>
+      <label for="length">One-way circuit length (ft)
+        <input type="number" id="length" min="0" step="any" placeholder="e.g. 350">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="material">Conductor material
+        <select id="material">
+          <option value="12.9" selected>Copper (K = 12.9)</option>
+          <option value="21.2">Aluminum (K = 21.2)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="size">Conductor size
+        <select id="size">
+          <option value="6530">12 AWG</option>
+          <option value="10380">10 AWG</option>
+          <option value="16510">8 AWG</option>
+          <option value="26240" selected>6 AWG</option>
+          <option value="41740">4 AWG</option>
+          <option value="52620">3 AWG</option>
+          <option value="66360">2 AWG</option>
+          <option value="83690">1 AWG</option>
+          <option value="105600">1/0 AWG</option>
+          <option value="133100">2/0 AWG</option>
+          <option value="167800">3/0 AWG</option>
+          <option value="211600">4/0 AWG</option>
+          <option value="250000">250 kcmil</option>
+          <option value="350000">350 kcmil</option>
+          <option value="500000">500 kcmil</option>
+        </select>
+      </label>
+      <label for="parallel">Conductors per phase (parallel sets)
+        <input type="number" id="parallel" min="1" step="1" value="1">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Voltage drop</td><td class="val" id="r-vd">—</td></tr>
+    <tr><td>Percent drop</td><td class="val" id="r-pct">—</td></tr>
+    <tr><td>Voltage at load</td><td class="val" id="r-load">—</td></tr>
+    <tr><td>Max one-way length at 3% with this wire</td><td class="val" id="r-maxlen">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The circular-mil method</summary>
+  <p>Three phase: <code>V_d = √3 × K × I × L / CM</code> &nbsp;&nbsp; Single phase: <code>V_d = 2 × K × I × L / CM</code></p>
+  <p>K is conductor resistivity in Ω·cmil/ft (12.9 copper, 21.2 aluminum at operating temperature), L is one-way length in feet, CM is the conductor's circular-mil area. Parallel sets divide the current per conductor, equivalent to multiplying CM. This is the standard estimating method; it neglects reactance, which is conservative to ignore only at high power factor and modest conductor sizes.</p>
+</details>
+
+<details>
+  <summary>The 3% / 5% guideline</summary>
+  <p>The NEC's informational notes suggest limiting drop to 3% on a branch circuit or feeder and 5% total (source to load) for "reasonable efficiency of operation." It's a recommendation, not a code mandate — but motors, VFDs, and contactor coils get grumpy well before lights dim. Low voltage at a motor means higher current for the same load, which means more heat, which is how a marginal temp feeder cooks a rental pump motor over a week.</p>
+</details>
+
+<details>
+  <summary>460 V three-phase motor FLA reference (NEC Table 430.250 values)</summary>
+  <table class="fla">
+    <thead><tr><th>HP</th><th>FLA</th><th>HP</th><th>FLA</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>2.1</td><td>25</td><td>34</td></tr>
+      <tr><td>3</td><td>4.8</td><td>30</td><td>40</td></tr>
+      <tr><td>5</td><td>7.6</td><td>40</td><td>52</td></tr>
+      <tr><td>7.5</td><td>11</td><td>50</td><td>65</td></tr>
+      <tr><td>10</td><td>14</td><td>75</td><td>96</td></tr>
+      <tr><td>15</td><td>21</td><td>100</td><td>124</td></tr>
+      <tr><td>20</td><td>27</td><td>125</td><td>156</td></tr>
+    </tbody>
+  </table>
+  <p>Table values (used for sizing), not nameplate — verify against the current NEC edition and the actual motor nameplate.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>NFPA 70 (NEC) — Art. 210/215 informational notes on voltage drop; Table 430.250 motor FLA; Chapter 9 Table 8 conductor properties. <span class="small">https://www.nfpa.org/</span></li>
+  <li>The electrician/electrical engineer of record — ampacity, protection, and anything permanent.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "voltdrop.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("volts-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("volts").hidden = false;
+    } else {
+      $("volts").hidden = true;
+      $("volts").value = this.value;
+    }
+    recalc();
+  });
+
+  function recalc() {
+    var phase = parseInt($("phase").value, 10);
+    var V = num("volts");
+    var I = num("amps");
+    var L = num("length");
+    var K = parseFloat($("material").value);
+    var CM = parseFloat($("size").value);
+    var par = num("parallel");
+    var out = $("results");
+
+    if (!V || !I || !L || !par) { out.hidden = true; saveState(); return; }
+    par = Math.max(1, Math.round(par));
+
+    var mult = phase === 3 ? Math.sqrt(3) : 2;
+    var cmEff = CM * par;
+    var vd = mult * K * I * L / cmEff;
+    var pct = vd / V * 100;
+    var vLoad = V - vd;
+    var maxLen = 0.03 * V * cmEff / (mult * K * I);
+
+    $("r-vd").textContent = fmt(vd, 1) + " V";
+    $("r-pct").textContent = fmt(pct, 2) + " %";
+    $("r-load").textContent = fmt(vLoad, 1) + " V";
+    $("r-maxlen").textContent = fmt(maxLen, 0) + " ft";
+
+    var msgs = [];
+    out.classList.remove("fail");
+    if (pct > 5) {
+      $("verdict").textContent = "EXCESSIVE — " + fmt(pct, 1) + "% drop";
+      out.classList.add("fail");
+      msgs.push("Well past the 5% total guideline. Upsize the conductor, parallel a second set, shorten the run, or move the source. A motor at " +
+        fmt(vLoad, 0) + " V will run hot.");
+    } else if (pct > 3) {
+      $("verdict").textContent = "MARGINAL — " + fmt(pct, 1) + "% drop";
+      msgs.push("Past the 3% branch/feeder guideline. Acceptable only if the rest of the system contributes almost nothing — and remember motor starting current is ~6× FLA, so momentary drop at start is roughly 6× this number.");
+    } else {
+      $("verdict").textContent = "OK — " + fmt(pct, 1) + "% drop";
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["phase","volts-preset","volts","amps","length","material","size","parallel"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["volts-preset"] === "custom") $("volts").hidden = false;
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

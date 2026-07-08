@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Structure Buoyancy / Flotation Check</title>
+<meta name="description" content="Offline field calculator for flotation of empty basins, wet wells, and vaults during dewatering: uplift vs. resisting weight and factor of safety. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --fail-bg: #fdecec;
+    --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --fail-bg: #33191a;
+      --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .danger {
+    background: var(--fail-bg);
+    border-left: 4px solid var(--fail-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Structure Buoyancy / Flotation Check</h1>
+<p class="subtitle">Factor of safety against flotation for an empty basin, wet well, tank, or vault with groundwater present — the check to run before draining a structure or turning off the dewatering. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="danger">
+  <strong>Use limits:</strong> This is a screening check on the classic worst case — structure empty, groundwater high. It ignores side-wall friction and any structural anchorage (piles, tie-downs), which is conservative, but it also trusts your groundwater elevation, which is the input most likely to be wrong. If this tool says the FS is thin, the answer is the project geotech/structural engineer and the approved dewatering plan — not a slightly more optimistic groundwater guess.
+</div>
+
+<fieldset>
+  <legend>Structure Geometry (outside dimensions)</legend>
+  <div class="row">
+    <div>
+      <label for="shape">Shape
+        <select id="shape">
+          <option value="rect">Rectangular</option>
+          <option value="circ">Circular</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="height">Structure height, base of slab to top (ft)
+        <input type="number" id="height" min="0" step="any" placeholder="e.g. 18">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-geom">
+    <div>
+      <label for="olen">Outside length (ft)
+        <input type="number" id="olen" min="0" step="any" placeholder="e.g. 24">
+      </label>
+    </div>
+    <div>
+      <label for="owid">Outside width (ft)
+        <input type="number" id="owid" min="0" step="any" placeholder="e.g. 16">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="circ-geom" hidden>
+    <div>
+      <label for="odia">Outside diameter (ft)
+        <input type="number" id="odia" min="0" step="any" placeholder="e.g. 12">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="gw">Groundwater height above BOTTOM of base slab (ft)
+        <input type="number" id="gw" min="0" step="any" placeholder="e.g. 12">
+      </label>
+      <p class="small">The worst credible case: seasonal high, or the level when dewatering shuts off — not today's piezometer reading on a dry week.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Resisting Weight</legend>
+  <div class="row">
+    <div>
+      <label for="wt-mode">Dead weight
+        <select id="wt-mode">
+          <option value="calc">Estimate from concrete dimensions</option>
+          <option value="direct">Enter directly (lb)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div id="calc-wt">
+    <div class="row">
+      <div>
+        <label for="twall">Wall thickness (in)
+          <input type="number" id="twall" min="0" step="any" placeholder="e.g. 12">
+        </label>
+      </div>
+      <div>
+        <label for="tbase">Base slab thickness (in)
+          <input type="number" id="tbase" min="0" step="any" placeholder="e.g. 18">
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="ttop">Top slab thickness (in) — 0 if open-top
+          <input type="number" id="ttop" min="0" step="any" value="0">
+        </label>
+      </div>
+      <div>
+        <label for="cunit">Concrete unit weight (pcf)
+          <input type="number" id="cunit" min="0" step="any" value="150">
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="row" id="direct-wt" hidden>
+    <div>
+      <label for="deadwt">Structure dead weight (lb)
+        <input type="number" id="deadwt" min="0" step="any" placeholder="e.g. 380000">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="soilcover">Soil cover over top slab (ft) — buried structures
+        <input type="number" id="soilcover" min="0" step="any" value="0">
+      </label>
+    </div>
+    <div>
+      <label for="soilunit">Soil unit weight for cover (pcf)
+        <input type="number" id="soilunit" min="0" step="any" value="110">
+      </label>
+      <p class="small">If the cover soil is below groundwater, use the buoyant unit weight (total − 62.4).</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="extra">Other permanent resisting weight (lb) — equipment, base slab ledge soil, etc.
+        <input type="number" id="extra" min="0" step="any" value="0">
+      </label>
+      <p class="small">Only count what is verifiably permanent and in place at the moment the structure is empty. Contents don't count — the check assumes empty.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="reqfs">Required factor of safety
+        <select id="reqfs-preset">
+          <option value="1.10">1.10 (common with buoyant weights, no friction)</option>
+          <option value="1.25" selected>1.25 (common spec value)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="reqfs" min="1" step="any" value="1.25" hidden>
+      </label>
+      <p class="small">From the project specs or the structural general notes — it varies.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Footprint area</td><td class="val" id="r-area">—</td></tr>
+    <tr><td>Displaced volume (to groundwater level)</td><td class="val" id="r-disp">—</td></tr>
+    <tr><td>Uplift force</td><td class="val" id="r-uplift">—</td></tr>
+    <tr id="r-dead-row"><td>Concrete dead weight</td><td class="val" id="r-dead">—</td></tr>
+    <tr id="r-soil-row" hidden><td>Soil cover weight</td><td class="val" id="r-soil">—</td></tr>
+    <tr id="r-extra-row" hidden><td>Other resisting weight</td><td class="val" id="r-extra">—</td></tr>
+    <tr><td>Total resisting weight</td><td class="val" id="r-resist">—</td></tr>
+    <tr><td>Factor of safety</td><td class="val" id="r-fs">—</td></tr>
+    <tr><td>Max groundwater height for required FS</td><td class="val" id="r-maxgw">—</td></tr>
+  </table>
+  <div class="danger" id="danger" hidden></div>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p>Uplift (Archimedes, in feet and pounds):</p>
+  <p><code>U = A_footprint × h_gw × 62.4</code></p>
+  <p>where <code>h_gw</code> is groundwater height above the bottom of the base slab, capped at the structure height. Resisting weight is concrete dead load (walls as the outside-minus-inside prism, plus base and top slabs at the footprint) plus soil cover plus any entered permanent weight:</p>
+  <p><code>FS = W_resist / U</code></p>
+  <p>The "max groundwater" line inverts this: the groundwater height at which FS drops to the required value — a useful trigger level for the dewatering plan ("keep the water below elevation X or the pumps stay on").</p>
+</details>
+
+<details>
+  <summary>What this deliberately leaves out (and why)</summary>
+  <ul>
+    <li><strong>Side friction and adhesion:</strong> real but unreliable, especially in soft or recently disturbed backfill — most flotation checks neglect it, and so does this tool. Anything it adds is silent extra margin.</li>
+    <li><strong>Soil wedge on base slab projections:</strong> if the base slab extends beyond the walls, the soil block above the ledge resists uplift (at buoyant unit weight below groundwater). Add it under "other resisting weight" if the geometry exists and the backfill is actually in place.</li>
+    <li><strong>Anchors and piles:</strong> tension piles or rock anchors change the whole problem — that's a designed system, not a field check.</li>
+    <li><strong>Contents:</strong> the check assumes the structure is empty because that is the case you are creating the moment you drain it. A basin that is safe full and unsafe empty is exactly the situation this tool exists to catch.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Field scenarios where this bites</summary>
+  <ul>
+    <li>Draining an existing basin for rehab while the plant's other basins stay full — the local groundwater around a working plant is often higher than the borings from the original construction suggest.</li>
+    <li>Turning off well points over a weekend "because the excavation looked dry."</li>
+    <li>New wet wells and vaults after backfill but before the equipment, top slab, or pavement that the designer counted on is in place — check the interim condition, not just the final one.</li>
+    <li>Heavy rain filling a granular backfill zone around a structure faster than the surrounding native drains — a temporary perched groundwater condition.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ACI 350 — Code Requirements for Environmental Engineering Concrete Structures (flotation provisions and load factors). <span class="small">https://www.concrete.org/</span></li>
+  <li>Project geotechnical report — design groundwater elevations (the governing input).</li>
+  <li>Approved dewatering plan — the document this check should send you back to when the FS is thin.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "buoyancy.v1";
+  var GAMMA_W = 62.4;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 0;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("shape").addEventListener("change", function () {
+    $("rect-geom").hidden = this.value !== "rect";
+    $("circ-geom").hidden = this.value !== "circ";
+    recalc();
+  });
+  $("wt-mode").addEventListener("change", function () {
+    $("calc-wt").hidden = this.value !== "calc";
+    $("direct-wt").hidden = this.value !== "direct";
+    recalc();
+  });
+  $("reqfs-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("reqfs").hidden = false;
+    } else {
+      $("reqfs").hidden = true;
+      $("reqfs").value = this.value;
+    }
+    recalc();
+  });
+
+  function footprint() {
+    if ($("shape").value === "rect") {
+      var L = num("olen"), W = num("owid");
+      if (!L || !W) return null;
+      return { A: L * W, L: L, W: W };
+    }
+    var D = num("odia");
+    if (!D) return null;
+    return { A: Math.PI / 4 * D * D, D: D };
+  }
+
+  function concreteWeight(fp, H) {
+    var tw = num("twall"), tb = num("tbase"), tt = num("ttop", true), unit = num("cunit");
+    if (!tw || !tb || tt === null || !unit) return null;
+    var twFt = tw / 12, tbFt = tb / 12, ttFt = tt / 12;
+    var wallH = Math.max(H - tbFt - ttFt, 0);
+    var wallVol;
+    if ($("shape").value === "rect") {
+      var Li = fp.L - 2 * twFt, Wi = fp.W - 2 * twFt;
+      if (Li <= 0 || Wi <= 0) return null;
+      wallVol = (fp.A - Li * Wi) * wallH;
+    } else {
+      var Di = fp.D - 2 * twFt;
+      if (Di <= 0) return null;
+      wallVol = (fp.A - Math.PI / 4 * Di * Di) * wallH;
+    }
+    var slabVol = fp.A * tbFt + fp.A * ttFt;
+    return (wallVol + slabVol) * unit;
+  }
+
+  function recalc() {
+    var fp = footprint();
+    var H = num("height");
+    var gw = num("gw", true);
+    var soilCover = num("soilcover", true);
+    var soilUnit = num("soilunit");
+    var extra = num("extra", true);
+    var reqFs = num("reqfs");
+    var out = $("results");
+
+    if (!fp || !H || gw === null || soilCover === null || !soilUnit || extra === null || !reqFs) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var msgs = [], dangers = [];
+
+    var hEff = Math.min(gw, H);
+    if (gw > H) msgs.push("Groundwater is above the top of the structure — displaced volume is capped at the structure height, but confirm the structure isn't also carrying water load on the top slab.");
+
+    var dead;
+    if ($("wt-mode").value === "calc") {
+      dead = concreteWeight(fp, H);
+      if (dead === null) { out.hidden = true; saveState(); return; }
+    } else {
+      dead = num("deadwt");
+      if (!dead) { out.hidden = true; saveState(); return; }
+    }
+
+    var soilWt = soilCover * fp.A * soilUnit;
+    var resist = dead + soilWt + extra;
+    var uplift = fp.A * hEff * GAMMA_W;
+    var fs = uplift > 0 ? resist / uplift : Infinity;
+
+    /* max groundwater height for required FS: h = resist / (reqFs * A * 62.4) */
+    var maxGw = resist / (reqFs * fp.A * GAMMA_W);
+
+    var pass = fs >= reqFs;
+    if (uplift === 0) {
+      $("verdict").textContent = "No uplift — groundwater at or below base of slab";
+      out.classList.remove("fail");
+    } else if (fs < 1.0) {
+      $("verdict").textContent = "FLOATS — FS = " + fmt(fs, 2) + " (uplift exceeds weight)";
+      out.classList.add("fail");
+      dangers.push("Uplift exceeds resisting weight. Do not empty this structure (or do not stop dewatering) under this groundwater condition. Options: keep it ballasted with water, keep dewatering running, or install pressure-relief measures — per the engineer, not per this tool.");
+    } else if (!pass) {
+      $("verdict").textContent = "BELOW REQUIRED FS — " + fmt(fs, 2) + " vs. required " + fmt(reqFs, 2);
+      out.classList.add("fail");
+      msgs.push("The structure doesn't float on these numbers, but the margin is under the required factor of safety. Groundwater estimates are rarely good to ±1 ft — get the geotech/structural engineer's concurrence before proceeding.");
+    } else {
+      $("verdict").textContent = "OK — FS = " + fmt(fs, 2) + " (required " + fmt(reqFs, 2) + ")";
+      out.classList.remove("fail");
+      if (fs < reqFs + 0.15) {
+        msgs.push("Passing, but thin. A wet season or a mis-read piezometer eats this margin — consider a trigger level in the dewatering plan.");
+      }
+    }
+
+    $("r-area").textContent = fmt(fp.A, 0) + " sf";
+    $("r-disp").textContent = fmt(fp.A * hEff, 0) + " cf (water " + fmt(hEff, 1) + " ft above base)";
+    $("r-uplift").textContent = fmt(uplift) + " lb (" + fmt(uplift / 2000, 1) + " tons)";
+    $("r-dead-row").hidden = false;
+    $("r-dead").textContent = fmt(dead) + " lb";
+    $("r-soil-row").hidden = soilWt === 0;
+    if (soilWt > 0) $("r-soil").textContent = fmt(soilWt) + " lb";
+    $("r-extra-row").hidden = extra === 0;
+    if (extra > 0) $("r-extra").textContent = fmt(extra) + " lb";
+    $("r-resist").textContent = fmt(resist) + " lb (" + fmt(resist / 2000, 1) + " tons)";
+    $("r-fs").textContent = uplift > 0 ? fmt(fs, 2) : "∞";
+    $("r-maxgw").textContent = fmt(Math.min(maxGw, H), 1) + " ft above base of slab" +
+      (maxGw > H ? " (≥ structure height — cannot float at required FS)" : "");
+
+    var danger = $("danger");
+    danger.hidden = dangers.length === 0;
+    danger.textContent = dangers.join(" ");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["shape","height","olen","owid","odia","gw","wt-mode","twall","tbase","ttop","cunit","deadwt","soilcover","soilunit","extra","reqfs-preset","reqfs"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["reqfs-preset"] === "custom") $("reqfs").hidden = false;
+      $("shape").dispatchEvent(new Event("change"));
+      $("wt-mode").dispatchEvent(new Event("change"));
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

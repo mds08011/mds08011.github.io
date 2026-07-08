@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWPPP Rain Event &amp; Inspection Tracker</title>
+<meta name="description" content="Offline tracker for stormwater compliance: log rain events and inspections, see which qualifying events still need a post-rain inspection and when the next routine inspection is due. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="date"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .verdict { font-size: 1.2rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  table.log { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.log th, table.log td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; font-size: 0.92rem; }
+  table.log th { background: var(--panel); }
+  table.log td.status-ok { color: var(--result-border); font-weight: 600; }
+  table.log td.status-due { color: var(--fail-border); font-weight: 700; }
+  table.log button {
+    padding: 0.2rem 0.55rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>SWPPP Rain Event &amp; Inspection Tracker</h1>
+<p class="subtitle">Logs rain events and inspections against configurable permit rules, and shows which qualifying storms still need a post-rain inspection and when the next routine inspection is due. Runs entirely offline; all data persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Permit requirements vary — the Construction General Permit (federal or your state's version) and the project SWPPP define qualifying storm thresholds, inspection frequencies, deadlines, and documentation. Set the rules below to match <em>your</em> permit, and remember: the signed inspection form is the compliance record; this tracker is the thing that reminds you to go create it on time.
+</div>
+
+<fieldset>
+  <legend>Permit Rules (set once, per your permit)</legend>
+  <div class="row">
+    <div>
+      <label for="threshold">Qualifying storm threshold (in of rain)
+        <input type="number" id="threshold" min="0" step="any" value="0.25">
+      </label>
+      <p class="small">0.25 in / 24 hr is the common CGP trigger; your permit governs.</p>
+    </div>
+    <div>
+      <label for="window">Post-rain inspection due within (calendar days)
+        <input type="number" id="window" min="0" step="1" value="1">
+      </label>
+      <p class="small">Many permits say within 24 hours of a qualifying event (or of the next working day) — enter what yours says.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="routine">Routine inspection interval (days)
+        <input type="number" id="routine" min="1" step="1" value="7">
+      </label>
+      <p class="small">Weekly (7) or every 14 days depending on the permit option in effect.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Log a Rain Event</legend>
+  <div class="row">
+    <div>
+      <label for="rain-date">Date
+        <input type="date" id="rain-date">
+      </label>
+    </div>
+    <div>
+      <label for="rain-amt">Rainfall (in, 24-hr total)
+        <input type="number" id="rain-amt" min="0" step="any" placeholder="e.g. 0.45">
+      </label>
+    </div>
+    <div>
+      <label for="rain-note">Note (gauge/source)
+        <input type="text" id="rain-note" maxlength="60" placeholder="e.g. site gauge">
+      </label>
+    </div>
+  </div>
+  <button type="button" class="add" id="rain-add">+ Log rain event</button>
+</fieldset>
+
+<fieldset>
+  <legend>Log an Inspection</legend>
+  <div class="row">
+    <div>
+      <label for="insp-date">Date
+        <input type="date" id="insp-date">
+      </label>
+    </div>
+    <div>
+      <label for="insp-type">Type
+        <select id="insp-type">
+          <option value="routine">Routine</option>
+          <option value="post-rain">Post-rain</option>
+          <option value="pre-storm">Pre-storm</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="insp-note">Note
+        <input type="text" id="insp-note" maxlength="60" placeholder="e.g. form filed">
+      </label>
+    </div>
+  </div>
+  <button type="button" class="add" id="insp-add">+ Log inspection</button>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Last inspection (any type)</td><td class="val" id="r-last">—</td></tr>
+    <tr><td>Next routine inspection due</td><td class="val" id="r-next">—</td></tr>
+    <tr><td>Qualifying events awaiting inspection</td><td class="val" id="r-pending">—</td></tr>
+  </table>
+</div>
+
+<h2>Rain Events</h2>
+<table class="log" id="rain-table" hidden>
+  <thead><tr><th>Date</th><th>Inches</th><th>Qualifying</th><th>Inspection</th><th>Note</th><th></th></tr></thead>
+  <tbody id="rain-body"></tbody>
+</table>
+<p class="small" id="rain-empty">No rain events logged.</p>
+
+<h2>Inspections</h2>
+<table class="log" id="insp-table" hidden>
+  <thead><tr><th>Date</th><th>Type</th><th>Note</th><th></th></tr></thead>
+  <tbody id="insp-body"></tbody>
+</table>
+<p class="small" id="insp-empty">No inspections logged.</p>
+
+<button class="reset" id="reset-btn" type="button">Clear all data</button>
+
+<h2>How the Status Is Derived</h2>
+
+<details>
+  <summary>Matching logic</summary>
+  <p>A rain event at or above the threshold is "qualifying." It's considered covered if an inspection of any type is logged on a date from the event date through the event date plus the due window; otherwise it shows as needing inspection (overdue once the window has passed). The next routine due date is the most recent inspection date plus the routine interval. The logic is deliberately simple and visible — if your permit counts things differently (working days, combined events, stabilized-site exemptions), adjust behavior, not expectations.</p>
+</details>
+
+<details>
+  <summary>Why contemporaneous logging matters</summary>
+  <ul>
+    <li>Stormwater enforcement runs on records: a rain log kept daily, matched to signed inspection forms, is the difference between a clean audit and a notice of violation built on gaps.</li>
+    <li>Log the rain even when it doesn't qualify — a string of 0.2-in days that never triggers an inspection is itself a record that you were watching.</li>
+    <li>Forecast-triggered requirements (pre-storm inspections, REAP-type action plans in some states) are on you to track from the forecast — this tool records that you did them via the pre-storm inspection type.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>EPA Construction General Permit (or the state-issued equivalent) — qualifying events, frequencies, and deadlines. <span class="small">https://www.epa.gov/npdes/stormwater-discharges-construction-activities</span></li>
+  <li>The project SWPPP — site-specific inspection requirements (governing document).</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking (the irony is noted). All data is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "swppp.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function parseLocal(iso) {
+    if (!iso) return null;
+    var p = iso.split("-");
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function addDays(d, n) {
+    var x = new Date(d.getTime());
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+  function fmtDate(d) {
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  var rains = [];  // { date, amt, note }
+  var insps = [];  // { date, type, note }
+
+  function today() {
+    var t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  /* an event is covered if any inspection date falls in [event, event + window] */
+  function coverage(eventIso, windowDays) {
+    var ev = parseLocal(eventIso);
+    if (!ev) return { covered: false, overdue: false };
+    var end = addDays(ev, windowDays);
+    var covered = insps.some(function (i) {
+      var d = parseLocal(i.date);
+      return d && d >= ev && d <= end;
+    });
+    return { covered: covered, overdue: !covered && today() > end, dueBy: end };
+  }
+
+  function render() {
+    var threshold = num("threshold", true);
+    var windowDays = num("window", true);
+    var routine = num("routine");
+
+    rains.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    insps.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+
+    /* rain table */
+    var rb = $("rain-body");
+    rb.innerHTML = "";
+    var pending = 0, overdueCount = 0;
+    rains.forEach(function (r, idx) {
+      var tr = document.createElement("tr");
+      var qualifying = threshold !== null && r.amt >= threshold;
+      var status = "—", cls = "";
+      if (qualifying && windowDays !== null) {
+        var c = coverage(r.date, windowDays);
+        if (c.covered) { status = "done"; cls = "status-ok"; }
+        else if (c.overdue) { status = "OVERDUE"; cls = "status-due"; overdueCount++; pending++; }
+        else { status = "due by " + fmtDate(c.dueBy); cls = "status-due"; pending++; }
+      }
+      var cells = [
+        r.date,
+        r.amt.toFixed(2),
+        qualifying ? "yes" : "no",
+        status,
+        r.note || ""
+      ];
+      cells.forEach(function (c2, ci) {
+        var td = document.createElement("td");
+        td.textContent = c2;
+        if (ci === 3) td.className = cls;
+        tr.appendChild(td);
+      });
+      var tdBtn = document.createElement("td");
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.textContent = "×"; btn.setAttribute("aria-label", "Remove");
+      btn.addEventListener("click", function () { rains.splice(idx, 1); render(); });
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+      rb.appendChild(tr);
+    });
+    $("rain-table").hidden = rains.length === 0;
+    $("rain-empty").hidden = rains.length !== 0;
+
+    /* inspection table */
+    var ib = $("insp-body");
+    ib.innerHTML = "";
+    insps.forEach(function (i, idx) {
+      var tr = document.createElement("tr");
+      [i.date, i.type, i.note || ""].forEach(function (c) {
+        var td = document.createElement("td");
+        td.textContent = c;
+        tr.appendChild(td);
+      });
+      var tdBtn = document.createElement("td");
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.textContent = "×"; btn.setAttribute("aria-label", "Remove");
+      btn.addEventListener("click", function () { insps.splice(idx, 1); render(); });
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+      ib.appendChild(tr);
+    });
+    $("insp-table").hidden = insps.length === 0;
+    $("insp-empty").hidden = insps.length !== 0;
+
+    /* status panel */
+    var out = $("results");
+    if (routine === null && rains.length === 0 && insps.length === 0) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+    var last = insps.length ? parseLocal(insps[0].date) : null;
+    $("r-last").textContent = last ? fmtDate(last) + " (" + insps[0].type + ")" : "none logged";
+    var nextDue = last && routine ? addDays(last, routine) : null;
+    var routineOverdue = nextDue && today() > nextDue;
+    $("r-next").textContent = nextDue
+      ? fmtDate(nextDue) + (routineOverdue ? " — OVERDUE" : "")
+      : (routine ? "log an inspection to start the clock" : "—");
+    $("r-pending").textContent = pending === 0 ? "none" : pending + (overdueCount ? " (" + overdueCount + " overdue)" : "");
+
+    out.classList.toggle("fail", overdueCount > 0 || routineOverdue);
+    $("verdict").textContent = (overdueCount > 0 || routineOverdue)
+      ? "ACTION NEEDED — inspections outstanding"
+      : "Current — no outstanding inspections";
+    out.hidden = false;
+    saveState();
+  }
+
+  $("rain-add").addEventListener("click", function () {
+    var date = $("rain-date").value;
+    var amt = num("rain-amt", true);
+    if (!date || !parseLocal(date) || amt === null) return;
+    rains.push({ date: date, amt: amt, note: $("rain-note").value.trim() });
+    $("rain-amt").value = "";
+    $("rain-note").value = "";
+    render();
+  });
+  $("insp-add").addEventListener("click", function () {
+    var date = $("insp-date").value;
+    if (!date || !parseLocal(date)) return;
+    insps.push({ date: date, type: $("insp-type").value, note: $("insp-note").value.trim() });
+    $("insp-note").value = "";
+    render();
+  });
+
+  var RULE_FIELDS = ["threshold","window","routine"];
+  function saveState() {
+    try {
+      var state = { rains: rains, insps: insps };
+      RULE_FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.rains)) {
+        rains = state.rains.filter(function (r) { return r && parseLocal(r.date) && isFinite(r.amt); });
+      }
+      if (Array.isArray(state.insps)) {
+        insps = state.insps.filter(function (i) { return i && parseLocal(i.date); });
+      }
+      RULE_FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    if ((rains.length || insps.length) &&
+        !window.confirm("This clears the permit rules AND both logs. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  RULE_FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  });
+
+  loadState();
+  render();
+})();
+</script>
+</body>
+</html>

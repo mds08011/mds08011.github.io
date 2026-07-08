@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPSH Available Calculator</title>
+<meta name="description" content="Offline field calculator for pump suction problems: NPSH available from elevation-adjusted atmospheric pressure, static head, vapor pressure, and suction friction, compared against NPSHr with margin. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>NPSH Available Calculator</h1>
+<p class="subtitle">Net positive suction head available at the pump: elevation-adjusted atmospheric pressure, static suction head or lift, vapor pressure at water temperature, and suction-side friction — compared against the pump's NPSHr with margin. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Clean water assumed (vapor pressure table is for water; specific gravity ≈ 1). Entrained air, dissolved gases coming out of solution, and vortexing at the intake all rob suction performance in ways NPSH arithmetic doesn't capture — a passing NPSHa with a bad intake still cavitates. NPSHr comes from the manufacturer's curve at the actual operating flow, not the rated point.
+</div>
+
+<fieldset>
+  <legend>Site &amp; Water</legend>
+  <div class="row">
+    <div>
+      <label for="elev">Site elevation (ft above sea level)
+        <input type="number" id="elev" step="any" value="0">
+      </label>
+    </div>
+    <div>
+      <label for="temp">Water temperature (°F)
+        <input type="number" id="temp" min="32" max="212" step="any" value="60">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Suction Conditions</legend>
+  <div class="row">
+    <div>
+      <label for="static-type">Suction configuration
+        <select id="static-type">
+          <option value="flooded">Flooded suction (water surface above pump)</option>
+          <option value="lift">Suction lift (water surface below pump)</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="static"><span id="static-label">Water surface height above pump centerline (ft)</span>
+        <input type="number" id="static" min="0" step="any" placeholder="e.g. 6">
+      </label>
+      <p class="small">Use the LOWEST credible water level — NPSH is worst at low wet well level.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="fric">Suction-side friction loss (ft)
+        <input type="number" id="fric" min="0" step="any" value="0">
+      </label>
+      <p class="small">Pipe + fittings + strainer/foot valve from the source to the pump flange. A half-plugged strainer is friction too.</p>
+    </div>
+    <div>
+      <label for="npshr">Pump NPSHr at operating flow (ft) — optional
+        <input type="number" id="npshr" min="0" step="any" placeholder="from the pump curve">
+      </label>
+      <label for="margin">Required margin over NPSHr (ft)
+        <input type="number" id="margin" min="0" step="any" value="3">
+      </label>
+      <p class="small">Hydraulic Institute suggests a margin (commonly 2–5 ft or a 1.1–1.3 ratio); the pump spec may state one.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Atmospheric pressure at elevation</td><td class="val" id="r-atm">—</td></tr>
+    <tr><td>Static suction head</td><td class="val" id="r-static">—</td></tr>
+    <tr><td>Vapor pressure at temperature</td><td class="val" id="r-vp">—</td></tr>
+    <tr><td>Suction friction</td><td class="val" id="r-fric">—</td></tr>
+    <tr class="total"><td>NPSH available</td><td class="val" id="r-npsha">—</td></tr>
+    <tr id="r-npshr-row" hidden><td>NPSHr + margin</td><td class="val" id="r-req">—</td></tr>
+    <tr id="r-head-row" hidden><td>Margin actually available</td><td class="val" id="r-avail-margin">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The NPSHa equation</summary>
+  <p><code>NPSHa = h_atm ± h_static − h_vp − h_friction</code> (all in feet of water)</p>
+  <p>Atmospheric pressure falls with elevation per the standard atmosphere: <code>P(psia) = 14.696 × (1 − 6.8754×10⁻⁶ × elev)^5.2559</code>, converted to feet at 2.31 ft/psi. Static head is positive for flooded suction, negative for lift. Vapor pressure is interpolated from the water table below and subtracted because water flashes to vapor once local pressure falls to it — that flashing is cavitation.</p>
+</details>
+
+<details>
+  <summary>Water vapor pressure table (psia)</summary>
+  <p>32°F: 0.089 · 40°F: 0.122 · 50°F: 0.178 · 60°F: 0.256 · 70°F: 0.363 · 80°F: 0.507 · 90°F: 0.698 · 100°F: 0.949 · 110°F: 1.275 · 120°F: 1.692 · 130°F: 2.223 · 140°F: 2.889 · 150°F: 3.718 · 160°F: 4.741 · 170°F: 5.992 · 180°F: 7.510 · 190°F: 9.339 · 200°F: 11.526 · 212°F: 14.696</p>
+  <p>Linear interpolation between points. Note how fast this climbs with temperature — the same suction that works on 60°F water can cavitate on 130°F digester recirculation.</p>
+</details>
+
+<details>
+  <summary>Field diagnosis notes</summary>
+  <ul>
+    <li>Cavitation sounds like pumping gravel and shows as pitting on the impeller eye, falling flow/head, and fluctuating amps.</li>
+    <li>NPSHr rises steeply with flow. A pump that runs out to the right of its curve (low system head, e.g. during a bypass with a short discharge) can cavitate purely from over-flow — throttle the discharge to walk it back up the curve.</li>
+    <li>The classic marginal case: self-priming trash pump, hot day, long suction hose, plugged strainer, and the wet well drawn low. Every one of those terms moves the same direction.</li>
+    <li>NPSHa margin is not a substitute for good intake hydraulics — submergence to prevent vortexing is a separate check (Hydraulic Institute intake design).</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ANSI/HI 9.6.1 — Rotodynamic Pumps: Guideline for NPSH Margin. <span class="small">https://www.pumps.org/</span></li>
+  <li>Karassik et al., <em>Pump Handbook</em> — NPSH fundamentals.</li>
+  <li>Manufacturer's certified pump curve — NPSHr at the actual operating flow (governing input).</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "npsha.v1";
+  var FT_PER_PSI = 2.31;
+
+  var VP_TABLE = [
+    [32, 0.0885], [40, 0.1217], [50, 0.1781], [60, 0.2563], [70, 0.3631],
+    [80, 0.5069], [90, 0.6982], [100, 0.9492], [110, 1.275], [120, 1.692],
+    [130, 2.223], [140, 2.889], [150, 3.718], [160, 4.741], [170, 5.992],
+    [180, 7.510], [190, 9.339], [200, 11.526], [212, 14.696]
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero, allowNeg) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowNeg && v < 0) return null;
+    if (!allowZero && v === 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  function atmPsia(elevFt) {
+    return 14.696 * Math.pow(1 - 6.8754e-6 * elevFt, 5.2559);
+  }
+  function vaporPsia(tempF) {
+    if (tempF <= VP_TABLE[0][0]) return VP_TABLE[0][1];
+    if (tempF >= VP_TABLE[VP_TABLE.length - 1][0]) return VP_TABLE[VP_TABLE.length - 1][1];
+    for (var i = 0; i < VP_TABLE.length - 1; i++) {
+      var a = VP_TABLE[i], b = VP_TABLE[i + 1];
+      if (tempF >= a[0] && tempF <= b[0]) {
+        return a[1] + (b[1] - a[1]) * (tempF - a[0]) / (b[0] - a[0]);
+      }
+    }
+    return null;
+  }
+
+  $("static-type").addEventListener("change", function () {
+    $("static-label").textContent = this.value === "flooded"
+      ? "Water surface height above pump centerline (ft)"
+      : "Suction lift, pump centerline above water surface (ft)";
+    recalc();
+  });
+
+  function recalc() {
+    var elev = num("elev", true, true);
+    var temp = num("temp");
+    var staticFt = num("static", true);
+    var fric = num("fric", true);
+    var npshr = opt("npshr");
+    var margin = num("margin", true);
+    var out = $("results");
+
+    if (elev === null || !temp || staticFt === null || fric === null || margin === null) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var flooded = $("static-type").value === "flooded";
+    var hAtm = atmPsia(elev) * FT_PER_PSI;
+    var hVp = vaporPsia(temp) * FT_PER_PSI;
+    var hStatic = flooded ? staticFt : -staticFt;
+    var npsha = hAtm + hStatic - hVp - fric;
+
+    $("r-atm").textContent = fmt(hAtm, 1) + " ft (" + fmt(atmPsia(elev), 2) + " psia)";
+    $("r-static").textContent = (hStatic >= 0 ? "+" : "") + fmt(hStatic, 1) + " ft (" + (flooded ? "flooded" : "lift") + ")";
+    $("r-vp").textContent = "−" + fmt(hVp, 2) + " ft (" + fmt(vaporPsia(temp), 3) + " psia at " + fmt(temp, 0) + "°F)";
+    $("r-fric").textContent = "−" + fmt(fric, 1) + " ft";
+    $("r-npsha").textContent = fmt(npsha, 1) + " ft";
+
+    var msgs = [];
+    out.classList.remove("fail");
+
+    if (npshr !== null) {
+      var req = npshr + margin;
+      $("r-npshr-row").hidden = false;
+      $("r-head-row").hidden = false;
+      $("r-req").textContent = fmt(npshr, 1) + " + " + fmt(margin, 1) + " = " + fmt(req, 1) + " ft";
+      $("r-avail-margin").textContent = fmt(npsha - npshr, 1) + " ft over NPSHr";
+      if (npsha < npshr) {
+        $("verdict").textContent = "CAVITATION — NPSHa " + fmt(npsha, 1) + " ft is below NPSHr " + fmt(npshr, 1) + " ft";
+        out.classList.add("fail");
+        msgs.push("The pump cannot run here without cavitating. Raise the water level, shorten/fatten the suction line, cool the water, lower the pump, or pick a pump with lower NPSHr.");
+      } else if (npsha < req) {
+        $("verdict").textContent = "MARGINAL — meets NPSHr but not the " + fmt(margin, 1) + " ft margin";
+        out.classList.add("fail");
+        msgs.push("Passing on paper with no cushion. NPSHr on the curve is the 3% head-drop point — incipient cavitation and damage start above it, which is what the margin is for.");
+      } else {
+        $("verdict").textContent = "OK — NPSHa " + fmt(npsha, 1) + " ft vs. required " + fmt(req, 1) + " ft";
+      }
+    } else {
+      $("r-npshr-row").hidden = true;
+      $("r-head-row").hidden = true;
+      $("verdict").textContent = "NPSHa = " + fmt(npsha, 1) + " ft";
+    }
+
+    if (npsha < 0) {
+      msgs.push("NPSHa is negative — water flashes before it reaches the pump under these conditions regardless of the pump selected.");
+    }
+    if (!flooded && staticFt > 20) {
+      msgs.push("Suction lift over 20 ft is at the practical limit for surface pumps even before friction and vapor pressure — expect priming trouble.");
+    }
+    if (temp > 120) {
+      msgs.push("Hot water: vapor pressure is eating the atmospheric column fast. Flooded suction is strongly preferred above ~120°F.");
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["elev","temp","static-type","static","fric","npshr","margin"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("static-type").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

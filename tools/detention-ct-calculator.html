@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detention Time &amp; Disinfection CT Calculator</title>
+<meta name="description" content="Offline field calculator for hydraulic retention time and disinfection contact time: HRT, T10 via EPA baffling factors, achieved CT, and CT ratio against a required value. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  table.bf { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.bf th, table.bf td { border: 1px solid var(--border); padding: 0.35rem 0.5rem; text-align: left; font-size: 0.9rem; }
+  table.bf th { background: var(--panel); }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Detention Time &amp; Disinfection CT Calculator</h1>
+<p class="subtitle">Hydraulic retention time for basins at a given flow, and disinfection contact time: T10 from EPA baffling factors, achieved CT, and the ratio against a required value. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The required CT value comes from the regulatory tables (temperature, pH, disinfectant, and log-inactivation credit sought) or from the permit — this tool doesn't reproduce those tables; it computes what the basin achieves so you can compare. The baffling factor is a claim about hydraulics that the primacy agency may require a tracer study to substantiate. Compliance determinations belong to the operator of record and the permit, not a field calculator.
+</div>
+
+<fieldset>
+  <legend>Basin &amp; Flow</legend>
+  <div class="row">
+    <div>
+      <label for="vol-mode">Volume
+        <select id="vol-mode">
+          <option value="direct">Enter volume directly (gal)</option>
+          <option value="rect">Rectangular basin</option>
+          <option value="circ">Circular basin</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="flow">Flow (GPM)
+        <input type="number" id="flow" min="0" step="any" placeholder="e.g. 1400">
+      </label>
+      <p class="small">Use peak flow for the conservative check — CT is worst at peak.</p>
+    </div>
+  </div>
+  <div class="row" id="direct-vol">
+    <div>
+      <label for="vol">Effective volume (gal)
+        <input type="number" id="vol" min="0" step="any" placeholder="e.g. 250000">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-vol" hidden>
+    <div>
+      <label for="rlen">Length (ft)
+        <input type="number" id="rlen" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="rwid">Width (ft)
+        <input type="number" id="rwid" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="rdep">Water depth (ft)
+        <input type="number" id="rdep" min="0" step="any">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="circ-vol" hidden>
+    <div>
+      <label for="cdia">Diameter (ft)
+        <input type="number" id="cdia" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="cdep">Water depth (ft)
+        <input type="number" id="cdep" min="0" step="any">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Disinfection (optional — leave blank for HRT only)</legend>
+  <div class="row">
+    <div>
+      <label for="bf">Baffling condition (EPA)
+        <select id="bf">
+          <option value="0.1">Unbaffled / mixed — BF = 0.1</option>
+          <option value="0.3">Poor — BF = 0.3</option>
+          <option value="0.5" selected>Average — BF = 0.5</option>
+          <option value="0.7">Superior — BF = 0.7</option>
+          <option value="1.0">Perfect plug flow (pipeline) — BF = 1.0</option>
+          <option value="custom">Custom / tracer-study value…</option>
+        </select>
+        <input type="number" id="bf-custom" min="0" max="1" step="any" value="0.5" hidden>
+      </label>
+    </div>
+    <div>
+      <label for="residual">Disinfectant residual at segment outlet (mg/L)
+        <input type="number" id="residual" min="0" step="any" placeholder="e.g. 1.2">
+      </label>
+      <p class="small">Measured at the end of the contact segment — the conservative convention.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="reqct">Required CT (mg·min/L) — from tables/permit
+        <input type="number" id="reqct" min="0" step="any" placeholder="e.g. 60">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Effective volume</td><td class="val" id="r-vol">—</td></tr>
+    <tr><td>Theoretical HRT (V/Q)</td><td class="val" id="r-hrt">—</td></tr>
+    <tr id="r-t10-row" hidden><td>T10 (HRT × BF)</td><td class="val" id="r-t10">—</td></tr>
+    <tr id="r-ct-row" hidden><td>CT achieved (residual × T10)</td><td class="val" id="r-ct">—</td></tr>
+    <tr id="r-ratio-row" hidden><td>CT ratio (achieved / required)</td><td class="val" id="r-ratio">—</td></tr>
+    <tr id="r-maxq-row" hidden><td>Max flow that still meets required CT</td><td class="val" id="r-maxq">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p><code>HRT (min) = V (gal) / Q (GPM)</code></p>
+  <p><code>T10 = HRT × BF</code> — the time the fastest 10% of the water actually spends in the basin, which is what disinfection credit is based on. <code>CT = C_residual × T10</code>, compared against the required CT for the target log inactivation. The max-flow line inverts the chain: <code>Q_max = V × BF × C / CT_req</code>.</p>
+</details>
+
+<details>
+  <summary>EPA baffling factor descriptions</summary>
+  <table class="bf">
+    <thead><tr><th>BF</th><th>Condition</th><th>What it looks like</th></tr></thead>
+    <tbody>
+      <tr><td>0.1</td><td>Unbaffled</td><td>Agitated or mixed basin; inlet and outlet close together; clearwell with no baffles</td></tr>
+      <tr><td>0.3</td><td>Poor</td><td>Single or no intra-basin baffles; unbaffled inlet/outlet</td></tr>
+      <tr><td>0.5</td><td>Average</td><td>Baffled inlet or outlet with some intra-basin baffling</td></tr>
+      <tr><td>0.7</td><td>Superior</td><td>Perforated inlet baffle, serpentine or perforated intra-basin baffles, weir or perforated launder outlet</td></tr>
+      <tr><td>1.0</td><td>Perfect</td><td>Pipeline flow (plug flow) — length ≥ ~10× diameter of turbulent mixing</td></tr>
+    </tbody>
+  </table>
+  <p>These are the EPA SWTR guidance defaults. A tracer study can substantiate a higher (or reveal a lower) T10/T ratio than the table gives — the custom entry is for that.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Volume should be the <em>effective</em> volume at the actual operating level — a clearwell run at half depth has half the CT the drawings imply.</li>
+    <li>During startup, low plant flows make CT easy; the check that matters is at design peak flow, which is why the max-flow output exists — it's the operating envelope in one number.</li>
+    <li>Residual decays through the segment. Using the outlet residual is the conservative convention; using the inlet residual flatters the number.</li>
+    <li>Multiple segments in series (basin + pipeline) each get their own CT and the credits sum — run this tool per segment.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>US EPA — Surface Water Treatment Rule guidance manuals (CT tables, baffling factors). <span class="small">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</span></li>
+  <li>EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> — T10 determination and tracer studies.</li>
+  <li>State primacy agency guidance and the facility's operations permit — governing requirements.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "ctcalc.v1";
+  var GAL_PER_CUFT = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function fmtTime(min) {
+    if (min === null || !isFinite(min)) return "—";
+    if (min < 90) return fmt(min, 1) + " min";
+    return fmt(min / 60, 2) + " hr (" + fmt(min, 0) + " min)";
+  }
+
+  $("vol-mode").addEventListener("change", function () {
+    $("direct-vol").hidden = this.value !== "direct";
+    $("rect-vol").hidden = this.value !== "rect";
+    $("circ-vol").hidden = this.value !== "circ";
+    recalc();
+  });
+  $("bf").addEventListener("change", function () {
+    $("bf-custom").hidden = this.value !== "custom";
+    recalc();
+  });
+
+  function volume() {
+    var mode = $("vol-mode").value;
+    if (mode === "direct") return num("vol");
+    if (mode === "rect") {
+      var L = num("rlen"), W = num("rwid"), D = num("rdep");
+      if (!L || !W || !D) return null;
+      return L * W * D * GAL_PER_CUFT;
+    }
+    var dia = num("cdia"), dep = num("cdep");
+    if (!dia || !dep) return null;
+    return Math.PI / 4 * dia * dia * dep * GAL_PER_CUFT;
+  }
+
+  function bafflingFactor() {
+    var v = $("bf").value;
+    if (v === "custom") return num("bf-custom");
+    return parseFloat(v);
+  }
+
+  function recalc() {
+    var V = volume();
+    var Q = num("flow");
+    var out = $("results");
+    if (!V || !Q) { out.hidden = true; saveState(); return; }
+
+    var hrt = V / Q; // minutes
+    $("r-vol").textContent = fmt(V, 0) + " gal";
+    $("r-hrt").textContent = fmtTime(hrt);
+
+    var bf = bafflingFactor();
+    var residual = opt("residual");
+    var reqCt = opt("reqct");
+    var msgs = [];
+
+    var hasDisinfection = bf !== null && residual !== null;
+    $("r-t10-row").hidden = !hasDisinfection;
+    $("r-ct-row").hidden = !hasDisinfection;
+    $("r-ratio-row").hidden = !(hasDisinfection && reqCt !== null);
+    $("r-maxq-row").hidden = !(hasDisinfection && reqCt !== null);
+    out.classList.remove("fail");
+
+    if (hasDisinfection) {
+      var t10 = hrt * bf;
+      var ct = residual * t10;
+      $("r-t10").textContent = fmtTime(t10) + " (BF = " + fmt(bf, 2) + ")";
+      $("r-ct").textContent = fmt(ct, 1) + " mg·min/L";
+
+      if (reqCt !== null) {
+        var ratio = ct / reqCt;
+        var maxQ = V * bf * residual / reqCt;
+        $("r-ratio").textContent = fmt(ratio, 2);
+        $("r-maxq").textContent = fmt(maxQ, 0) + " GPM at this residual and BF";
+        if (ratio >= 1) {
+          $("verdict").textContent = "CT MET — ratio " + fmt(ratio, 2);
+          if (ratio < 1.1) msgs.push("Ratio under 1.1 — no operational cushion. A residual dip or a flow bump puts this segment out of compliance.");
+        } else {
+          $("verdict").textContent = "CT NOT MET — ratio " + fmt(ratio, 2);
+          out.classList.add("fail");
+          msgs.push("Options, in the usual order: raise the residual, reduce flow through the segment (max " +
+            fmt(maxQ, 0) + " GPM as-is), improve baffling, or add contact volume.");
+        }
+      } else {
+        $("verdict").textContent = "CT achieved: " + fmt(ct, 1) + " mg·min/L";
+      }
+    } else {
+      $("verdict").textContent = "HRT: " + fmtTime(hrt);
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["vol-mode","flow","vol","rlen","rwid","rdep","cdia","cdep","bf","bf-custom","residual","reqct"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("vol-mode").dispatchEvent(new Event("change"));
+      if (state["bf"] === "custom") $("bf-custom").hidden = false;
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

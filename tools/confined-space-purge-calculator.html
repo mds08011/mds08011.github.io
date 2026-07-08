@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confined Space Ventilation Purge Calculator</title>
+<meta name="description" content="Offline field calculator for scheduling confined space ventilation: purge time from space volume, required air changes, and blower output derated for duct losses. Does not replace atmospheric testing or the entry permit. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --danger-bg: #fdecec; --danger-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --danger-bg: #33191a; --danger-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  .danger {
+    background: var(--danger-bg); border-left: 4px solid var(--danger-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Confined Space Ventilation Purge Calculator</h1>
+<p class="subtitle">Scheduling arithmetic for forced-air ventilation of manholes, wet wells, and vaults: purge time from space volume, required air changes, and blower output derated for duct losses. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="danger">
+  <strong>This tool does not clear a space for entry. Ever.</strong> Only calibrated atmospheric testing (oxygen, LEL, H₂S, CO at minimum — top, middle, and bottom of the space) by the qualified person, under the entry permit, clears a space — and continuous monitoring keeps it cleared. A calculated purge time tells you when it's worth <em>testing again</em>, nothing more. Sewer-connected spaces can re-contaminate in minutes from upstream slugs regardless of how long the blower ran. The permit, the attendant, the retrieval equipment, and the competent/qualified person requirements are all upstream of this arithmetic.
+</div>
+
+<fieldset>
+  <legend>Space Volume</legend>
+  <div class="row">
+    <div>
+      <label for="shape">Shape
+        <select id="shape">
+          <option value="circ">Circular (manhole / wet well)</option>
+          <option value="rect">Rectangular (vault / channel)</option>
+          <option value="direct">Enter volume directly</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="circ-in">
+    <div>
+      <label for="cdia">Inside diameter (ft)
+        <input type="number" id="cdia" min="0" step="any" placeholder="e.g. 4">
+      </label>
+    </div>
+    <div>
+      <label for="cdep">Depth (ft)
+        <input type="number" id="cdep" min="0" step="any" placeholder="e.g. 20">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-in" hidden>
+    <div>
+      <label for="rlen">Length (ft)
+        <input type="number" id="rlen" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="rwid">Width (ft)
+        <input type="number" id="rwid" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="rdep">Depth/height (ft)
+        <input type="number" id="rdep" min="0" step="any">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="direct-in" hidden>
+    <div>
+      <label for="dvol">Volume (cf)
+        <input type="number" id="dvol" min="0" step="any">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Ventilation</legend>
+  <div class="row">
+    <div>
+      <label for="changes">Air changes for initial purge
+        <input type="number" id="changes" min="1" step="any" value="7">
+      </label>
+      <p class="small">Common practice is on the order of 7–10 complete air changes before the pre-entry test (or blower manufacturer's guidance) — your program's number governs.</p>
+    </div>
+    <div>
+      <label for="cfm">Blower rated output (CFM)
+        <input type="number" id="cfm" min="0" step="any" placeholder="e.g. 1200">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="eff">Effective delivery (% of rated, after duct losses)
+        <select id="eff-preset">
+          <option value="85">Short straight duct, ≤15 ft — ~85%</option>
+          <option value="65" selected>15–25 ft with one 90° bend — ~65%</option>
+          <option value="50">25 ft+ or two 90° bends — ~50%</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="eff" min="5" max="100" step="any" value="65" hidden>
+      </label>
+      <p class="small">Flexible duct is brutal on axial blowers — every bend and every extra section costs real flow. The blower manufacturer's duct-loss chart beats these rules of thumb.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Space volume</td><td class="val" id="r-vol">—</td></tr>
+    <tr><td>Effective airflow</td><td class="val" id="r-cfm">—</td></tr>
+    <tr><td>Time per air change</td><td class="val" id="r-perchange">—</td></tr>
+    <tr><td>Initial purge time (<span id="r-nch"></span> changes)</td><td class="val" id="r-purge">—</td></tr>
+  </table>
+  <div class="warn">After the purge: <strong>test the atmosphere</strong> per the permit before anyone enters, and keep the blower running continuously during occupancy — purging is a precondition for testing, not a substitute for it.</div>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p><code>t = V × N / Q_eff</code> — volume (cf) times required air changes divided by effective delivered airflow (CFM), giving minutes. Effective airflow is the rated CFM times the duct-loss factor. That's the whole calculation; everything hard about confined spaces is in the parts that aren't math.</p>
+</details>
+
+<details>
+  <summary>Placement matters as much as time</summary>
+  <ul>
+    <li>Duct the supply to within a couple of feet of the <em>bottom</em> of the space (or the far end of a horizontal one) so fresh air displaces from the bottom up. A blower parked at the rim churns the top and leaves the bottom — where H₂S sits, heavier than air — undisturbed.</li>
+    <li>Position the blower intake upwind and away from generator exhaust, truck exhaust, and the space's own vent discharge, or you're pumping CO in with great efficiency.</li>
+    <li>Sewer-connected structures: plug or block channels where the entry procedure allows, and expect the atmosphere to change when upstream flow changes — which is what the continuous monitor is for.</li>
+    <li>If the pre-entry test fails after a full calculated purge, the space has a supply problem (off-gassing, connected atmosphere), not a time problem — more minutes on the blower isn't the fix; the entry supervisor's re-evaluation is.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>OSHA 29 CFR 1910.146 — Permit-Required Confined Spaces (general industry) and 29 CFR 1926 Subpart AA (construction). <span class="small">https://www.osha.gov/</span></li>
+  <li>The employer's written confined space program and the entry permit — governing procedures.</li>
+  <li>Blower manufacturer duct-loss data — actual delivered CFM for the duct setup in use.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "csvent.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function fmtMin(min) {
+    if (min === null || !isFinite(min)) return "—";
+    if (min < 1) return fmt(min * 60, 0) + " sec";
+    if (min < 90) {
+      var m = Math.floor(min);
+      var s = Math.round((min - m) * 60);
+      if (s === 60) { m += 1; s = 0; }
+      return m + " min " + (s < 10 ? "0" : "") + s + " sec";
+    }
+    return fmt(min / 60, 1) + " hr (" + fmt(min, 0) + " min)";
+  }
+
+  $("shape").addEventListener("change", function () {
+    $("circ-in").hidden = this.value !== "circ";
+    $("rect-in").hidden = this.value !== "rect";
+    $("direct-in").hidden = this.value !== "direct";
+    recalc();
+  });
+  $("eff-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("eff").hidden = false;
+    } else {
+      $("eff").hidden = true;
+      $("eff").value = this.value;
+    }
+    recalc();
+  });
+
+  function volumeCf() {
+    var shape = $("shape").value;
+    if (shape === "direct") return num("dvol");
+    if (shape === "circ") {
+      var d = num("cdia"), dep = num("cdep");
+      if (!d || !dep) return null;
+      return Math.PI / 4 * d * d * dep;
+    }
+    var L = num("rlen"), W = num("rwid"), D = num("rdep");
+    if (!L || !W || !D) return null;
+    return L * W * D;
+  }
+
+  function recalc() {
+    var V = volumeCf();
+    var N = num("changes");
+    var cfm = num("cfm");
+    var eff = num("eff");
+    var out = $("results");
+
+    if (!V || !N || !cfm || !eff) { out.hidden = true; saveState(); return; }
+
+    var qEff = cfm * eff / 100;
+    var perChange = V / qEff;
+    var purge = perChange * N;
+
+    $("r-vol").textContent = fmt(V, 0) + " cf";
+    $("r-cfm").textContent = fmt(qEff, 0) + " CFM (" + fmt(cfm, 0) + " rated × " + fmt(eff, 0) + "%)";
+    $("r-perchange").textContent = fmtMin(perChange);
+    $("r-nch").textContent = fmt(N, 0);
+    $("r-purge").textContent = fmtMin(purge);
+
+    var msgs = [];
+    if (qEff < V / 10) {
+      msgs.push("Effective airflow is small relative to the space (over 10 minutes per air change) — a bigger blower or shorter duct run will pay for itself in schedule alone.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["shape","cdia","cdep","rlen","rwid","rdep","dvol","changes","cfm","eff-preset","eff"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["eff-preset"] === "custom") $("eff").hidden = false;
+      $("shape").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

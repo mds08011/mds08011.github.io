@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Annular &amp; Abandonment Grout Volume Calculator</title>
+<meta name="description" content="Offline field calculator for grout orders: casing/carrier annular space, full-bore pipe abandonment, and structure abandonment volumes with overage, in CY, gallons, and sacks. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Annular &amp; Abandonment Grout Volume Calculator</h1>
+<p class="subtitle">Grout and CLSM order quantities: casing/carrier annular space, full-bore pipe abandonment, and structure abandonment, with overage — in cubic yards, gallons, and sacks. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Neat geometric volume plus your overage factor. Real annular grouting loses material to permeable backfill, joints, and takes in bulges of the bore — HDD and bore-and-jack overages of 25–50% aren't unusual where ground was lost during the crossing. If the take runs far past the estimate, stop and figure out where it's going (a nearby storm drain finding out for you is the bad version). Grout mix, pressure limits, lift heights on structures, and buoyancy of the carrier during grouting are per the approved plan.
+</div>
+
+<fieldset>
+  <legend>What's Being Filled</legend>
+  <div class="row">
+    <div>
+      <label for="mode">Fill type
+        <select id="mode">
+          <option value="annular">Annular space (casing ID vs. carrier OD)</option>
+          <option value="pipe">Pipe abandonment (full bore)</option>
+          <option value="rect">Structure abandonment (rectangular)</option>
+          <option value="direct">Direct volume entry</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="annular-in">
+    <div>
+      <label for="cid">Casing inside diameter (in)
+        <input type="number" id="cid" min="0" step="any" placeholder="e.g. 23.25">
+      </label>
+    </div>
+    <div>
+      <label for="pod">Carrier pipe outside diameter (in)
+        <input type="number" id="pod" min="0" step="any" placeholder="e.g. 13.20">
+      </label>
+      <p class="small">Bell OD reduces the annulus locally; spacers/skids displace a negligible volume.</p>
+    </div>
+  </div>
+  <div class="row" id="pipe-in" hidden>
+    <div>
+      <label for="aid">Abandoned pipe inside diameter (in)
+        <input type="number" id="aid" min="0" step="any" placeholder="e.g. 15">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-in" hidden>
+    <div>
+      <label for="slen">Inside length (ft)
+        <input type="number" id="slen" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="swid">Inside width (ft)
+        <input type="number" id="swid" min="0" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="sdep">Fill depth (ft)
+        <input type="number" id="sdep" min="0" step="any">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="len-in">
+    <div>
+      <label for="flen">Length (ft)
+        <input type="number" id="flen" min="0" step="any" placeholder="e.g. 180">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="direct-in" hidden>
+    <div>
+      <label for="dvol">Volume (cf)
+        <input type="number" id="dvol" min="0" step="any">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Ordering</legend>
+  <div class="row">
+    <div>
+      <label for="overage">Overage factor (%)
+        <input type="number" id="overage" min="0" step="any" value="15">
+      </label>
+      <p class="small">10–15% for tight casings; 25–50% where ground loss or permeable backfill is likely.</p>
+    </div>
+    <div>
+      <label for="yield">Sack yield (cf per sack) — for sacked grout
+        <input type="number" id="yield" min="0" step="any" value="0.5">
+      </label>
+      <p class="small">From the product data sheet — non-shrink and cellular grouts vary widely.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Quantities</h3>
+  <table>
+    <tr><td>Neat volume</td><td class="val" id="r-neat">—</td></tr>
+    <tr><td>Order volume (with overage)</td><td class="val" id="r-order">—</td></tr>
+    <tr><td>In gallons (pump/batch sizing)</td><td class="val" id="r-gal">—</td></tr>
+    <tr><td>Sacks at entered yield</td><td class="val" id="r-sacks">—</td></tr>
+    <tr id="r-ann-row" hidden><td>Annular clearance (radial)</td><td class="val" id="r-clear">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The geometry</summary>
+  <ul>
+    <li>Annular: <code>V = π/4 × (D_casing² − D_carrier²) / 144 × L</code> (cf, diameters in inches)</li>
+    <li>Pipe abandonment: <code>V = π/4 × D_ID² / 144 × L</code></li>
+    <li>Structure: <code>V = L × W × depth</code></li>
+  </ul>
+  <p>Conversions: 27 cf/CY, 7.48 gal/cf. A ready-mix or CLSM truck is typically ~10 CY; a grout plant batches by the cf — the gallons line helps size pump strokes and batch counts.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li><strong>Carrier buoyancy:</strong> an empty carrier pipe in a flooded annulus floats hard against the casing crown during grouting. Fill the carrier with water first, grout in stages, or use restrained spacers per the plan — an air-filled HDPE carrier in fluid grout generates serious uplift per foot.</li>
+    <li><strong>Vents and verification:</strong> grout in at the low end, vent at the high end; the job is done when grout returns at the vent, not when the estimate says so. The estimate is for ordering, the vent is for acceptance.</li>
+    <li><strong>Cellular (foamed) grout</strong> is common for large annulus and abandonment fills specifically because it's light (less carrier buoyancy differential, less pressure on old pipe) and flows far — yields and densities come from the supplier's design, not a standard table.</li>
+    <li><strong>Abandonment:</strong> most specs require the abandoned line be verified full — bulkheads at both ends, fill from the low end, and account for the volume of any laterals or structures on the run that will also take grout.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Contract specifications — grout/CLSM mix, placement pressure limits, and verification requirements (governing).</li>
+  <li>ACI 229R — Controlled Low-Strength Materials. <span class="small">https://www.concrete.org/</span></li>
+  <li>Product data sheets — sack yields and cellular grout designs.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "groutvol.v1";
+  var GAL_PER_CUFT = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("mode").addEventListener("change", function () {
+    var v = this.value;
+    $("annular-in").hidden = v !== "annular";
+    $("pipe-in").hidden = v !== "pipe";
+    $("rect-in").hidden = v !== "rect";
+    $("direct-in").hidden = v !== "direct";
+    $("len-in").hidden = v === "rect" || v === "direct";
+    recalc();
+  });
+
+  function neatCf() {
+    var mode = $("mode").value;
+    if (mode === "direct") return { cf: num("dvol") };
+    if (mode === "rect") {
+      var L = num("slen"), W = num("swid"), D = num("sdep");
+      if (!L || !W || !D) return null;
+      return { cf: L * W * D };
+    }
+    var len = num("flen");
+    if (!len) return null;
+    if (mode === "pipe") {
+      var d = num("aid");
+      if (!d) return null;
+      return { cf: Math.PI / 4 * d * d / 144 * len };
+    }
+    var cid = num("cid"), pod = num("pod");
+    if (!cid || !pod) return null;
+    if (pod >= cid) return { err: "Carrier OD meets or exceeds casing ID — no annulus. Check the diameters (casing ID vs. OD is the usual mix-up)." };
+    return {
+      cf: Math.PI / 4 * (cid * cid - pod * pod) / 144 * len,
+      clear: (cid - pod) / 2
+    };
+  }
+
+  function recalc() {
+    var g = neatCf();
+    var overage = num("overage", true);
+    var yieldCf = num("yield");
+    var out = $("results");
+    var warn = $("warn");
+
+    if (!g || overage === null || !yieldCf) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+    if (g.err) {
+      out.hidden = false;
+      $("r-neat").textContent = "—";
+      $("r-order").textContent = "—";
+      $("r-gal").textContent = "—";
+      $("r-sacks").textContent = "—";
+      $("r-ann-row").hidden = true;
+      warn.hidden = false;
+      warn.textContent = g.err;
+      saveState();
+      return;
+    }
+    if (g.cf === null || g.cf === undefined) { out.hidden = true; saveState(); return; }
+
+    var orderCf = g.cf * (1 + overage / 100);
+    var msgs = [];
+
+    $("r-neat").textContent = fmt(g.cf, 1) + " cf (" + fmt(g.cf / 27, 2) + " CY)";
+    $("r-order").textContent = fmt(orderCf, 1) + " cf (" + fmt(orderCf / 27, 2) + " CY) at +" + fmt(overage, 0) + "%";
+    $("r-gal").textContent = fmt(orderCf * GAL_PER_CUFT, 0) + " gal";
+    $("r-sacks").textContent = fmt(Math.ceil(orderCf / yieldCf), 0) + " sacks at " + fmt(yieldCf, 2) + " cf/sack";
+
+    var isAnnular = $("mode").value === "annular";
+    $("r-ann-row").hidden = !isAnnular;
+    if (isAnnular && g.clear !== undefined) {
+      $("r-clear").textContent = fmt(g.clear, 2) + " in";
+      if (g.clear < 1.0) {
+        msgs.push("Under 1 in. of radial clearance — verify the grout can actually be placed through this annulus (aggregate size, pump pressure) and that bells/couplings fit at all.");
+      }
+    }
+
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["mode","cid","pod","aid","slen","swid","sdep","flen","dvol","overage","yield"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("mode").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

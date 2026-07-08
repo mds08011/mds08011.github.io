@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basin Hydrostatic Test Calculator (ACI 350.1)</title>
+<meta name="description" content="Offline field calculator for water-tightness testing of concrete basins and tanks: corrected water loss vs. the ACI 350.1 allowable, with evaporation and rainfall correction. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --border: #ccc;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+    --fail-bg: #fdecec;
+    --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --fg: #e4e4e4;
+      --muted: #a0a0a0;
+      --border: #444;
+      --accent: #6db3d6;
+      --panel: #222;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #1c2b22;
+      --result-border: #5c9d7c;
+      --fail-bg: #33191a;
+      --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%;
+    max-width: 20rem;
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg);
+    border: 1px solid var(--result-border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0.5rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Basin Hydrostatic Test Calculator</h1>
+<p class="subtitle">Water-tightness (liquid loss) testing of concrete basins, tanks, and channels per the ACI 350.1 method: corrected water surface drop against the allowable percentage of volume per 24 hours. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This computes the arithmetic of the test. The governing acceptance criterion (0.05% vs. 0.10% of volume per 24 hr, or something project-specific), the stabilization period, the test duration, and what happens on a failure all come from the contract specs and the referenced edition of ACI 350.1. Fill rates, temporary bulkheads, and disposal of test water are their own plan.
+</div>
+
+<fieldset>
+  <legend>Basin Geometry at Test Water Level</legend>
+  <div class="row">
+    <div>
+      <label for="shape">Shape
+        <select id="shape">
+          <option value="rect">Rectangular</option>
+          <option value="circ">Circular</option>
+          <option value="direct">Enter area &amp; volume directly</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rect-geom">
+    <div>
+      <label for="blen">Inside length (ft)
+        <input type="number" id="blen" min="0" step="any" placeholder="e.g. 60">
+      </label>
+    </div>
+    <div>
+      <label for="bwid">Inside width (ft)
+        <input type="number" id="bwid" min="0" step="any" placeholder="e.g. 30">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="circ-geom" hidden>
+    <div>
+      <label for="bdia">Inside diameter (ft)
+        <input type="number" id="bdia" min="0" step="any" placeholder="e.g. 85">
+      </label>
+    </div>
+  </div>
+  <div class="row" id="depth-geom">
+    <div>
+      <label for="bdepth">Water depth at start of test (ft)
+        <input type="number" id="bdepth" min="0" step="any" placeholder="e.g. 14">
+      </label>
+      <p class="small">Test water level should be at the maximum operating level unless the spec says otherwise.</p>
+    </div>
+  </div>
+  <div class="row" id="direct-geom" hidden>
+    <div>
+      <label for="barea">Water surface area (sf)
+        <input type="number" id="barea" min="0" step="any" placeholder="e.g. 1800">
+      </label>
+    </div>
+    <div>
+      <label for="bvol">Water volume at test level (gal)
+        <input type="number" id="bvol" min="0" step="any" placeholder="e.g. 190000">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Test Measurements</legend>
+  <div class="row">
+    <div>
+      <label for="drop">Measured water surface drop (in)
+        <input type="number" id="drop" min="0" step="any" placeholder="e.g. 0.375">
+      </label>
+      <p class="small">From fixed reference gauges/points, not the same wet mark eyeballed twice.</p>
+    </div>
+    <div>
+      <label for="hours">Test duration (hr)
+        <input type="number" id="hours" min="0" step="any" value="24">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="corr-mode">Evaporation / rainfall correction
+        <select id="corr-mode">
+          <option value="pan">Floating pan reading (preferred)</option>
+          <option value="split">Separate evaporation &amp; rainfall estimates</option>
+          <option value="none">No correction</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="pan-corr">
+    <div>
+      <label for="pan">Pan water surface change (in) — drop positive, rise negative
+        <input type="number" id="pan" step="any" value="0">
+      </label>
+      <p class="small">A calibrated open pan floating in the basin sees the same evaporation and rainfall as the basin. Net leakage drop = basin drop − pan change.</p>
+    </div>
+  </div>
+  <div class="row" id="split-corr" hidden>
+    <div>
+      <label for="evap">Estimated evaporation over test (in)
+        <input type="number" id="evap" min="0" step="any" value="0">
+      </label>
+    </div>
+    <div>
+      <label for="rain">Rainfall over test (in)
+        <input type="number" id="rain" min="0" step="any" value="0">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Acceptance Criterion</legend>
+  <div class="row">
+    <div>
+      <label for="crit">Allowable loss (% of volume per 24 hr)
+        <select id="crit-preset">
+          <option value="0.05" selected>0.05% / 24 hr (ACI 350.1 HST-050)</option>
+          <option value="0.10">0.10% / 24 hr (ACI 350.1 HST-100)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="crit" min="0" step="any" value="0.05" hidden>
+      </label>
+      <p class="small">The designation is on the drawings or in the specs — 0.05% is typical for environmental structures.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Water surface area / test volume</td><td class="val" id="r-geom">—</td></tr>
+    <tr><td>Corrected (leakage) drop</td><td class="val" id="r-drop">—</td></tr>
+    <tr><td>Volume lost to leakage</td><td class="val" id="r-lost">—</td></tr>
+    <tr><td>Loss rate</td><td class="val" id="r-rate">—</td></tr>
+    <tr><td>Allowable</td><td class="val" id="r-allow">—</td></tr>
+    <tr><td>Allowable drop over this test duration</td><td class="val" id="r-allowdrop">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The math</summary>
+  <p>Corrected leakage drop:</p>
+  <p>Pan method: <code>Δh = drop_basin − Δh_pan</code> (the pan sees the same evaporation and rainfall, so subtracting it isolates leakage).<br>
+  Split method: <code>Δh = drop_basin − evaporation + rainfall</code>.</p>
+  <p>Volume lost: <code>V_lost = Δh/12 × A × 7.48</code> gal. Loss rate normalized to 24 hr:</p>
+  <p><code>%/24hr = V_lost / V_test × (24 / t_hr) × 100</code></p>
+  <p>The pre-test planning number — the allowable drop in inches over your test duration:</p>
+  <p><code>Δh_allow = (allow%/100) × V_test / (A × 7.48) × 12 × (t_hr/24)</code></p>
+</details>
+
+<details>
+  <summary>Running the test so the numbers mean something</summary>
+  <ul>
+    <li><strong>Stabilization first.</strong> New or long-dry concrete absorbs water; ACI 350.1 requires the basin sit full for a stabilization period (commonly 3 days, per the standard/spec) before the measured test starts, or an early "failure" is just the concrete drinking.</li>
+    <li><strong>Measurement precision governs duration.</strong> If the allowable drop over 24 hr is smaller than you can reliably measure (roughly 1/16 in. with a good hook gauge or fixed staff), extend the test — the standard allows longer durations for exactly this reason. The tool flags when the allowable drop is under 0.25 in.</li>
+    <li><strong>Fixed reference points.</strong> Measure from set gauges or marked points at multiple locations, at the same time of day (thermal expansion of the water is real over a big surface).</li>
+    <li><strong>Valves and bulkheads count as leaks.</strong> A weeping plug valve or temporary bulkhead fails the basin on paper. Isolate and verify them before blaming the concrete.</li>
+    <li><strong>Damp spots vs. flowing water.</strong> Most specs distinguish acceptable dampness from unacceptable flowing/trickling leakage on the exterior regardless of the volumetric result — walk the walls, don't just read the gauge.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>ACI 350.1 — Specification for Tightness Testing of Environmental Engineering Concrete Containment Structures. <span class="small">https://www.concrete.org/</span></li>
+  <li>AWWA D110 / D115 — tightness testing provisions for circular prestressed tanks, where applicable.</li>
+  <li>Contract specifications — governing criterion, stabilization period, and retest provisions.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "basinhst.v1";
+  var GAL_PER_CUFT = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero, allowNeg) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowNeg && v < 0) return null;
+    if (!allowZero && v === 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("shape").addEventListener("change", function () {
+    var v = this.value;
+    $("rect-geom").hidden = v !== "rect";
+    $("circ-geom").hidden = v !== "circ";
+    $("depth-geom").hidden = v === "direct";
+    $("direct-geom").hidden = v !== "direct";
+    recalc();
+  });
+  $("corr-mode").addEventListener("change", function () {
+    $("pan-corr").hidden = this.value !== "pan";
+    $("split-corr").hidden = this.value !== "split";
+    recalc();
+  });
+  $("crit-preset").addEventListener("change", function () {
+    if (this.value === "custom") {
+      $("crit").hidden = false;
+    } else {
+      $("crit").hidden = true;
+      $("crit").value = this.value;
+    }
+    recalc();
+  });
+
+  function geometry() {
+    var shape = $("shape").value;
+    if (shape === "direct") {
+      var A = num("barea"), V = num("bvol");
+      if (!A || !V) return null;
+      return { A: A, Vgal: V };
+    }
+    var depth = num("bdepth");
+    if (!depth) return null;
+    var A2;
+    if (shape === "rect") {
+      var L = num("blen"), W = num("bwid");
+      if (!L || !W) return null;
+      A2 = L * W;
+    } else {
+      var D = num("bdia");
+      if (!D) return null;
+      A2 = Math.PI / 4 * D * D;
+    }
+    return { A: A2, Vgal: A2 * depth * GAL_PER_CUFT };
+  }
+
+  function correctedDrop(dropIn) {
+    var mode = $("corr-mode").value;
+    if (mode === "pan") {
+      var pan = num("pan", true, true);
+      if (pan === null) return null;
+      return dropIn - pan;
+    }
+    if (mode === "split") {
+      var evap = num("evap", true), rain = num("rain", true);
+      if (evap === null || rain === null) return null;
+      return dropIn - evap + rain;
+    }
+    return dropIn;
+  }
+
+  function recalc() {
+    var g = geometry();
+    var dropIn = num("drop", true);
+    var hours = num("hours");
+    var crit = num("crit");
+    var out = $("results");
+
+    if (!g || dropIn === null || !hours || !crit) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var corr = correctedDrop(dropIn);
+    if (corr === null) { out.hidden = true; saveState(); return; }
+
+    var msgs = [];
+    if (corr < 0) {
+      msgs.push("Corrected drop is negative (correction exceeds the measured drop) — treated as zero leakage. If the pan or rainfall numbers are estimates, tighten them up before calling this definitive.");
+      corr = 0;
+    }
+
+    var lostGal = (corr / 12) * g.A * GAL_PER_CUFT;
+    var pct24 = lostGal / g.Vgal * (24 / hours) * 100;
+    var allowDropIn = (crit / 100) * g.Vgal / (g.A * GAL_PER_CUFT) * 12 * (hours / 24);
+    var pass = pct24 <= crit;
+
+    $("verdict").textContent = pass
+      ? "PASS — " + fmt(pct24, 3) + "% / 24 hr (allowable " + fmt(crit, 3) + "%)"
+      : "FAIL — " + fmt(pct24, 3) + "% / 24 hr exceeds allowable " + fmt(crit, 3) + "%";
+    out.classList.toggle("fail", !pass);
+
+    $("r-geom").textContent = fmt(g.A, 0) + " sf / " + fmt(g.Vgal, 0) + " gal";
+    $("r-drop").textContent = fmt(corr, 3) + " in over " + fmt(hours, 1) + " hr";
+    $("r-lost").textContent = fmt(lostGal, 0) + " gal";
+    $("r-rate").textContent = fmt(pct24, 3) + " % of volume / 24 hr (" + fmt(lostGal * 24 / hours, 0) + " gal/day)";
+    $("r-allow").textContent = fmt(crit, 3) + " % / 24 hr (" + fmt(crit / 100 * g.Vgal, 0) + " gal/day)";
+    $("r-allowdrop").textContent = fmt(allowDropIn, 3) + " in";
+
+    if (allowDropIn < 0.25) {
+      msgs.push("The allowable drop over this duration (" + fmt(allowDropIn, 3) +
+        " in) is at or below practical measurement precision — extend the test duration so a passing basin can actually demonstrate a pass.");
+    }
+    if (hours < 24) {
+      msgs.push("Test duration under 24 hr — most specs require at least 24 hr of measured test after stabilization.");
+    }
+    if ($("corr-mode").value === "none" && dropIn > 0) {
+      msgs.push("No evaporation correction applied — on a warm day evaporation alone can exceed the allowable, failing a tight basin. A floating pan is cheap insurance.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["shape","blen","bwid","bdia","bdepth","barea","bvol","drop","hours","corr-mode","pan","evap","rain","crit-preset","crit"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing — carry on without persistence */ }
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state["crit-preset"] === "custom") $("crit").hidden = false;
+      $("shape").dispatchEvent(new Event("change"));
+      $("corr-mode").dispatchEvent(new Event("change"));
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>
