@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timing Low-Pressure Air and Manhole Vacuum Tests | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Timing Low-Pressure Air and Manhole Vacuum Tests</h1>
+                <time datetime="2026-06-12">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Acceptance testing a new gravity sewer means holding a low-pressure air test on the pipe and a vacuum test on the manholes, and both are pass/fail on <em>time</em>: pressurize, let it stabilize, and see whether the drop stays under the allowable for the required hold. The hold time isn't a fixed number &mdash; it scales with pipe diameter and length &mdash; and if there's groundwater over the pipe, every gauge pressure has to be bumped up to account for it. Getting that wrong means either failing tight pipe or passing leaky pipe.</p>
+
+            <h2>The Approach</h2>
+            <p>The air-test time comes from the UNI-B-6 / ASTM F1417 method, based on an allowable loss of 0.0015 cfm per square foot of internal pipe surface for a 1.0 psig drop:</p>
+            <p><code>T = 0.085&middot;D&middot;K/Q</code> seconds, with <code>K = 0.000419&middot;D&middot;L</code> (floor of 1.0) and <code>Q = 0.0015</code></p>
+            <p>For short or small runs where K = 1, that collapses to the familiar <code>T = 56.7&middot;D</code> seconds &mdash; the &ldquo;minimum time&rdquo; column, 7 min 34 s for 8-inch pipe. Past the threshold length <code>L = 2387/D</code>, time grows with <code>D&sup2;&middot;L</code>. The half-psig method is exactly half those times [1][2].</p>
+
+            <p>Groundwater is handled as head: 0.433 psi per foot of water above the pipe crown, added to the pressurization, start, and fail pressures. There's a hard line the tool watches for &mdash; when the required adjusted test pressure creeps toward 9 psig, air testing gets dangerous (plug thrust) and generally isn't advised. Dewater or test another way.</p>
+
+            <figure>
+                <img src="/path/to/air-vacuum-test-screenshot.png" alt="The calculator showing required hold time and a running countdown timer for an 8-inch sewer air test" loading="lazy">
+                <figcaption>Figure 1: Computed hold time with the built-in countdown running against it.</figcaption>
+            </figure>
+
+            <p>The manhole side reproduces the ASTM C1244 vacuum table: pull 10 in. Hg, and the manhole passes if it takes at least the tabulated time to drop to 9 in. Hg. Times scale with barrel volume, so the tool interpolates the published 8&ndash;30 ft depth by 30&ndash;72 in. diameter grid, rounds intermediate depths up to the next row, and extrapolates past 30 ft with a warning. I added a countdown timer to the whole thing because the actual field failure mode is starting a stopwatch and getting distracted [3].</p>
+
+            <details>
+                <summary>Field notes worth remembering</summary>
+                <ul>
+                    <li>Let the air section stabilize at least 2 minutes &mdash; air equalizing with the pipe-wall temperature wanders in a way that looks like a leak. Bleed back to the start pressure before timing.</li>
+                    <li>On a hot day, wet the pipe interior if the spec allows; a hot dry pipe absorbing moisture from the compressed air can fail a section that is actually tight.</li>
+                    <li>A failed vacuum test usually leaks at the chimney/frame joint, a boot, or an unplugged lift hole &mdash; soap the suspects before condemning the barrel.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, inputs and timer state persisted in <code>localStorage</code>.</p>
+
+            <p>The tool: <a href="/tools/air-vacuum-test-calculator.html">Sewer Air Test &amp; Manhole Vacuum Test Timer</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ASTM F1417 &mdash; Installation Acceptance of Plastic Non-pressure Sewer Lines Using Low-Pressure Air. <a href="https://www.astm.org/">https://www.astm.org/</a></li>
+                <li>[2] Uni-Bell UNI-B-6 &mdash; Recommended Practice for Low-Pressure Air Testing of Installed Sewer Pipe. <a href="https://www.uni-bell.org/">https://www.uni-bell.org/</a></li>
+                <li>[3] ASTM C1244 &mdash; Concrete Sewer Manholes by the Negative Air Pressure (Vacuum) Test. (See also ASTM C828 / C924 for clay and concrete air tests.)</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

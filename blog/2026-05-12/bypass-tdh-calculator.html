@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computing Bypass Pumping Total Dynamic Head with Hazen-Williams | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Computing Bypass Pumping Total Dynamic Head with Hazen-Williams</h1>
+                <time datetime="2026-05-12">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>When you set up a temporary sewer bypass, the rental house hands you a pump curve and asks what head you are pumping against. If you guess low, the pump can't keep up and the manhole you are protecting overflows. If you guess high, you rent a bigger pump than you need and pay for it every day it sits on site. The honest answer is a total dynamic head number: static lift plus friction loss through however many hundred feet of lay-flat hose or fused HDPE you ran down the shoulder.</p>
+
+            <p>Friction loss is where people wave their hands. It is very sensitive to diameter &mdash; the loss term goes as roughly the fifth power of the bore &mdash; so using nominal pipe size instead of the actual inside diameter, or forgetting that a DR 11 HDPE wall eats a real chunk out of a 12-inch pipe, throws the whole estimate off.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool runs Hazen-Williams in the customary GPM/inch form, friction slope in feet of head per 100 ft of pipe:</p>
+            <p><code>h_f = 0.2083 &times; (100/C)^1.85 &times; Q^1.85 / d^4.8655</code></p>
+            <p>with velocity as <code>V = 0.4085 &times; Q / d&sup2;</code>. Static lift and discharge static head get added on top of friction and a percentage minor-loss allowance for fittings, and the result converts to psi at 0.4331 psi/ft. The C-factor is a dropdown of the values you actually meet in the field &mdash; 150 for new HDPE, 140 for rubber discharge hose, on down &mdash; and there is a lookup of real HDPE inside diameters by DR so nobody has to type nominal-minus-the-wall from memory [2].</p>
+
+            <figure>
+                <img src="/path/to/bypass-tdh-screenshot.png" alt="Results panel showing velocity, friction slope, total dynamic head in feet and psi, plus a system curve table" loading="lazy">
+                <figcaption>Figure 2: TDH at design flow, with a five-point system-curve table to overlay on the rental pump's published curve.</figcaption>
+            </figure>
+
+            <p>The part I find most useful on site is the system-curve table. It recomputes velocity and TDH at 50/75/100/125/150% of design flow, so instead of a single number you get five points to lay over the pump's curve. Where the two curves cross is the operating point &mdash; if the pump curve sits above the system curve at design flow, you know you have margin before you ever start the engine.</p>
+
+            <details>
+                <summary>Velocity guardrails the tool warns on</summary>
+                <ul>
+                    <li>Below ~2 ft/s a sewage bypass line silts up &mdash; solids settle, grease and rags accumulate, and you get slug discharges. Many specs want 2.5&ndash;3.5 ft/s.</li>
+                    <li>Above ~8&ndash;10 ft/s friction climbs steeply, restrained fittings see high thrust, and hose whip becomes a real hazard. Usually cheaper to go up a pipe size than to buy the head.</li>
+                    <li>Systems sized for peak flow spend most of the day well below peak &mdash; check velocity at average flow, not just the design point.</li>
+                </ul>
+            </details>
+
+            <p>Hazen-Williams assumes full-pipe, turbulent, ordinary-temperature water. It does not model sludge, high solids, or air entrainment, so this is a sizing aid, not a substitute for the approved bypass plan or the supplier's own analysis. Single file, vanilla JS, inputs persisted in <code>localStorage</code>.</p>
+
+            <p>The tool: <a href="/tools/bypass-tdh-calculator.html">Bypass Pumping TDH Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Hazen-Williams empirical formula, standard form per the Ten-State Standards and common hydraulics references (e.g. Lindeburg, <em>Civil Engineering Reference Manual</em>).</li>
+                <li>[2] Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> &mdash; HDPE dimensions and C-factor guidance. <a href="https://plasticpipe.org/">https://plasticpipe.org/</a></li>
+                <li>[3] Manufacturer pump curves &mdash; verify the operating point against the published curve for the specific rental unit.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

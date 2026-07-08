@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solving Manning's Normal Depth by Bisection Client-Side | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Solving Manning's Normal Depth by Bisection Client-Side</h1>
+                <time datetime="2026-07-01">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Manning's equation is the workhorse of gravity-flow hydraulics: give it a channel section, a slope, and a roughness and it hands back flow and velocity. Going that direction &mdash; depth to flow &mdash; is a plug-and-chug. Going the other direction &mdash; <em>design flow to the depth it runs at</em> &mdash; is the question you actually have standing at a manhole, and it has no closed-form answer for a partially full pipe. That is the gap this tool fills.</p>
+
+            <h2>The Approach</h2>
+            <p>Forward, it is just Manning's in customary units:</p>
+            <p><code>Q = (1.486/n)&middot;A&middot;R^(2/3)&middot;S^(1/2)</code></p>
+            <p>with velocity <code>V = Q/A</code>. The geometry is where the bookkeeping lives. For a circular pipe at depth <code>y</code> and diameter <code>D</code>, the central angle is <code>&theta; = 2&middot;acos(1 &minus; 2y/D)</code>, and from there <code>A = (D&sup2;/8)(&theta; &minus; sin&theta;)</code>, wetted perimeter <code>P = D&theta;/2</code>, hydraulic radius <code>R = A/P</code>. Rectangular and trapezoidal sections are handled too.</p>
+
+            <h3>The bisection solver</h3>
+            <p>Because <code>Q(y)</code> can't be inverted for depth in these sections, the reverse mode brackets the answer and bisects: evaluate flow at the midpoint of a depth interval, compare to the target, and halve toward it. Forty iterations gets you to machine precision in a few microseconds &mdash; there is no reason to be clever about it. Bisection is bulletproof here because <code>Q(y)</code> is monotonic over the range the solver searches.</p>
+
+            <p>That last qualifier matters, and it is the one genuinely interesting wrinkle. In a circular pipe, discharge does <em>not</em> increase all the way to full &mdash; it peaks at about d/D &asymp; 0.94 and then falls off, because that last sliver of depth adds wetted perimeter faster than it adds area. So the solver only searches up to the peak; ask for a flow above it and the tool reports that you have exceeded gravity capacity and the pipe would surcharge, rather than quietly returning a bogus near-full depth [1][3].</p>
+
+            <figure>
+                <img src="/path/to/mannings-normal-depth-screenshot.png" alt="Reverse-mode output showing the solved normal depth, d/D ratio, velocity, and Froude number for a design flow" loading="lazy">
+                <figcaption>Figure 1: Normal-depth solver output &mdash; design flow in, depth, d/D, velocity, and flow regime out.</figcaption>
+            </figure>
+
+            <p>It also reports the Froude number, <code>Fr = V/&radic;(g&middot;A/T)</code>, and flags subcritical vs. supercritical flow. The band between about 0.9 and 1.1 is where the water surface goes unstable and wavy, and the tool calls that out &mdash; depth readings in that range are unreliable and designers avoid it.</p>
+
+            <details>
+                <summary>Field notes the tool bakes in</summary>
+                <ul>
+                    <li>Most sewer specs want &ge;2.0 ft/s at design flow for self-cleansing (Ten-State). The tool flags anything slower.</li>
+                    <li>Measure depth off the invert, not the top of a grit or grease layer &mdash; and if there's a layer, your effective geometry isn't the design geometry.</li>
+                    <li>Use the constructed invert slope between structures, not the ground surface.</li>
+                    <li>Manning's off a single depth reading is &plusmn;10&ndash;20% at best &mdash; good enough to catch a pump running or an I&amp;I problem, not good enough to bill anyone.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, no dependencies, inputs persisted in <code>localStorage</code>.</p>
+
+            <p>The tool: <a href="/tools/mannings-flow-calculator.html">Manning's Open-Channel Flow Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Chow, <em>Open-Channel Hydraulics</em> &mdash; Manning's equation and section geometry.</li>
+                <li>[2] Recommended Standards for Wastewater Facilities (&ldquo;Ten-State Standards&rdquo;) &mdash; minimum velocity and design n. <a href="https://www.broadagencyannouncement.com/ten-states-standards/">https://www.broadagencyannouncement.com/ten-states-standards/</a> (verify current host)</li>
+                <li>[3] FHWA HDS-4, <em>Introduction to Highway Hydraulics</em> &mdash; normal depth and Froude number reference.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

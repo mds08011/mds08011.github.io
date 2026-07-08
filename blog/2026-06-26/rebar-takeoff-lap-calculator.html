@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebar Weight Takeoff and ACI 318 Lap Splice Lengths | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Rebar Weight Takeoff and ACI 318 Lap Splice Lengths</h1>
+                <time datetime="2026-06-26">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Two rebar questions come up constantly and neither is hard, but both are easy to fumble in a hurry. One: how much does this mat weigh, for the order and the crane pick? Two: how long is the lap? The lap question in particular gets answered from a dog-eared table that may or may not match the bar grade, the concrete strength, or the cover condition on <em>this</em> drawing &mdash; and a lap that's too short is a rejection, while a lap that's too long is steel you bought and bent for nothing.</p>
+
+            <h2>The Approach</h2>
+            <p>The takeoff side is a multi-line table of bar size, length, and count, using the ASTM A615 nominal weights (#4 at 0.668 lb/ft, #5 at 1.043, and so on) to total the tonnage. The splice side runs the ACI 318 simplified tension development equations. For deformed bars in tension with favorable spacing and cover (Case 1):</p>
+            <p>#6 and smaller: <code>&ell;d = (fy&middot;&psi;t&middot;&psi;e / (25&middot;&lambda;&middot;&radic;f&prime;c))&middot;db</code><br>
+            #7 and larger: <code>&ell;d = (fy&middot;&psi;t&middot;&psi;e / (20&middot;&lambda;&middot;&radic;f&prime;c))&middot;db</code></p>
+            <p>Case 2 (tighter spacing/cover) multiplies both by 1.5. The code limits are built in: the product &psi;t&middot;&psi;e is capped at 1.7, &radic;f&prime;c is capped at 100 psi, and &ell;d never goes below 12 in. A Class B tension lap is 1.3&middot;&ell;d; Class A is 1.0&middot;&ell;d [1].</p>
+
+            <figure>
+                <img src="/path/to/rebar-takeoff-screenshot.png" alt="Multi-line rebar takeoff totalling weight, alongside a computed Class B tension lap length" loading="lazy">
+                <figcaption>Figure 1: A wall takeoff totalling to tonnage, with the tension lap length computed from the bar and concrete inputs.</figcaption>
+            </figure>
+
+            <p>The tool defaults laps to Class B, which is what most drawings do unless noted &mdash; Class A needs at least twice the steel provided over the splice and no more than half the bars spliced in one place, conditions the field can rarely verify. It also flags the traps: #14 and #18 bars can't be lap spliced at all (mechanical or welded only), and Grade 80 laps run about a third longer than Grade 60, so the bar tags matter before you assume.</p>
+
+            <details>
+                <summary>Why laps quietly blow the order quantity</summary>
+                <p>Each splice adds one lap length of bar per splice. On a long wall built from 60-ft stock, that's a splice every stick, and the lap allowance adds up fast enough to matter at the order &mdash; which is exactly why the takeoff and the lap calc live in the same tool. Stagger and splice location are design decisions from the drawings; this only computes the length.</p>
+            </details>
+
+            <p>Single file, vanilla JS, the takeoff table and inputs persisted in <code>localStorage</code>.</p>
+
+            <p>The tool: <a href="/tools/rebar-takeoff-lap-calculator.html">Rebar Weight Takeoff &amp; Tension Lap Splice Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] ACI 318 &mdash; Building Code Requirements for Structural Concrete, development and splice provisions (Ch. 25 in current editions). <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
+                <li>[2] CRSI, <em>Manual of Standard Practice</em> &mdash; bar data and placing conventions. <a href="https://www.crsi.org/">https://www.crsi.org/</a></li>
+                <li>[3] ASTM A615 &mdash; deformed bar dimensions and weights.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
