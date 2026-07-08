@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weir Flow "True Zero" Translator</title>
+<meta name="description" content="Offline calculator that converts a raw ultrasonic level reading into live GPM/MGD over a V-notch or rectangular weir using a crest true-zero. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #555;
+    --border: #999;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+    --result-bg: #eef4f0;
+    --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --fg: #eeeeee;
+      --muted: #a0a0a0;
+      --border: #666;
+      --accent: #6db3d6;
+      --panel: #1e1e1e;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+      --result-bg: #16241c;
+      --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 2px solid var(--border); border-radius: 6px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 700; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.75rem; font-size: 1.05rem; font-weight: 600; }
+  input[type="number"], select {
+    width: 100%;
+    min-height: 3.2rem;
+    padding: 0.5rem;
+    margin-top: 0.25rem;
+    font-size: 1.3rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+  }
+  .radio-row { display: flex; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap; }
+  .radio-row label {
+    flex: 1 1 10rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-weight: 400;
+    font-size: 0.95rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem;
+    cursor: pointer;
+  }
+  .radio-row input[type="radio"] { width: 1.4rem; height: 1.4rem; }
+  .small { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+  .results {
+    background: var(--result-bg);
+    border: 3px solid var(--result-border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: center;
+  }
+  .results .head { font-size: 1.1rem; margin-bottom: 0.25rem; }
+  .big {
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .big .unit { font-size: 1.4rem; font-weight: 700; }
+  .big2 { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 0.3rem; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; min-height: 2.2rem; display: flex; align-items: center; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  button.reset {
+    margin-top: 1rem;
+    min-height: 3rem;
+    padding: 0.4rem 1rem;
+    font-size: 1rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Weir Flow &ldquo;True Zero&rdquo; Translator</h1>
+<p class="subtitle">Converts a raw ultrasonic level-element reading into live flow over a weir, given the crest's reading (&ldquo;true zero&rdquo;). Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<fieldset>
+  <legend>Weir</legend>
+  <label for="type">Weir type
+    <select id="type">
+      <option value="v90">V-Notch 90&deg;</option>
+      <option value="v60">V-Notch 60&deg;</option>
+      <option value="rect">Rectangular (suppressed)</option>
+    </select>
+  </label>
+  <label for="width" id="width-label" hidden>Weir width L (ft)
+    <input type="number" id="width" min="0" step="any" placeholder="e.g. 2.0">
+  </label>
+</fieldset>
+
+<fieldset>
+  <legend>Level Element</legend>
+  <label>Signal direction</label>
+  <div class="radio-row">
+    <label><input type="radio" name="dir" value="level" checked> Level &mdash; reading <em>rises</em> as water rises</label>
+    <label><input type="radio" name="dir" value="dist"> Distance down &mdash; reading <em>falls</em> as water rises</label>
+  </div>
+  <label for="zero">Weir crest reading &mdash; true zero (ft)
+    <input type="number" id="zero" step="any" placeholder="LE reading with water exactly at the crest">
+  </label>
+  <p class="small">Capture this once: the LE reading at the moment the water surface sits exactly at the crest (or compute it from the survey). Everything else is subtraction.</p>
+  <label for="live">Live reading (ft)
+    <input type="number" id="live" step="any" placeholder="what the LE says right now">
+  </label>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="head">Head on weir: <strong id="r-head">—</strong></div>
+  <div class="big" id="r-gpm">—</div>
+  <div class="big2" id="r-mgd">—</div>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Head from the raw reading</summary>
+  <p>Level mode: <code>H = live &minus; true zero</code>. Distance-down mode (sensor above the water reading air gap): <code>H = true zero &minus; live</code>. If H &le; 0 the water is below the crest and flow is zero &mdash; the tool says so instead of printing a negative number.</p>
+</details>
+
+<details>
+  <summary>Weir equations (Q in cfs, H and L in ft)</summary>
+  <ul>
+    <li>V-notch 90&deg;: <code>Q = 2.5 &middot; H^2.5</code> (standard field form; USBR's precise fit is <code>2.49&middot;H^2.48</code> &mdash; within ~1% over the working range)</li>
+    <li>V-notch 60&deg;: <code>Q = 2.5 &middot; tan(30&deg;) &middot; H^2.5 = 1.443 &middot; H^2.5</code></li>
+    <li>Rectangular, suppressed: <code>Q = 3.33 &middot; L &middot; H^1.5</code>. If the notch has end contractions (narrower than the channel), the Francis correction <code>L &minus; 0.2H</code> applies &mdash; use the contracted length as L for a quick approximation.</li>
+  </ul>
+  <p>Conversions: 1 cfs = 448.83 GPM = 0.6463 MGD.</p>
+</details>
+
+<details>
+  <summary>Accuracy fine print</summary>
+  <ul>
+    <li>Sharp-crested formulas are rated for roughly 0.2&ndash;2.0 ft of head; the tool warns outside that band. Below ~0.2 ft the nappe clings and the reading is mush.</li>
+    <li>The weir must run free &mdash; air under the nappe, no submergence from downstream.</li>
+    <li>Ultrasonic LEs average over a footprint and dislike foam, steam, and standing waves. If the reading is bouncing, the flow number bounces with it &mdash; read the trend, not one sample.</li>
+    <li>This translates an instrument reading; it is not a billing meter. See the site's <a href="/tools/weir-orifice-flow-calculator.html">Weir &amp; Orifice Flow Calculator</a> for the fuller device set.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>USBR, <em>Water Measurement Manual</em> &mdash; weir formulas and installation conditions. <span class="small">https://www.usbr.gov/tsc/techreferences/mands/wmm/</span></li>
+  <li>ISO 1438 &mdash; Hydrometry: thin-plate weirs.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "weirzero.v1";
+  var GPM_PER_CFS = 448.831;
+  var MGD_PER_CFS = 0.646317;
+  var K60 = 2.5 * Math.tan(Math.PI / 6); // 1.4434
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function dir() {
+    return document.querySelector("input[name='dir']:checked").value;
+  }
+
+  function recalc() {
+    var type = $("type").value;
+    $("width-label").hidden = type !== "rect";
+
+    var zero = num("zero"), live = num("live");
+    var out = $("results");
+    if (zero === null || live === null) { out.hidden = true; save(); return; }
+
+    var H = dir() === "level" ? live - zero : zero - live;
+    var warn = $("warn");
+    var msgs = [];
+
+    if (H <= 0) {
+      $("r-head").textContent = fmt(H, 3) + " ft";
+      $("r-gpm").innerHTML = "0 <span class='unit'>GPM</span>";
+      $("r-mgd").textContent = "Water below crest — no flow";
+      warn.hidden = true;
+      out.hidden = false;
+      save();
+      return;
+    }
+
+    var Q; // cfs
+    if (type === "v90") Q = 2.5 * Math.pow(H, 2.5);
+    else if (type === "v60") Q = K60 * Math.pow(H, 2.5);
+    else {
+      var L = num("width");
+      if (L === null || L <= 0) { out.hidden = true; save(); return; }
+      Q = 3.33 * L * Math.pow(H, 1.5);
+    }
+
+    $("r-head").textContent = fmt(H, 3) + " ft (" + fmt(H * 12, 1) + " in)";
+    $("r-gpm").innerHTML = fmt(Q * GPM_PER_CFS, 0) + " <span class='unit'>GPM</span>";
+    $("r-mgd").textContent = fmt(Q * MGD_PER_CFS, 3) + " MGD  (" + fmt(Q, 2) + " cfs)";
+
+    if (H < 0.2) msgs.push("Head under 0.2 ft — below the rated range of sharp-crested formulas; nappe clinging makes this reading unreliable.");
+    if (H > 2.0) msgs.push("Head over 2.0 ft — above the usual rated range; verify the weir geometry can even pass this fairly.");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    save();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["type", "zero", "live", "width"];
+  function save() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      state.dir = dir();
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing */ }
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      if (state.dir) {
+        var r = document.querySelector("input[name='dir'][value='" + state.dir + "']");
+        if (r) r.checked = true;
+      }
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+  document.querySelectorAll("input[name='dir']").forEach(function (r) {
+    r.addEventListener("change", recalc);
+  });
+
+  load();
+  recalc();
+})();
+</script>
+</body>
+</html>

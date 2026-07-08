@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VFD Hand vs. Auto Rotation Matrix</title>
+<meta name="description" content="Offline checklist that tracks motor rotation in Hand and Auto per equipment ID and tells you whether the fix is a VFD parameter or swapped leads. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #555;
+    --border: #999;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --ok-bg: #e7f4ea;
+    --ok-border: #2e6e4e;
+    --warn-bg: #fff3c4;
+    --warn-border: #b8860b;
+    --bad-bg: #fde0e0;
+    --bad-border: #b00020;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --fg: #eeeeee;
+      --muted: #a0a0a0;
+      --border: #666;
+      --accent: #6db3d6;
+      --panel: #1e1e1e;
+      --ok-bg: #16241c;
+      --ok-border: #5c9d7c;
+      --warn-bg: #33290a;
+      --warn-border: #d9b02f;
+      --bad-bg: #331214;
+      --bad-border: #ff6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  form.add { display: flex; gap: 0.6rem; margin: 1rem 0; }
+  form.add input[type="text"] {
+    flex: 1;
+    min-height: 3.2rem;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+  }
+  form.add button {
+    min-height: 3.2rem;
+    padding: 0 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border: 2px solid var(--fg);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .card {
+    border: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    background: var(--panel);
+  }
+  .card.ok   { background: var(--ok-bg);   border-color: var(--ok-border); }
+  .card.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .card.bad  { background: var(--bad-bg);  border-color: var(--bad-border); }
+  .card h3 { margin: 0 0 0.5rem; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+  .card h3 button {
+    font-size: 0.85rem;
+    min-height: 2.4rem;
+    padding: 0 0.7rem;
+    background: transparent;
+    color: inherit;
+    border: 2px solid currentColor;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .grp { margin: 0.5rem 0; }
+  .grp .lbl { font-weight: 700; font-size: 0.95rem; }
+  .radio-row { display: flex; gap: 0.5rem; margin-top: 0.3rem; }
+  .radio-row label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 3rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    background: var(--bg);
+  }
+  .radio-row input[type="radio"] { width: 1.3rem; height: 1.3rem; }
+  .verdict { font-weight: 800; font-size: 1.05rem; margin-top: 0.6rem; }
+  .actions { display: flex; gap: 0.75rem; margin: 1.25rem 0; flex-wrap: wrap; }
+  .actions button {
+    flex: 1 1 10rem;
+    min-height: 3.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    background: var(--panel);
+    color: var(--fg);
+  }
+  .actions button.danger { border-color: #b00020; color: #b00020; }
+  @media (prefers-color-scheme: dark) {
+    .actions button.danger { border-color: #ff6b6b; color: #ff6b6b; }
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; min-height: 2.2rem; display: flex; align-items: center; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  .empty { color: var(--muted); text-align: center; margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<h1>VFD &ldquo;Hand vs. Auto&rdquo; Rotation Matrix</h1>
+<p class="subtitle">Tracks observed motor rotation in Hand and Auto per equipment ID, and says whether the fix is a drive parameter or physical leads &mdash; before anyone opens the MCC. Runs entirely offline; the matrix persists in this browser via localStorage.</p>
+
+<form class="add" id="add-form">
+  <input type="text" id="eq-id" placeholder="Equipment ID — e.g. BLR-101" maxlength="40" autocomplete="off">
+  <button type="submit">Add</button>
+</form>
+
+<div id="cards"></div>
+<p class="empty" id="empty">No equipment added yet.</p>
+
+<div class="actions">
+  <button type="button" id="export-btn">Export to CSV</button>
+  <button type="button" class="danger" id="clear-btn">Clear All</button>
+</div>
+
+<h2>How the Verdicts Are Derived</h2>
+
+<details>
+  <summary>The one insight that saves the rework</summary>
+  <p>Physical wiring affects Hand and Auto <em>identically</em> &mdash; the same three leads feed the same motor either way. So if rotation <strong>differs</strong> between Hand and Auto, wiring cannot be the cause: one of the two references is inverted in software (drive parameter, PLC output sign, or a reversed run command). Only when rotation is wrong in <strong>both</strong> modes is it a lead swap &mdash; and then the fix is swapping any two of the three phases at the MCC.</p>
+</details>
+
+<details>
+  <summary>Verdict table</summary>
+  <ul>
+    <li><strong>Hand Reverse / Auto Forward</strong> &rarr; software conflict. Do not touch leads; find the inversion (commonly a drive &ldquo;reverse enable&rdquo;/&ldquo;direction&rdquo; parameter or an inverted reference).</li>
+    <li><strong>Hand Forward / Auto Reverse</strong> &rarr; software conflict on the Auto path (PLC/SCADA reference sign or drive terminal mapping).</li>
+    <li><strong>Reverse in both</strong> &rarr; hardware: swap two physical leads at the MCC, then retest both modes.</li>
+    <li><strong>Forward in both</strong> &rarr; verified; move on.</li>
+    <li>Anything Untested &rarr; incomplete; no verdict issued on partial data.</li>
+  </ul>
+  <p>Reminder of why it matters: a three-phase centrifugal machine running backward delivers roughly half flow and head and often sounds nearly normal &mdash; it gets missed.</p>
+</details>
+
+<details>
+  <summary>Test discipline</summary>
+  <ul>
+    <li>Bump-test rotation at low speed with the coupling/drive train ready for it; some machines (screw pumps, some gearboxes) must never run backward even briefly &mdash; check the O&amp;M first.</li>
+    <li>Verify direction against the rotation arrow on the casing, not against what &ldquo;looks right.&rdquo;</li>
+    <li>After any lead swap or parameter change, retest <em>both</em> modes &mdash; that's the whole point of the matrix.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>The drive manufacturer's parameter manual &mdash; direction/reference parameters (governing document for the software side).</li>
+  <li>Motor and driven-equipment O&amp;M &mdash; rotation arrow and reverse-rotation restrictions.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. The matrix is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "vfdrot.v1";
+  var items = []; // [{id: string, name: string, hand: 'fwd'|'rev'|'untested', auto: same}]
+  var seq = 1;
+
+  function $(id) { return document.getElementById(id); }
+
+  function verdict(it) {
+    if (it.hand === "untested" || it.auto === "untested") {
+      return { cls: "", text: "Testing incomplete." };
+    }
+    if (it.hand === "rev" && it.auto === "fwd") {
+      return { cls: "warn", text: "⚠ Software Conflict: DO NOT SWAP PHYSICAL LEADS. Adjust VFD parameter (inverted Hand reference/direction)." };
+    }
+    if (it.hand === "fwd" && it.auto === "rev") {
+      return { cls: "warn", text: "⚠ Software Conflict: DO NOT SWAP PHYSICAL LEADS. Auto reference is inverted — fix the PLC/drive reference sign." };
+    }
+    if (it.hand === "rev" && it.auto === "rev") {
+      return { cls: "bad", text: "✖ Hardware Fault: Swap L1/L2 physical leads at MCC, then retest both modes." };
+    }
+    return { cls: "ok", text: "✔ Verified: forward in Hand and Auto." };
+  }
+
+  function radioGroup(it, mode) {
+    var wrap = document.createElement("div");
+    wrap.className = "grp";
+    var lbl = document.createElement("div");
+    lbl.className = "lbl";
+    lbl.textContent = mode === "hand" ? "Hand Rotation" : "Auto Rotation";
+    wrap.appendChild(lbl);
+    var row = document.createElement("div");
+    row.className = "radio-row";
+    [["fwd", "Forward"], ["rev", "Reverse"], ["untested", "Untested"]].forEach(function (opt) {
+      var label = document.createElement("label");
+      var r = document.createElement("input");
+      r.type = "radio";
+      r.name = mode + "-" + it.id;
+      r.value = opt[0];
+      r.checked = it[mode] === opt[0];
+      r.addEventListener("change", function () {
+        it[mode] = opt[0];
+        save();
+        render();
+      });
+      label.appendChild(r);
+      label.appendChild(document.createTextNode(opt[1]));
+      row.appendChild(label);
+    });
+    wrap.appendChild(row);
+    return wrap;
+  }
+
+  function render() {
+    var host = $("cards");
+    host.innerHTML = "";
+    items.forEach(function (it, idx) {
+      var v = verdict(it);
+      var card = document.createElement("section");
+      card.className = "card" + (v.cls ? " " + v.cls : "");
+      var h = document.createElement("h3");
+      var span = document.createElement("span");
+      span.textContent = it.name;
+      var del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "Remove";
+      del.addEventListener("click", function () {
+        if (!confirm("Remove " + it.name + " from the matrix?")) return;
+        items.splice(idx, 1);
+        save();
+        render();
+      });
+      h.appendChild(span);
+      h.appendChild(del);
+      card.appendChild(h);
+      card.appendChild(radioGroup(it, "hand"));
+      card.appendChild(radioGroup(it, "auto"));
+      var vd = document.createElement("div");
+      vd.className = "verdict";
+      vd.textContent = v.text;
+      card.appendChild(vd);
+      host.appendChild(card);
+    });
+    $("empty").hidden = items.length > 0;
+  }
+
+  $("add-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("eq-id").value.trim();
+    if (!name) return;
+    items.push({ id: seq++, name: name, hand: "untested", auto: "untested" });
+    $("eq-id").value = "";
+    save();
+    render();
+  });
+
+  $("clear-btn").addEventListener("click", function () {
+    if (items.length === 0) return;
+    if (!confirm("Delete the entire matrix (" + items.length + " item" + (items.length === 1 ? "" : "s") + ")? This cannot be undone.")) return;
+    items = [];
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    render();
+  });
+
+  function csvField(s) {
+    s = String(s == null ? "" : s);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  var WORD = { fwd: "Forward", rev: "Reverse", untested: "Untested" };
+
+  $("export-btn").addEventListener("click", function () {
+    if (items.length === 0) { alert("Nothing to export yet."); return; }
+    var lines = ["Equipment ID,Hand Rotation,Auto Rotation,Verdict"];
+    items.forEach(function (it) {
+      lines.push([csvField(it.name), WORD[it.hand], WORD[it.auto], csvField(verdict(it).text)].join(","));
+    });
+    var blob = new Blob([lines.join("\r\n") + "\r\n"], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "vfd-rotation-matrix.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+
+  /* ---------- persistence ---------- */
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ seq: seq, items: items })); } catch (e) {}
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (state && Array.isArray(state.items)) {
+        items = state.items.filter(function (it) { return it && it.name; });
+        seq = isFinite(state.seq) ? state.seq : items.length + 1;
+      }
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Industrial Subnet Clash Detector</title>
+<meta name="description" content="Offline subnet calculator for field engineers: computes the network address of two devices and says whether they can see each other. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #555;
+    --border: #999;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --ok-bg: #e7f4ea;
+    --ok-border: #2e6e4e;
+    --bad-bg: #fde0e0;
+    --bad-border: #b00020;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --fg: #eeeeee;
+      --muted: #a0a0a0;
+      --border: #666;
+      --accent: #6db3d6;
+      --panel: #1e1e1e;
+      --ok-bg: #16241c;
+      --ok-border: #5c9d7c;
+      --bad-bg: #331214;
+      --bad-border: #ff6b6b;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 2px solid var(--border); border-radius: 6px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 700; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.75rem; font-size: 1rem; font-weight: 600; }
+  input[type="text"] {
+    width: 100%;
+    min-height: 3.2rem;
+    padding: 0.5rem;
+    margin-top: 0.25rem;
+    font-size: 1.25rem;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: var(--bg);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+  }
+  .small { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+  .net { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1rem; margin-top: 0.4rem; color: var(--muted); }
+  .verdict {
+    border-radius: 8px;
+    border: 4px solid var(--border);
+    background: var(--panel);
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+  .verdict.ok  { background: var(--ok-bg);  border-color: var(--ok-border); }
+  .verdict.bad { background: var(--bad-bg); border-color: var(--bad-border); }
+  .verdict .sub { display: block; font-size: 1rem; font-weight: 400; margin-top: 0.3rem; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; min-height: 2.2rem; display: flex; align-items: center; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  button.reset {
+    margin-top: 1rem;
+    min-height: 3rem;
+    padding: 0.4rem 1rem;
+    font-size: 1rem;
+    background: var(--panel);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Industrial Subnet Clash Detector</h1>
+<p class="subtitle">For the moment a telemetry gateway and the site router refuse to talk and IT is a text message away: enter both devices' IP and mask, and find out whether they're even on the same network. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<fieldset>
+  <legend>Device 1 (e.g. the eWON / PLC / HMI)</legend>
+  <label for="ip1">IP address
+    <input type="text" id="ip1" inputmode="decimal" placeholder="192.168.17.1" autocomplete="off" spellcheck="false">
+  </label>
+  <label for="mask1">Subnet mask
+    <input type="text" id="mask1" inputmode="decimal" placeholder="255.255.255.0  (or /24)" autocomplete="off" spellcheck="false">
+  </label>
+  <div class="net" id="net1"></div>
+</fieldset>
+
+<fieldset>
+  <legend>Device 2 (e.g. the site router / laptop)</legend>
+  <label for="ip2">IP address
+    <input type="text" id="ip2" inputmode="decimal" placeholder="10.215.113.50" autocomplete="off" spellcheck="false">
+  </label>
+  <label for="mask2">Subnet mask
+    <input type="text" id="mask2" inputmode="decimal" placeholder="255.255.255.0  (or /24)" autocomplete="off" spellcheck="false">
+  </label>
+  <div class="net" id="net2"></div>
+</fieldset>
+
+<div class="verdict" id="verdict" hidden></div>
+<div class="warn" id="warn" hidden></div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Answer Is Derived</h2>
+
+<details>
+  <summary>What a subnet mask actually does</summary>
+  <p>An IP address is 32 bits. The mask splits it into a <em>network</em> part and a <em>host</em> part: wherever the mask has a 1-bit, that bit belongs to the network number. Two devices can talk directly only if their network numbers match &mdash; otherwise each one sends the traffic to its gateway and hopes. The math is one bitwise AND per device:</p>
+  <p><code>network = IP &amp; mask</code></p>
+  <p>Example: <code>192.168.17.1 &amp; 255.255.255.0 = 192.168.17.0</code>, while <code>10.215.113.50 &amp; 255.255.255.0 = 10.215.113.0</code>. Different network numbers &mdash; the devices are invisible to each other without a router that knows both networks.</p>
+</details>
+
+<details>
+  <summary>The usual field fix</summary>
+  <ul>
+    <li>Fastest: give the laptop a <em>second</em> static IP in the device's subnet (most OSes allow multiple addresses per adapter) &mdash; you keep internet on the site network and reach the device directly.</li>
+    <li>Right answer long-term: have IT add a route or put the device VLAN behind the router. That's their call, not a field improvisation.</li>
+    <li>Matching subnets is necessary, not sufficient &mdash; if the two devices are on physically separate switches or separate VLANs, they still can't talk. This tool answers the addressing question only.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Reading the numbers you were handed</summary>
+  <ul>
+    <li><code>/24</code> after an address is the same thing as mask <code>255.255.255.0</code> &mdash; the number counts the 1-bits. The tool accepts either form.</li>
+    <li>Addresses starting 10.x, 172.16&ndash;31.x, and 192.168.x are private ranges (RFC 1918) &mdash; normal for industrial gear, never reachable from the internet directly.</li>
+    <li>A non-contiguous mask (1-bits with gaps) is almost certainly a typo; the tool flags it.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>RFC 1918 &mdash; Address Allocation for Private Internets. <span class="small">https://www.rfc-editor.org/rfc/rfc1918</span></li>
+  <li>The site's IT/OT network administrator &mdash; the governing authority for anything beyond reading addresses.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "subnet.v1";
+
+  function $(id) { return document.getElementById(id); }
+
+  /* dotted-quad string -> unsigned 32-bit int, or null */
+  function parseIp(s) {
+    if (!s) return null;
+    var m = s.trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!m) return null;
+    var n = 0;
+    for (var i = 1; i <= 4; i++) {
+      var o = parseInt(m[i], 10);
+      if (o > 255) return null;
+      n = ((n << 8) | o) >>> 0;
+    }
+    return n;
+  }
+
+  /* dotted-quad or "/nn" or bare "nn" -> unsigned mask int, or null */
+  function parseMask(s) {
+    if (!s) return null;
+    s = s.trim();
+    var cidr = s.match(/^\/?(\d{1,2})$/);
+    if (cidr) {
+      var bits = parseInt(cidr[1], 10);
+      if (bits < 0 || bits > 32) return null;
+      return bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+    }
+    return parseIp(s);
+  }
+
+  function contiguous(mask) {
+    /* valid masks are 1-bits then 0-bits; adding the inverted+1 must be a power of two or zero */
+    var inv = (~mask) >>> 0;
+    return ((inv + 1) & inv) === 0;
+  }
+
+  function toDotted(n) {
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+  }
+
+  function cidrBits(mask) {
+    var c = 0;
+    for (var i = 31; i >= 0; i--) {
+      if ((mask >>> i) & 1) c++; else break;
+    }
+    return c;
+  }
+
+  function recalc() {
+    var ip1 = parseIp($("ip1").value), mask1 = parseMask($("mask1").value);
+    var ip2 = parseIp($("ip2").value), mask2 = parseMask($("mask2").value);
+    var verdict = $("verdict"), warn = $("warn");
+    var msgs = [];
+
+    $("net1").textContent = (ip1 !== null && mask1 !== null) ?
+      "Network: " + toDotted((ip1 & mask1) >>> 0) + "/" + cidrBits(mask1) : "";
+    $("net2").textContent = (ip2 !== null && mask2 !== null) ?
+      "Network: " + toDotted((ip2 & mask2) >>> 0) + "/" + cidrBits(mask2) : "";
+
+    if (ip1 === null || mask1 === null || ip2 === null || mask2 === null) {
+      verdict.hidden = true;
+      warn.hidden = true;
+      save();
+      return;
+    }
+
+    if (!contiguous(mask1)) msgs.push("Device 1's mask is non-contiguous — almost certainly a typo.");
+    if (!contiguous(mask2)) msgs.push("Device 2's mask is non-contiguous — almost certainly a typo.");
+    if (mask1 !== mask2) msgs.push("The two masks differ (/" + cidrBits(mask1) + " vs /" + cidrBits(mask2) + ") — even a match below is fragile; devices on one link should share a mask.");
+
+    var net1 = (ip1 & mask1) >>> 0;
+    var net2 = (ip2 & mask2) >>> 0;
+
+    if (net1 === net2) {
+      verdict.className = "verdict ok";
+      verdict.innerHTML = "✔ Subnets Match<span class='sub'>Both devices are on " + toDotted(net1) +
+        " — if they still can't talk, the problem is physical (cable, switch, VLAN), not addressing.</span>";
+    } else {
+      verdict.className = "verdict bad";
+      verdict.innerHTML = "✖ Subnet Mismatch<span class='sub'>Devices are invisible to each other: " +
+        toDotted(net1) + " vs " + toDotted(net2) + ". They need a router, or one of them needs an address in the other's network.</span>";
+    }
+    verdict.hidden = false;
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    save();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["ip1", "mask1", "ip2", "mask2"];
+  function save() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) { /* private browsing */ }
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  load();
+  recalc();
+})();
+</script>
+</body>
+</html>

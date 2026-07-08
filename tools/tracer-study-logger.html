@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracer Study Sample Logger</title>
+<meta name="description" content="Offline chronological sampling clipboard for tracer studies: one-tap timestamp capture, manual residual entry, CSV export. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #555;
+    --border: #999;
+    --accent: #00557f;
+    --panel: #f4f4f4;
+    --warn-bg: #fff6e0;
+    --warn-border: #d09a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --fg: #eeeeee;
+      --muted: #a0a0a0;
+      --border: #666;
+      --accent: #6db3d6;
+      --panel: #1e1e1e;
+      --warn-bg: #332a10;
+      --warn-border: #c9a227;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  .warn {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+  }
+  button.log {
+    display: block;
+    width: 100%;
+    min-height: 6rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: var(--accent);
+    color: #fff;
+    border: 3px solid var(--fg);
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 1rem 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.log:active { transform: scale(0.99); }
+  .count { font-size: 1rem; color: var(--muted); text-align: center; margin: 0.5rem 0 1rem; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    border: 2px solid var(--border);
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    font-size: 1.05rem;
+  }
+  th { background: var(--panel); }
+  td input[type="text"] {
+    width: 100%;
+    min-height: 2.8rem;
+    font-size: 1.2rem;
+    padding: 0.3rem 0.5rem;
+    background: var(--bg);
+    color: var(--fg);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+  }
+  .actions { display: flex; gap: 0.75rem; margin: 1.25rem 0; flex-wrap: wrap; }
+  .actions button {
+    flex: 1 1 10rem;
+    min-height: 3.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid var(--border);
+    background: var(--panel);
+    color: var(--fg);
+  }
+  .actions button.danger { border-color: #b00020; color: #b00020; }
+  @media (prefers-color-scheme: dark) {
+    .actions button.danger { border-color: #ff6b6b; color: #ff6b6b; }
+  }
+  details {
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 2.2rem; display: flex; align-items: center; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Tracer Study Sample Logger</h1>
+<p class="subtitle">A digital clipboard for chronological water sampling. Tap once at the moment of the grab; enter the bench reading whenever the meter catches up. Runs entirely offline; the log persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Clock discipline:</strong> the whole point of a tracer log is matching timestamps against the SCADA historian later. Before the first sample, compare this device's clock to the plant historian's clock and note any offset &mdash; a two-minute skew looks like a baffling-factor error at analysis time.
+</div>
+
+<button class="log" id="log-btn" type="button">LOG SAMPLE TIME</button>
+<p class="count" id="count">No samples logged.</p>
+
+<table id="log-table" hidden>
+  <thead>
+    <tr><th style="width: 55%">Timestamp</th><th>Chlorine ppm</th></tr>
+  </thead>
+  <tbody id="log-body"></tbody>
+</table>
+
+<div class="actions">
+  <button type="button" id="export-btn">Export to CSV</button>
+  <button type="button" class="danger" id="clear-btn">Clear Log</button>
+</div>
+
+<h2>Notes</h2>
+
+<details>
+  <summary>Why one-tap timestamps</summary>
+  <p>Handwritten sample times are the weak link in a field tracer study: the tech is holding a bottle, a reagent kit, and a phone, and &ldquo;about 10:35&rdquo; gets reconstructed later. Capturing the device timestamp to the second at the grab, and back-filling the residual after titration, keeps the time column trustworthy &mdash; which is the column the T10 analysis actually depends on.</p>
+</details>
+
+<details>
+  <summary>Matching against SCADA flow data</summary>
+  <p>Export the CSV and join it against the historian's flow trend on the timestamp column. If the device clock offset was noted at the start, apply it as a constant shift. Sampling on a fixed cadence (e.g. every 2 minutes through the breakthrough curve, stretching out on the tail) makes the join and the curve both cleaner.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> &mdash; tracer study procedure and T10 determination. <span class="small">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</span></li>
+  <li>State primacy agency tracer study protocol, where one governs the facility.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. The log is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "tracerlog.v1";
+  var rows = []; // [{ts: epoch-ms, ppm: string}] in chronological order
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  /* Local-time stamp, built from components — new Date().toISOString()
+     would render UTC and shift the date/hour. */
+  function stamp(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(rows)); } catch (e) { /* private browsing */ }
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        rows = parsed.filter(function (r) { return r && isFinite(r.ts); });
+      }
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  function render() {
+    var body = $("log-body");
+    body.innerHTML = "";
+    /* newest first on screen; storage stays chronological */
+    for (var i = rows.length - 1; i >= 0; i--) {
+      (function (idx) {
+        var tr = document.createElement("tr");
+        var tdTs = document.createElement("td");
+        tdTs.textContent = stamp(rows[idx].ts);
+        var tdPpm = document.createElement("td");
+        var input = document.createElement("input");
+        input.type = "text";
+        input.inputMode = "decimal";
+        input.placeholder = "—";
+        input.value = rows[idx].ppm || "";
+        input.setAttribute("aria-label", "Chlorine ppm for sample at " + stamp(rows[idx].ts));
+        input.addEventListener("input", function () {
+          rows[idx].ppm = input.value;
+          save();
+        });
+        tdPpm.appendChild(input);
+        tr.appendChild(tdTs);
+        tr.appendChild(tdPpm);
+        body.appendChild(tr);
+      })(i);
+    }
+    $("log-table").hidden = rows.length === 0;
+    $("count").textContent = rows.length === 0 ? "No samples logged." :
+      rows.length + " sample" + (rows.length === 1 ? "" : "s") + " logged. Last: " + stamp(rows[rows.length - 1].ts);
+  }
+
+  $("log-btn").addEventListener("click", function () {
+    rows.push({ ts: Date.now(), ppm: "" });
+    save();
+    render();
+  });
+
+  $("clear-btn").addEventListener("click", function () {
+    if (rows.length === 0) return;
+    if (!confirm("Delete all " + rows.length + " logged samples? This cannot be undone.")) return;
+    rows = [];
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    render();
+  });
+
+  function csvField(s) {
+    s = String(s == null ? "" : s);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  $("export-btn").addEventListener("click", function () {
+    if (rows.length === 0) { alert("Nothing to export yet."); return; }
+    var lines = ["Timestamp,Chlorine ppm"];
+    rows.forEach(function (r) { // chronological in the file
+      lines.push(csvField(stamp(r.ts)) + "," + csvField(r.ppm));
+    });
+    var blob = new Blob([lines.join("\r\n") + "\r\n"], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tracer-log-" + stamp(Date.now()).slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
