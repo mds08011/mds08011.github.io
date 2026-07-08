@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging Tracer Study Samples with One-Tap Timestamps | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Logging Tracer Study Samples with One-Tap Timestamps</h1>
+                <time datetime="2026-07-08">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A tracer study is two time series that have to line up: chlorine residuals from grab samples, and flow from the SCADA historian. The flow side keeps immaculate time. The sample side is a tech holding a bottle, a reagent kit, and a phone, writing &ldquo;~10:35&rdquo; on a wet clipboard &mdash; and at analysis time, that reconstructed timestamp column is exactly what the T10 curve hangs on. The weak link isn't the chemistry; it's the clock.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool is a digital clipboard with one oversized control: a full-width <strong>LOG SAMPLE TIME</strong> button sized for a gloved thumb in sunlight. Tapping it captures the device timestamp to the second and opens a table row with an empty field for the residual, which gets back-filled whenever the titration catches up. Grab now, type later &mdash; the time column stays trustworthy because it was never typed at all.</p>
+
+            <figure>
+                <img src="/path/to/tracer-logger-screenshot.png" alt="The logger with a large LOG SAMPLE TIME button and rows of timestamps with chlorine ppm entry fields" loading="lazy">
+                <figcaption>Figure 1: One tap per grab; the ppm column fills in whenever the bench catches up.</figcaption>
+            </figure>
+
+            <p>The log persists in <code>localStorage</code> (with a <code>confirm()</code>-guarded clear), and exports to CSV via the Blob API for the join against the historian's flow trend &mdash; chronological in the file even though the screen shows newest first [1].</p>
+
+            <h3>The timestamp bug this avoids</h3>
+            <p>Same lesson as the <a href="/blog/2026-07-07/swppp-rain-tracker.html">SWPPP tracker</a>, opposite direction: formatting a JS date with <code>toISOString()</code> renders <em>UTC</em>, which in any US timezone shifts every sample by hours and can shift the date. The logger builds its stamps from local components:</p>
+            <pre><code>// wrong: renders UTC — 10:35 PDT becomes 17:35 in the log
+new Date().toISOString()
+
+// right: local wall-clock time, matching the historian
+d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate())
+  + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())</code></pre>
+
+            <details>
+                <summary>Clock discipline for the SCADA join</summary>
+                <ul>
+                    <li>Before the first grab, compare the phone's clock to the plant historian's clock and write down the offset &mdash; a two-minute skew looks like a baffling-factor error at analysis time.</li>
+                    <li>Sample on a fixed cadence through the breakthrough curve (every couple minutes), stretching out on the tail &mdash; the join and the curve both come out cleaner.</li>
+                    <li>Export the CSV and join on the timestamp column, applying the noted offset as a constant shift.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, no dependencies, nothing leaves the browser.</p>
+
+            <p>The tool: <a href="/tools/tracer-study-logger.html">Tracer Study Sample Logger</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> &mdash; tracer study procedure and T10 determination. <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
+                <li>[2] State primacy agency tracer study protocol, where one governs the facility.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

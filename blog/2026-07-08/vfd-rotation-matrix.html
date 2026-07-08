@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnosing VFD Rotation Conflicts Between Hand and Auto | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Diagnosing VFD Rotation Conflicts Between Hand and Auto</h1>
+                <time datetime="2026-07-08">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A blower runs backward in Hand during startup. The reflex is muscle memory from across-the-line motors: open the MCC bucket and swap two leads. But on a VFD-driven machine that reflex can be exactly wrong &mdash; if the drive's Hand reference is inverted in software, the motor may run <em>correctly</em> in Auto, and swapping leads &ldquo;fixes&rdquo; Hand while quietly breaking Auto. The crew leaves site with the machine verified in the mode they tested and wrong in the mode it will actually run in.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool is a state matrix: add an equipment ID, record observed rotation in Hand and in Auto (Forward / Reverse / Untested), and let one piece of logic issue the verdict. The logic rests on a single fact worth internalizing:</p>
+            <p><strong>Physical wiring affects Hand and Auto identically.</strong> The same three leads feed the same motor in either mode. So if rotation <em>differs</em> between modes, it cannot be wiring &mdash; one of the two references is inverted in software. Only when rotation is wrong in <em>both</em> modes is it a lead problem.</p>
+            <p>That yields the verdict table: Hand-Reverse/Auto-Forward flags yellow &mdash; <em>software conflict, do not swap physical leads, find the drive parameter</em>. Hand-Forward/Auto-Reverse is the same conflict on the Auto path (PLC reference sign or terminal mapping). Reverse in both flags red &mdash; <em>hardware: swap two leads at the MCC and retest both modes</em>. Forward in both goes green, and anything Untested gets no verdict at all &mdash; the tool refuses to conclude from partial data.</p>
+
+            <figure>
+                <img src="/path/to/vfd-rotation-screenshot.png" alt="Equipment cards with Hand and Auto rotation radios, one highlighted yellow with a software-conflict warning" loading="lazy">
+                <figcaption>Figure 1: A card in the yellow state &mdash; rotation differs between modes, so the leads are innocent.</figcaption>
+            </figure>
+
+            <details>
+                <summary>Test discipline that rides along</summary>
+                <ul>
+                    <li>Bump-test at low speed with the drive train ready for it &mdash; some machines (screw pumps, certain gearboxes) must never run backward even briefly. Check the O&amp;M first.</li>
+                    <li>Verify against the rotation arrow on the casing, not against what sounds right &mdash; a centrifugal machine running backward delivers roughly half flow and head and can sound nearly normal.</li>
+                    <li>After any fix &mdash; parameter or leads &mdash; retest <em>both</em> modes. That's the entire point of tracking them as a matrix.</li>
+                </ul>
+            </details>
+
+            <p>The matrix persists in <code>localStorage</code> and exports to CSV (with verdicts) for the commissioning record. Single file, vanilla JS, no dependencies [1][2].</p>
+
+            <p>The tool: <a href="/tools/vfd-rotation-matrix.html">VFD &ldquo;Hand vs. Auto&rdquo; Rotation Matrix</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] The drive manufacturer's parameter manual &mdash; direction/reference parameters (governing document for the software side).</li>
+                <li>[2] Motor and driven-equipment O&amp;M &mdash; rotation arrow and reverse-rotation restrictions.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

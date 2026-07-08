@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detecting Subnet Mismatches Between Field Devices | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Detecting Subnet Mismatches Between Field Devices</h1>
+                <time datetime="2026-07-08">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A telemetry gateway sits at 192.168.17.1. The site router hands out 10.215.113.x. Neither device is broken, the cable is fine, and nothing will ever ping &mdash; and the civil engineer standing between them ends up texting screenshots of a command prompt to IT to learn why. The why is one bitwise operation, and it's checkable on a phone with no signal.</p>
+
+            <h2>The Approach</h2>
+            <p>An IP address is 32 bits, and the subnet mask splits it into a network part and a host part. Two devices can talk directly only if their network numbers match. The math is a single AND per device:</p>
+            <p><code>network = IP &amp; mask</code></p>
+            <p>So <code>192.168.17.1 &amp; 255.255.255.0 = 192.168.17.0</code>, while <code>10.215.113.50 &amp; 255.255.255.0 = 10.215.113.0</code>. Different networks &mdash; the tool flashes red and says so in plain words: <em>the devices are invisible to each other; they need a router, or one of them needs an address in the other's network</em>. Matching networks flash green, with the honest caveat that matching addresses on separate switches or VLANs still won't talk &mdash; this answers the addressing question only.</p>
+
+            <figure>
+                <img src="/path/to/subnet-clash-screenshot.png" alt="Two device IP and mask inputs with computed network addresses and a red Subnet Mismatch verdict panel" loading="lazy">
+                <figcaption>Figure 1: The mismatch case &mdash; both computed network addresses shown, so the verdict is explainable in a text to IT.</figcaption>
+            </figure>
+
+            <p>Masks are accepted as dotted decimal or CIDR (<code>/24</code> and <code>255.255.255.0</code> are the same statement), non-contiguous masks get flagged as the typos they almost always are, and both computed network addresses display under the inputs &mdash; because &ldquo;my device is on 192.168.17.0/24, yours is 10.215.113.0/24&rdquo; is a much better opening line with IT than a screenshot of <code>ipconfig</code>.</p>
+
+            <details>
+                <summary>A JavaScript footnote on the bitwise part</summary>
+                <p>JS bitwise operators work on <em>signed</em> 32-bit integers, so an address like 192.168.17.1 (high bit set) goes negative the moment you AND it. Every operation in the tool is followed by <code>&gt;&gt;&gt; 0</code>, the unsigned right-shift by zero, which is the idiomatic way to coerce back to an unsigned 32-bit value:</p>
+                <pre><code>var network = (ip &amp; mask) &gt;&gt;&gt; 0;</code></pre>
+                <p>The mask sanity check is a bit-trick worth knowing: a valid mask is 1-bits then 0-bits, so its inverse must be of the form 2&#8319;&minus;1, and <code>((inv + 1) &amp; inv) === 0</code> tests exactly that.</p>
+            </details>
+
+            <details>
+                <summary>The usual field fix</summary>
+                <ul>
+                    <li>Fastest: give the laptop a <em>second</em> static IP in the device's subnet &mdash; most OSes allow multiple addresses on one adapter, so you keep the site network and reach the device.</li>
+                    <li>Right long-term: IT adds a route or puts the device VLAN behind the router. Their call, not a field improvisation [2].</li>
+                    <li>10.x, 172.16&ndash;31.x, and 192.168.x are private ranges &mdash; normal for industrial gear, never directly reachable from the internet [1].</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, inputs persisted in <code>localStorage</code>, fully offline &mdash; which matters, because the moment you need this tool is precisely the moment the network doesn't work.</p>
+
+            <p>The tool: <a href="/tools/subnet-clash-detector.html">Industrial Subnet Clash Detector</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] RFC 1918 &mdash; Address Allocation for Private Internets. <a href="https://www.rfc-editor.org/rfc/rfc1918">https://www.rfc-editor.org/rfc/rfc1918</a></li>
+                <li>[2] The site's IT/OT network administrator &mdash; the governing authority for anything beyond reading addresses.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
