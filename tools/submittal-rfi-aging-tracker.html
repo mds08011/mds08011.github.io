@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submittal &amp; RFI Aging Tracker</title>
+<meta name="description" content="Offline aging tracker for open submittals and RFIs: log items the day they go out, see the days-in-review histogram, median and oldest open age, cycle times of returned items, and a configurable review-duration threshold. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="date"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; min-width: 40rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input, table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; max-width: none; }
+  table.items input.ref { width: 5.5rem; }
+  table.items input.ttl { width: 9rem; }
+  table.items input.note { width: 8rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items td.open { color: var(--fail-border); font-weight: 700; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .bar { fill: var(--accent); }
+  .bar.fail { fill: var(--fail-border); }
+  .barcount { fill: var(--fg); font-size: 13px; text-anchor: middle; font-weight: 700; }
+  .bucketlabel { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .threshnote { fill: var(--muted); font-size: 11px; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Submittal &amp; RFI Aging Tracker</h1>
+<p class="subtitle">Log open submittals and RFIs, see what's stuck in review as a days-in-review histogram, and track cycle times as items come back. Runs entirely offline; everything persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is a field-side mirror, not the record. The submittal register in the project's PM platform (Procore, Kahua, e-Builder, ACC) is the contractual log. Age here is measured against the <em>date sent</em> — so it's only honest if you log each item the day it goes out, not from memory at the monthly meeting. Review durations and the definition of a &ldquo;complete&rdquo; submittal come from the contract specifications.
+</div>
+
+<fieldset>
+  <legend>Settings</legend>
+  <div class="row">
+    <div>
+      <label for="threshold">Review-duration threshold (calendar days)
+        <input type="number" id="threshold" min="1" step="1" value="30">
+      </label>
+      <p class="small">Typical spec review period is 30 days. Open items older than this are flagged.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Open &amp; Closed Items</legend>
+  <div class="table-wrap">
+    <table class="items">
+      <thead><tr>
+        <th>Ref / No.</th><th>Title</th><th>Type</th><th>Sent</th><th>Returned</th><th>Note</th><th>Age / Cycle</th><th></th>
+      </tr></thead>
+      <tbody id="item-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="add" id="item-add">+ Add item</button>
+  <p class="small">Leave <em>Returned</em> blank while an item is open. A revise-and-resubmit comes back as a <strong>new line</strong> for the next revision (R0, R1&hellip;) so cycle times stay honest.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Aging &mdash; open items by days in review</h3>
+  <figure class="chart">
+    <svg id="hist" viewBox="0 0 640 300" role="img" aria-label="Histogram of open items by days in review"></svg>
+  </figure>
+  <table>
+    <tr><td>Open items</td><td class="val" id="r-open">&mdash;</td></tr>
+    <tr><td>Open by type</td><td class="val" id="r-bytype">&mdash;</td></tr>
+    <tr><td>Median open age</td><td class="val" id="r-median">&mdash;</td></tr>
+    <tr><td>Oldest open item</td><td class="val" id="r-oldest">&mdash;</td></tr>
+    <tr><td>Open items over threshold</td><td class="val" id="r-over">&mdash;</td></tr>
+    <tr><td>Average cycle time (returned items)</td><td class="val" id="r-cycle">&mdash;</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all data</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Aging, buckets, and the threshold</summary>
+  <p>An item is <em>open</em> while its Returned field is blank. Its age is <code>today &minus; date sent</code> in calendar days (dates parsed as local, so no timezone drift). Open items fall into buckets <code>0&ndash;7, 8&ndash;14, 15&ndash;30, 31&ndash;60, 60+</code> days &mdash; exactly 7 days lands in the first bucket, 8 in the second. A bucket is drawn in the fail tone when its <em>entire</em> range is past the threshold (its lower edge exceeds it); at the default 30-day threshold that's the 31&ndash;60 and 60+ buckets. Returned items leave the histogram but stay in the table with their cycle time (<code>returned &minus; sent</code>) shown.</p>
+</details>
+
+<details>
+  <summary>The stats panel</summary>
+  <p>Median open age is the middle value of the open items' ages (average of the two middles for an even count). The oldest open item is your action item &mdash; name and age. &ldquo;Over threshold&rdquo; counts open items whose age exceeds the review duration. Average cycle time is the mean of <code>returned &minus; sent</code> across every item that has come back &mdash; the honest measure of how long your reviews actually take, revision by revision.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Log the item the day it goes out. Aging is measured from the date sent; a register reconstructed at month-end understates every age and hides the ones that are actually stuck &mdash; the same contemporaneous-records habit the working-day and SWPPP trackers rely on.</li>
+    <li>A submittal returned &ldquo;revise and resubmit&rdquo; is not closed &mdash; it starts a new revision cycle. Log R1 as its own line the day it goes back out. Rolling R0 and R1 into one line makes the cycle time look half as long as it was.</li>
+    <li>The histogram is the meeting slide: it shows the owner's rep where the backlog is without naming names. The oldest-item stat is the sentence that follows &mdash; &ldquo;the oldest open submittal is 74 days, here's what it's holding.&rdquo;</li>
+    <li>Not every old item is the reviewer's fault. Some sit open because the resubmittal is on your side of the fence. The tracker shows the age; the cause is the conversation.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Contract specifications &mdash; submittal procedures and review durations (Division 01, typically Section 01 33 00). Governing.</li>
+  <li>The project's PM platform of record (Procore / Kahua / e-Builder / Autodesk Build) &mdash; the contractual submittal and RFI register. This page is a field-side mirror.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. All data is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "submittalaging.v1";
+  var TYPES = [
+    { key: "submittal", label: "Submittal" },
+    { key: "rfi", label: "RFI" },
+    { key: "other", label: "Other" }
+  ];
+  var DAY = 86400000;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  /* parse YYYY-MM-DD as a LOCAL date (new Date(string) would parse as UTC and shift a day) */
+  function parseLocal(iso) {
+    if (!iso) return null;
+    var p = iso.split("-");
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function todayLocal() {
+    var t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+  function daysBetween(a, b) { return Math.round((b - a) / DAY); }
+
+  var items = []; // { ref, title, type, sent, returned, note }
+
+  function typeLabel(key) {
+    for (var i = 0; i < TYPES.length; i++) if (TYPES[i].key === key) return TYPES[i].label;
+    return key;
+  }
+  function typeSelectHtml(sel) {
+    return "<select class='i-type'>" + TYPES.map(function (t) {
+      return "<option value='" + t.key + "'" + (t.key === sel ? " selected" : "") + ">" + t.label + "</option>";
+    }).join("") + "</select>";
+  }
+
+  /* age (open) or cycle (returned) text for one item */
+  function ageCellHtml(it) {
+    var sent = parseLocal(it.sent);
+    if (!sent) return { html: "&mdash;", open: false };
+    if (it.returned) {
+      var ret = parseLocal(it.returned);
+      if (!ret) return { html: "&mdash;", open: false };
+      var cyc = daysBetween(sent, ret);
+      return { html: "closed &middot; " + cyc + " d", open: false };
+    }
+    var age = daysBetween(sent, todayLocal());
+    return { html: "open &middot; " + age + " d", open: true };
+  }
+
+  function renderItems() {
+    var body = $("item-body");
+    body.innerHTML = "";
+    items.forEach(function (it, idx) {
+      var tr = document.createElement("tr");
+      var ac = ageCellHtml(it);
+      tr.innerHTML =
+        "<td><input class='ref' type='text' maxlength='16' value='" + esc(it.ref || "") + "'></td>" +
+        "<td><input class='ttl' type='text' maxlength='60' value='" + esc(it.title || "") + "'></td>" +
+        "<td>" + typeSelectHtml(it.type) + "</td>" +
+        "<td><input class='i-sent' type='date' value='" + esc(it.sent || "") + "'></td>" +
+        "<td><input class='i-ret' type='date' value='" + esc(it.returned || "") + "'></td>" +
+        "<td><input class='note' type='text' maxlength='60' value='" + esc(it.note || "") + "'></td>" +
+        "<td class='calc" + (ac.open ? " open" : "") + "'>" + ac.html + "</td>" +
+        "<td><button type='button' class='i-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".ref").addEventListener("input", function () { items[idx].ref = this.value; recompute(); });
+      tr.querySelector(".ttl").addEventListener("input", function () { items[idx].title = this.value; recompute(); });
+      tr.querySelector(".i-type").addEventListener("change", function () { items[idx].type = this.value; recompute(); });
+      tr.querySelector(".i-sent").addEventListener("input", function () { items[idx].sent = this.value; updateRowCell(idx); recompute(); });
+      tr.querySelector(".i-ret").addEventListener("input", function () { items[idx].returned = this.value; updateRowCell(idx); recompute(); });
+      tr.querySelector(".note").addEventListener("input", function () { items[idx].note = this.value; recompute(); });
+      tr.querySelector(".i-del").addEventListener("click", function () { items.splice(idx, 1); renderItems(); recompute(); });
+      body.appendChild(tr);
+    });
+  }
+
+  /* update only the computed age/cycle cell so typing a date doesn't blow away focus */
+  function updateRowCell(idx) {
+    var row = $("item-body").rows[idx];
+    if (!row) return;
+    var cell = row.cells[6];
+    var ac = ageCellHtml(items[idx]);
+    cell.className = "calc" + (ac.open ? " open" : "");
+    cell.innerHTML = ac.html;
+  }
+
+  $("item-add").addEventListener("click", function () {
+    items.push({ ref: "", title: "", type: "submittal", sent: "", returned: "", note: "" });
+    renderItems(); recompute();
+  });
+
+  /* ---------- histogram + stats ---------- */
+  var BUCKETS = [
+    { label: "0–7", lo: 0, hi: 7 },
+    { label: "8–14", lo: 8, hi: 14 },
+    { label: "15–30", lo: 15, hi: 30 },
+    { label: "31–60", lo: 31, hi: 60 },
+    { label: "60+", lo: 61, hi: Infinity }
+  ];
+
+  function bucketIndex(age) {
+    for (var i = 0; i < BUCKETS.length; i++) if (age >= BUCKETS[i].lo && age <= BUCKETS[i].hi) return i;
+    return BUCKETS.length - 1;
+  }
+
+  function drawHist(counts, threshold) {
+    var W = 640, H = 300;
+    var padL = 34, padR = 14, padT = 24, padB = 46;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var maxCount = Math.max(1, Math.max.apply(null, counts));
+    /* round the y-axis top up to a clean number */
+    var yTop = maxCount <= 5 ? maxCount : Math.ceil(maxCount / 5) * 5;
+    var n = BUCKETS.length;
+    var slot = plotW / n, bw = slot * 0.62;
+    var svg = "";
+    /* baseline */
+    var y0 = padT + plotH;
+    svg += "<line class='axis' x1='" + padL + "' y1='" + y0 + "' x2='" + (W - padR) + "' y2='" + y0 + "'/>";
+    /* y gridlines/ticks at 0 and yTop */
+    for (var g = 0; g <= yTop; g += Math.max(1, Math.round(yTop / 5))) {
+      var gy = y0 - (g / yTop) * plotH;
+      svg += "<text class='bucketlabel' x='" + (padL - 6) + "' y='" + (gy + 4) + "' text-anchor='end'>" + g + "</text>";
+    }
+    counts.forEach(function (c, i) {
+      var x = padL + i * slot + (slot - bw) / 2;
+      var bh = (c / yTop) * plotH;
+      var y = y0 - bh;
+      var fail = BUCKETS[i].lo > threshold;
+      svg += "<rect class='bar" + (fail ? " fail" : "") + "' x='" + x.toFixed(1) + "' y='" + y.toFixed(1) +
+             "' width='" + bw.toFixed(1) + "' height='" + Math.max(0, bh).toFixed(1) + "' rx='2'/>";
+      if (c > 0) svg += "<text class='barcount' x='" + (x + bw / 2).toFixed(1) + "' y='" + (y - 6).toFixed(1) + "'>" + c + "</text>";
+      svg += "<text class='bucketlabel' x='" + (x + bw / 2).toFixed(1) + "' y='" + (y0 + 16) + "'>" + BUCKETS[i].label + "</text>";
+    });
+    svg += "<text class='bucketlabel' x='" + (padL + plotW / 2) + "' y='" + (H - 8) + "'>days in review &mdash; threshold " + threshold + " d (fail tone past it)</text>";
+    $("hist").innerHTML = svg;
+  }
+
+  function median(arr) {
+    if (!arr.length) return null;
+    var s = arr.slice().sort(function (a, b) { return a - b; });
+    var m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var threshold = parseInt($("threshold").value, 10);
+    if (!isFinite(threshold) || threshold < 1) threshold = 30;
+
+    var openAges = [], openByType = { submittal: 0, rfi: 0, other: 0 };
+    var oldest = null, overCount = 0, cycles = [];
+    var anySent = false;
+
+    items.forEach(function (it) {
+      var sent = parseLocal(it.sent);
+      if (!sent) return;
+      anySent = true;
+      if (it.returned) {
+        var ret = parseLocal(it.returned);
+        if (ret) cycles.push(daysBetween(sent, ret));
+        return;
+      }
+      var age = daysBetween(sent, todayLocal());
+      openAges.push(age);
+      if (openByType[it.type] === undefined) openByType[it.type] = 0;
+      openByType[it.type]++;
+      if (age > threshold) overCount++;
+      if (!oldest || age > oldest.age) oldest = { age: age, name: (it.ref || it.title || "(untitled)") };
+    });
+
+    if (!anySent) { out.hidden = true; saveState(); return; }
+
+    var counts = BUCKETS.map(function () { return 0; });
+    openAges.forEach(function (a) { counts[bucketIndex(a)]++; });
+    drawHist(counts, threshold);
+
+    $("r-open").textContent = openAges.length;
+    $("r-bytype").textContent = "submittal " + openByType.submittal + " · RFI " + openByType.rfi + " · other " + openByType.other;
+    var med = median(openAges);
+    $("r-median").textContent = med === null ? "—" : med + " d";
+    $("r-oldest").textContent = oldest ? (oldest.name + " — " + oldest.age + " d") : "—";
+    $("r-over").textContent = overCount + (overCount ? " (over " + threshold + " d)" : "");
+    var avgCyc = cycles.length ? cycles.reduce(function (a, b) { return a + b; }, 0) / cycles.length : null;
+    $("r-cycle").textContent = avgCyc === null ? "no returned items yet" : (Math.round(avgCyc) + " d over " + cycles.length + " returned");
+
+    var msgs = [];
+    if (oldest && oldest.age > threshold * 2) msgs.push("The oldest open item is more than twice the review threshold — that's the action item, not a statistic. Chase it by name.");
+    if (overCount > 0 && overCount === openAges.length && openAges.length > 1) msgs.push("Every open item is over threshold — this reads as a review-capacity problem on someone's side, not a handful of stragglers.");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  function saveState() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ items: items, threshold: $("threshold").value }));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (Array.isArray(st.items)) items = st.items;
+      if (st.threshold !== undefined) $("threshold").value = st.threshold;
+    } catch (e) {}
+  }
+
+  $("threshold").addEventListener("input", recompute);
+  $("reset-btn").addEventListener("click", function () {
+    if (items.length && !window.confirm("This clears every logged item. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (items.length === 0) items.push({ ref: "", title: "", type: "submittal", sent: "", returned: "", note: "" });
+  renderItems();
+  recompute();
+})();
+</script>
+</body>
+</html>

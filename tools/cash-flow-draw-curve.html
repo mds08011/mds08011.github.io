@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Flow Draw Curve Calculator</title>
+<meta name="description" content="Offline monthly billing projection with the GC twist: billed vs received, retention withheld and released, and payment lag. Smoothstep S-curve, front/back-loaded, or entered billing. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --billed: #00557f; --received: #2e6e4e; --barfill: rgba(0,85,127,0.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --billed: #6db3d6; --received: #5c9d7c; --barfill: rgba(109,179,214,0.28);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; min-width: 26rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; max-width: none; }
+  table.items input.lbl { width: 7rem; }
+  table.items input.money { width: 8rem; text-align: right; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .gridline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.5; }
+  .axislabel { fill: var(--muted); font-size: 10px; }
+  .bar { fill: var(--barfill); }
+  .billedline { stroke: var(--billed); stroke-width: 2.5; fill: none; }
+  .receivedline { stroke: var(--received); stroke-width: 2.5; fill: none; stroke-dasharray: 6 4; }
+  .legtext { fill: var(--fg); font-size: 11px; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Cash Flow Draw Curve Calculator</h1>
+<p class="subtitle">A monthly billing projection with the general contractor's twist &mdash; billed vs. received, retention withheld and released, and payment lag. Project a curve shape or enter your own billing. Runs entirely offline; everything persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This models <em>revenue</em> timing, not cost. True cash flow nets your billing against payroll, supplier, and subcontractor payment terms &mdash; a fuller model than this page attempts. Use it to see the billed-vs-received gap and what retention does to the tail, not as a treasury forecast. The contract's payment and retention provisions govern the actual dates and percentages.
+</div>
+
+<fieldset>
+  <legend>Billing source</legend>
+  <div class="row">
+    <div>
+      <label for="mode">Mode
+        <select id="mode">
+          <option value="projected">Projected from a curve shape</option>
+          <option value="entered">Entered monthly billing</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div id="proj-inputs">
+    <div class="row">
+      <div>
+        <label for="cval">Contract value ($)
+          <input type="number" id="cval" min="0" step="any" placeholder="e.g. 4000000">
+        </label>
+      </div>
+      <div>
+        <label for="dur">Duration (months)
+          <input type="number" id="dur" min="1" max="60" step="1" placeholder="e.g. 10">
+        </label>
+      </div>
+      <div>
+        <label for="shape">Curve shape
+          <select id="shape">
+            <option value="smoothstep">Smoothstep S-curve (3t² − 2t³)</option>
+            <option value="front">Front-loaded</option>
+            <option value="back">Back-loaded</option>
+            <option value="linear">Linear</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div id="enter-inputs" hidden>
+    <div class="table-wrap">
+      <table class="items">
+        <thead><tr><th>Month</th><th>Billing ($)</th><th>Σ billed</th><th></th></tr></thead>
+        <tbody id="bill-body"></tbody>
+      </table>
+    </div>
+    <button type="button" class="add" id="bill-add">+ Add month</button>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Retention &amp; payment terms</legend>
+  <div class="row">
+    <div>
+      <label for="ret">Retention withheld (%)
+        <input type="number" id="ret" min="0" max="20" step="any" value="5">
+      </label>
+    </div>
+    <div>
+      <label for="reln">Retention released (months after final billing)
+        <input type="number" id="reln" min="0" max="12" step="1" value="1">
+      </label>
+    </div>
+    <div>
+      <label for="lag">Payment lag (months)
+        <select id="lag">
+          <option value="0">0 — paid same month</option>
+          <option value="1" selected>1 — paid next month</option>
+          <option value="2">2 — paid in two months</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <p class="small">Retention and release terms vary by contract and by public vs. private work &mdash; some release in stages, some at substantial completion plus a punch period. Set these to your contract.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Cash flow &mdash; billed vs. received net of retention</h3>
+  <figure class="chart">
+    <svg id="cash" viewBox="0 0 660 320" role="img" aria-label="Cash flow draw curve: monthly billing bars with cumulative billed and received lines"></svg>
+  </figure>
+  <table>
+    <tr><td>Total billed (contract value)</td><td class="val" id="r-total">&mdash;</td></tr>
+    <tr><td>Peak financing gap (billed − received)</td><td class="val" id="r-gap">&mdash;</td></tr>
+    <tr><td>Peak retention held</td><td class="val" id="r-ret">&mdash;</td></tr>
+    <tr><td>Cash complete (fully received)</td><td class="val" id="r-complete">&mdash;</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The curve shapes</summary>
+  <p>Projected billing spreads the contract value over the duration by a cumulative fraction <code>f(t)</code>, <code>t = m / T</code>. The smoothstep S-curve is <code>f(t) = 3t² − 2t³</code> &mdash; slow start, steep middle, slow finish (<code>f(0)=0</code>, <code>f(0.5)=0.5</code>, <code>f(1)=1</code>), so the monthly amounts are bell-shaped. Front-loaded uses <code>f = 2t − t²</code>, back-loaded <code>f = t²</code>, linear <code>f = t</code>. Each month's billing is <code>(f(m/T) − f((m−1)/T)) × value</code>, and the monthly amounts sum exactly to the contract value.</p>
+</details>
+
+<details>
+  <summary>Retention, lag, and the received line</summary>
+  <p>Each progress payment pays <code>(1 − retention) × billing</code>, shifted later by the payment lag. The withheld retention accumulates and is released as a lump sum <code>N</code> months after the final billing month &mdash; the late jump you see in the received line. The peak financing gap is the largest value of <code>cumulative billed − cumulative received</code>: the money you've earned but not yet collected, which is the exposure this simple model shows. Peak retention held is <code>retention × total billed</code>, reached just before release.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>This is revenue timing only. Your real cash position also depends on when you pay labor (weekly), suppliers (net 30), and subs (often pay-when-paid). Retention you hold on your subs partially offsets the retention the owner holds on you &mdash; a real model nets the two.</li>
+    <li>Front-loading the schedule of values is common, visible, and a negotiation with the owner's rep. Mobilization line items exist for a reason; padding early activities that aren't really done is a different thing and gets caught.</li>
+    <li>Stored-materials billing changes both the curve and the paperwork &mdash; you can bill for material on site ahead of installation, but expect to document it and insure it.</li>
+    <li>The retention tail is real money sitting for months after you finish. On thin margins, the release date is a line on the cash forecast, not an afterthought.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>The contract's payment and retention provisions (progress payment schedule, retention percentage, and release terms). Governing.</li>
+  <li>AGC / CFMA guidance on construction cash flow and the schedule of values.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "cashflow.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  function fnum(v) { if (v === "" || v === null || v === undefined) return null; var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function money(x) {
+    if (x === null || !isFinite(x)) return "—";
+    var sign = x < 0 ? "-" : "", a = Math.abs(x);
+    if (a >= 1e6) return sign + "$" + (a / 1e6).toFixed(a >= 1e7 ? 1 : 2) + "M";
+    if (a >= 1e3) return sign + "$" + (a / 1e3).toFixed(a >= 1e5 ? 0 : 1) + "k";
+    return sign + "$" + a.toFixed(0);
+  }
+  function niceMax(v) {
+    if (v <= 0) return 1;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v / mag;
+    var step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return step * mag;
+  }
+
+  var entered = []; // { label, amt }  (strings)
+
+  /* ---------- curve shapes ---------- */
+  function cumFrac(shape, t) {
+    if (t <= 0) return 0; if (t >= 1) return 1;
+    switch (shape) {
+      case "front": return 2 * t - t * t;
+      case "back": return t * t;
+      case "linear": return t;
+      default: return 3 * t * t - 2 * t * t * t; // smoothstep
+    }
+  }
+
+  /* returns { billing: [], labels: [] } for months 1..T */
+  function billingSeries() {
+    if ($("mode").value === "entered") {
+      var b = [], labels = [];
+      entered.forEach(function (e) {
+        var a = fnum(e.amt);
+        b.push(a === null ? 0 : a);
+        labels.push(e.label || "");
+      });
+      return { billing: b, labels: labels };
+    }
+    var V = fnum($("cval").value), T = parseInt($("dur").value, 10);
+    if (V === null || V <= 0 || !isFinite(T) || T <= 0) return { billing: [], labels: [] };
+    var shape = $("shape").value, b = [], labels = [];
+    for (var m = 1; m <= T; m++) {
+      b.push((cumFrac(shape, m / T) - cumFrac(shape, (m - 1) / T)) * V);
+      labels.push("M" + m);
+    }
+    return { billing: b, labels: labels };
+  }
+
+  /* ---------- entered-mode table ---------- */
+  function renderBill() {
+    var body = $("bill-body");
+    body.innerHTML = "";
+    var run = 0;
+    entered.forEach(function (e, idx) {
+      var a = fnum(e.amt); run += a || 0;
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='lbl' type='text' maxlength='16' value='" + esc(e.label || "") + "'></td>" +
+        "<td><input class='money b-amt' type='number' step='any' value='" + esc(e.amt || "") + "'></td>" +
+        "<td class='calc c-cum'>" + money(run) + "</td>" +
+        "<td><button type='button' class='b-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".lbl").addEventListener("input", function () { entered[idx].label = this.value; recompute(); });
+      tr.querySelector(".b-amt").addEventListener("input", function () { entered[idx].amt = this.value; updateCumCells(); recompute(); });
+      tr.querySelector(".b-del").addEventListener("click", function () { entered.splice(idx, 1); renderBill(); recompute(); });
+      body.appendChild(tr);
+    });
+  }
+  function updateCumCells() {
+    var rows = $("bill-body").rows, run = 0;
+    for (var i = 0; i < rows.length; i++) {
+      run += fnum(entered[i].amt) || 0;
+      rows[i].querySelector(".c-cum").textContent = money(run);
+    }
+  }
+  $("bill-add").addEventListener("click", function () {
+    entered.push({ label: "", amt: "" });
+    renderBill(); recompute();
+  });
+
+  $("mode").addEventListener("change", function () {
+    var e = this.value === "entered";
+    $("enter-inputs").hidden = !e;
+    $("proj-inputs").hidden = e;
+    recompute();
+  });
+
+  /* ---------- draw ---------- */
+  function drawCash(billing, labels, cumBilled, cumReceived, horizon) {
+    var W = 660, H = 320, padL = 52, padR = 96, padT = 16, padB = 42;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var y0 = padT + plotH;
+    var total = cumBilled[cumBilled.length - 1];
+    var yTop = niceMax(total) || 1;
+    var n = horizon;
+    var slot = plotW / n;
+    function X(k) { return padL + (k - 0.5) * slot; } // month k (1-based) center
+    function Xc(k) { return padL + (k) * slot; }      // cumulative point at end of month k
+    function Y(v) { return y0 - (v / yTop) * plotH; }
+
+    var svg = "";
+    /* y grid + labels */
+    for (var g = 0; g <= 5; g++) {
+      var val = yTop * g / 5, gy = Y(val);
+      svg += "<line class='gridline' x1='" + padL + "' y1='" + gy.toFixed(1) + "' x2='" + (padL + plotW) + "' y2='" + gy.toFixed(1) + "'/>";
+      svg += "<text class='axislabel' x='" + (padL - 6) + "' y='" + (gy + 4).toFixed(1) + "' text-anchor='end'>" + money(val) + "</text>";
+    }
+    svg += "<line class='axis' x1='" + padL + "' y1='" + y0 + "' x2='" + (padL + plotW) + "' y2='" + y0 + "'/>";
+
+    /* billing bars */
+    var bw = Math.min(slot * 0.6, 26);
+    billing.forEach(function (b, i) {
+      if (b <= 0) return;
+      var cx = X(i + 1), bh = (b / yTop) * plotH;
+      svg += "<rect class='bar' x='" + (cx - bw / 2).toFixed(1) + "' y='" + Y(b).toFixed(1) + "' width='" + bw.toFixed(1) + "' height='" + bh.toFixed(1) + "' rx='2'/>";
+    });
+
+    /* x labels */
+    for (var k = 1; k <= n; k++) {
+      if (n > 14 && k % 2 === 0) continue;
+      var lab = (k <= labels.length && labels[k - 1]) ? labels[k - 1] : ("M" + k);
+      svg += "<text class='axislabel' x='" + X(k).toFixed(1) + "' y='" + (y0 + 16) + "' text-anchor='middle'>" + esc(lab) + "</text>";
+    }
+
+    function line(cum, cls) {
+      var pts = [padL + ",1"];
+      pts[0] = padL.toFixed(1) + "," + Y(0).toFixed(1);
+      for (var k = 1; k <= n; k++) pts.push(Xc(k).toFixed(1) + "," + Y(cum[k]).toFixed(1));
+      return "<polyline class='" + cls + "' points='" + pts.join(" ") + "'/>";
+    }
+    svg += line(cumBilled, "billedline");
+    svg += line(cumReceived, "receivedline");
+
+    /* legend */
+    var lx = padL + plotW + 10, ly = padT + 10;
+    var leg = [["billedline", "Billed"], ["receivedline", "Received"]];
+    leg.forEach(function (e, i) {
+      var yy = ly + i * 20;
+      svg += "<line class='" + e[0] + "' x1='" + lx + "' y1='" + yy + "' x2='" + (lx + 22) + "' y2='" + yy + "'/>";
+      svg += "<text class='legtext' x='" + (lx + 28) + "' y='" + (yy + 4) + "'>" + e[1] + "</text>";
+    });
+    svg += "<rect class='bar' x='" + lx + "' y='" + (ly + 34) + "' width='22' height='10'/>";
+    svg += "<text class='legtext' x='" + (lx + 28) + "' y='" + (ly + 43) + "'>Monthly</text>";
+
+    $("cash").innerHTML = svg;
+  }
+
+  /* ---------- main ---------- */
+  function recompute() {
+    var out = $("results");
+    var series = billingSeries();
+    var billing = series.billing;
+    var T = billing.length;
+    if (T === 0 || billing.reduce(function (a, b) { return a + b; }, 0) <= 0) { out.hidden = true; saveState(); return; }
+
+    var ret = (fnum($("ret").value) || 0) / 100;
+    var relN = parseInt($("reln").value, 10); if (!isFinite(relN) || relN < 0) relN = 0;
+    var lag = parseInt($("lag").value, 10) || 0;
+    var total = billing.reduce(function (a, b) { return a + b; }, 0);
+    var retentionTotal = ret * total;
+
+    var horizon = Math.max(T + relN, T + lag);
+    /* cumulative billed (1-based, index 0 unused = 0) */
+    var cumBilled = [0], cumReceived = [0];
+    var recv = []; for (var k = 0; k <= horizon; k++) recv[k] = 0;
+    /* progress payments */
+    for (var m = 1; m <= T; m++) {
+      var k = m + lag;
+      if (k <= horizon) recv[k] += (1 - ret) * billing[m - 1];
+    }
+    /* retention release */
+    var relMonth = T + relN;
+    if (relMonth <= horizon) recv[relMonth] += retentionTotal;
+
+    var cb = 0, cr = 0, peakGap = 0, complete = null;
+    for (var kk = 1; kk <= horizon; kk++) {
+      cb += (kk <= T) ? billing[kk - 1] : 0;
+      cr += recv[kk];
+      cumBilled[kk] = cb;
+      cumReceived[kk] = cr;
+      var gap = cb - cr;
+      if (gap > peakGap) peakGap = gap;
+      if (complete === null && cr >= total - 0.005) complete = kk;
+    }
+
+    drawCash(billing, series.labels, cumBilled, cumReceived, horizon);
+
+    $("r-total").textContent = money(total);
+    $("r-gap").textContent = money(peakGap);
+    $("r-ret").textContent = money(retentionTotal);
+    var completeLabel = complete === null ? "beyond horizon" :
+      (complete <= series.labels.length && series.labels[complete - 1] ? series.labels[complete - 1] : "M" + complete) +
+      (complete === relMonth ? " (retention release)" : "");
+    $("r-complete").textContent = completeLabel;
+
+    var msgs = [];
+    if (peakGap > total * 0.25) msgs.push("Peak financing gap exceeds a quarter of the contract — a real carrying cost. This is revenue timing only; layer in when you actually pay labor and subs before treating it as your cash position.");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["mode", "cval", "dur", "shape", "ret", "reln", "lag"];
+  function saveState() {
+    try {
+      var st = { entered: entered };
+      FIELDS.forEach(function (id) { st[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(st));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (Array.isArray(st.entered)) entered = st.entered;
+      FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recompute);
+    $(id).addEventListener("change", recompute);
+  });
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (entered.length === 0) entered.push({ label: "", amt: "" });
+  $("enter-inputs").hidden = $("mode").value !== "entered";
+  $("proj-inputs").hidden = $("mode").value === "entered";
+  renderBill();
+  recompute();
+})();
+</script>
+</body>
+</html>

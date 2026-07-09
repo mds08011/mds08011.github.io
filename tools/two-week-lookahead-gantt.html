@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two-Week Look-Ahead Gantt</title>
+<meta name="description" content="Offline short-horizon field Gantt: tasks as bars across a 7/14/21-day date axis with weekend shading, a today line, calendar- or working-day durations, and crew coloring. Deliberately no dependencies, float, or critical path. Vanilla HTML/CSS/JS.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --weekend: rgba(0,0,0,0.05); --todayline: #b3261e;
+    --c0: #3a7ca5; --c1: #a86a2b; --c2: #4a8a5a; --c3: #7a5a9a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --weekend: rgba(255,255,255,0.06); --todayline: #e46962;
+      --c0: #4f9dc9; --c1: #c98a4a; --c2: #66ad7c; --c3: #a07ac0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="date"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; min-width: 42rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input, table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; max-width: none; }
+  table.items input.nm { width: 9rem; }
+  table.items input.crew { width: 6rem; }
+  table.items input.dur { width: 4rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  figure.chart { margin: 1rem 0 0; }
+  .chart-scroll { overflow-x: auto; }
+  svg { height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .weekendcol { fill: var(--weekend); }
+  .gridline { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+  .todayline { stroke: var(--todayline); stroke-width: 2; stroke-dasharray: 4 3; }
+  .daylabel { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+  .dowlabel { fill: var(--muted); font-size: 9px; text-anchor: middle; }
+  .todaylabel { fill: var(--todayline); font-size: 10px; text-anchor: middle; font-weight: 700; }
+  .bar0 { fill: var(--c0); } .bar1 { fill: var(--c1); } .bar2 { fill: var(--c2); } .bar3 { fill: var(--c3); }
+  .bartext { fill: #fff; font-size: 11px; font-weight: 600; }
+  .barout { fill: var(--fg); font-size: 11px; }
+  .clip { fill: var(--fail-border); }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Two-Week Look-Ahead Gantt</h1>
+<p class="subtitle">A short-horizon field Gantt: tasks as bars across a 7/14/21-day window, weekends shaded, today marked. Deliberately <em>not</em> a CPM tool &mdash; no dependencies, no float, no critical path. Runs entirely offline; everything persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> A look-ahead is a commitment device, not a schedule. It works when it's built <em>with</em> the foreman and updated weekly &mdash; not printed once and taped to the trailer wall. There are no logic ties here on purpose: if you need dependencies, float, or a critical path, that's the master schedule's job, not a bigger look-ahead. The governing dates come from the master schedule.
+</div>
+
+<fieldset>
+  <legend>Window</legend>
+  <div class="row">
+    <div>
+      <label for="winstart">Window start
+        <input type="date" id="winstart">
+      </label>
+    </div>
+    <div>
+      <label for="winlen">Length
+        <select id="winlen">
+          <option value="7">7 days</option>
+          <option value="14" selected>14 days</option>
+          <option value="21">21 days</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Tasks</legend>
+  <div class="table-wrap">
+    <table class="items">
+      <thead><tr>
+        <th>Task</th><th>Crew / trade</th><th>Start</th><th>Duration</th><th>Mode</th><th>Ends</th><th></th>
+      </tr></thead>
+      <tbody id="task-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="add" id="task-add">+ Add task</button>
+  <p class="small">Working-day durations skip weekends: a 5-working-day task starting Friday ends the following Thursday. Same crew/trade label shares a color.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Look-ahead</h3>
+  <figure class="chart">
+    <div class="chart-scroll"><svg id="gantt" role="img" aria-label="Look-ahead Gantt chart"></svg></div>
+  </figure>
+  <table>
+    <tr><td>Tasks in window</td><td class="val" id="r-in">&mdash;</td></tr>
+    <tr><td>Tasks extending beyond window</td><td class="val" id="r-beyond">&mdash;</td></tr>
+    <tr><td>Busiest day (most concurrent)</td><td class="val" id="r-busy">&mdash;</td></tr>
+  </table>
+  <div class="warn" id="flag" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all data</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Calendar vs. working-day durations</summary>
+  <p>In <em>calendar</em> mode a task's end is <code>start + (duration &minus; 1)</code> days &mdash; a 5-day task starting Friday ends the following Tuesday, weekend included. In <em>working-day</em> mode the tool walks the calendar counting only Monday&ndash;Friday until it has counted the duration; a 5-working-day task starting Friday spans Fri&ndash;Thu and ends the following Thursday. The bar is drawn as one continuous span from start to end so it reads as a block; the weekend columns underneath it are shaded so you can see the skip. Dates are parsed as local, so the axis never drifts a day.</p>
+</details>
+
+<details>
+  <summary>What the panel counts</summary>
+  <p>&ldquo;Tasks in window&rdquo; is every task whose span overlaps the visible window at all. &ldquo;Extending beyond&rdquo; counts tasks that start before the window or run past its end &mdash; those get a clipped bar (a colored notch at the cut edge) and a line in the flag list below. &ldquo;Busiest day&rdquo; walks each day in the window and counts how many task spans cover it, reporting the peak &mdash; a rough read on where the crews stack up.</p>
+</details>
+
+<details>
+  <summary>Make-ready field notes</summary>
+  <ul>
+    <li>The point of a look-ahead is to surface constraints early enough to clear them: material on site, access granted, information (RFI/submittal) answered, manpower assigned. A task that can't answer all four isn't ready to promise.</li>
+    <li>Anything still sitting on the look-ahead three weeks running is a constraint problem, not a scheduling problem. Bumping it another week doesn't make it ready &mdash; find the missing prerequisite.</li>
+    <li>Build it with the foreman who'll do the work, not for them. A look-ahead the crew didn't help write is a wish list.</li>
+    <li>This tool has no dependencies by design. If moving one bar should move another, you're describing logic that belongs in the master schedule (P6/MS Project), where float and the critical path actually live.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Ballard, G. &mdash; The Last Planner System of Production Control (lean construction look-ahead / make-ready planning).</li>
+  <li>The project master schedule (P6, MS Project, or equivalent) &mdash; the governing document for dates, durations, logic, and float.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. All data is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "lookaheadgantt.v1";
+  var DAY = 86400000;
+  var DOW = ["S", "M", "T", "W", "T", "F", "S"];
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  function parseLocal(iso) {
+    if (!iso) return null;
+    var p = iso.split("-");
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function isoOf(d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function daysBetween(a, b) { return Math.round((b - a) / DAY); }
+  function todayLocal() { var t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function isWeekend(d) { var w = d.getDay(); return w === 0 || w === 6; }
+
+  var tasks = []; // { name, crew, start, dur, mode }  mode: cal|work
+
+  /* end date of a task given start, duration, mode */
+  function taskEnd(start, dur, mode) {
+    if (!start || !isFinite(dur) || dur <= 0) return null;
+    if (mode === "work") {
+      var count = 0, d = new Date(start.getTime()), guard = 0;
+      while (guard++ < 10000) {
+        if (!isWeekend(d)) { count++; if (count >= dur) return d; }
+        d = addDays(d, 1);
+      }
+      return d;
+    }
+    return addDays(start, dur - 1);
+  }
+
+  function modeSelectHtml(sel) {
+    return "<select class='t-mode'>" +
+      "<option value='cal'" + (sel === "cal" ? " selected" : "") + ">calendar days</option>" +
+      "<option value='work'" + (sel === "work" ? " selected" : "") + ">working days</option></select>";
+  }
+
+  function endCellText(t) {
+    var s = parseLocal(t.start);
+    var e = taskEnd(s, parseFloat(t.dur), t.mode);
+    if (!e) return "—";
+    return e.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  function renderTasks() {
+    var body = $("task-body");
+    body.innerHTML = "";
+    tasks.forEach(function (t, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='nm' type='text' maxlength='40' value='" + esc(t.name || "") + "'></td>" +
+        "<td><input class='crew' type='text' maxlength='20' value='" + esc(t.crew || "") + "'></td>" +
+        "<td><input class='t-start' type='date' value='" + esc(t.start || "") + "'></td>" +
+        "<td><input class='dur' type='number' min='1' step='1' value='" + esc(t.dur || "") + "'></td>" +
+        "<td>" + modeSelectHtml(t.mode) + "</td>" +
+        "<td class='calc'>" + endCellText(t) + "</td>" +
+        "<td><button type='button' class='t-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".nm").addEventListener("input", function () { tasks[idx].name = this.value; recompute(); });
+      tr.querySelector(".crew").addEventListener("input", function () { tasks[idx].crew = this.value; recompute(); });
+      tr.querySelector(".t-start").addEventListener("input", function () { tasks[idx].start = this.value; updateEndCell(idx); recompute(); });
+      tr.querySelector(".dur").addEventListener("input", function () { tasks[idx].dur = this.value; updateEndCell(idx); recompute(); });
+      tr.querySelector(".t-mode").addEventListener("change", function () { tasks[idx].mode = this.value; updateEndCell(idx); recompute(); });
+      tr.querySelector(".t-del").addEventListener("click", function () { tasks.splice(idx, 1); renderTasks(); recompute(); });
+      body.appendChild(tr);
+    });
+  }
+
+  /* patch only the computed end cell so typing doesn't lose focus */
+  function updateEndCell(idx) {
+    var row = $("task-body").rows[idx];
+    if (!row) return;
+    row.cells[5].textContent = endCellText(tasks[idx]);
+  }
+
+  $("task-add").addEventListener("click", function () {
+    tasks.push({ name: "", crew: "", start: "", dur: "", mode: "cal" });
+    renderTasks(); recompute();
+  });
+
+  /* ---------- crew color assignment ---------- */
+  function crewColorMap() {
+    var map = {}, next = 0;
+    tasks.forEach(function (t) {
+      var key = (t.crew || "").trim().toLowerCase();
+      if (key && map[key] === undefined) { map[key] = next % 4; next++; }
+    });
+    return map;
+  }
+
+  /* ---------- draw ---------- */
+  function drawGantt(winStart, lenDays) {
+    var colW = lenDays <= 7 ? 46 : (lenDays <= 14 ? 40 : 30);
+    var padL = 8, padR = 8, headerH = 34, rowH = 30, gap = 6;
+    var plotW = colW * lenDays;
+    var W = padL + plotW + padR;
+    var rows = tasks.filter(function (t) { return parseLocal(t.start) && parseFloat(t.dur) > 0; });
+    var H = headerH + rows.length * (rowH + gap) + 8;
+    if (rows.length === 0) H = headerH + 20;
+    var today = todayLocal();
+    var cmap = crewColorMap();
+    var svg = "";
+
+    /* weekend columns + day headers */
+    for (var i = 0; i < lenDays; i++) {
+      var d = addDays(winStart, i);
+      var x = padL + i * colW;
+      if (isWeekend(d)) svg += "<rect class='weekendcol' x='" + x + "' y='" + headerH + "' width='" + colW + "' height='" + (H - headerH) + "'/>";
+      if (i > 0) svg += "<line class='gridline' x1='" + x + "' y1='" + headerH + "' x2='" + x + "' y2='" + H + "'/>";
+      svg += "<text class='dowlabel' x='" + (x + colW / 2) + "' y='14'>" + DOW[d.getDay()] + "</text>";
+      svg += "<text class='daylabel' x='" + (x + colW / 2) + "' y='27'>" + d.getDate() + "</text>";
+    }
+    /* today line */
+    var tOff = daysBetween(winStart, today);
+    if (tOff >= 0 && tOff < lenDays) {
+      var tx = padL + (tOff + 0.5) * colW;
+      svg += "<line class='todayline' x1='" + tx + "' y1='" + (headerH - 4) + "' x2='" + tx + "' y2='" + H + "'/>";
+      svg += "<text class='todaylabel' x='" + tx + "' y='" + (headerH - 6) + "'>today</text>";
+    }
+
+    /* bars */
+    rows.forEach(function (t, r) {
+      var s = parseLocal(t.start);
+      var e = taskEnd(s, parseFloat(t.dur), t.mode);
+      var startOff = daysBetween(winStart, s);
+      var endOff = daysBetween(winStart, e);
+      var y = headerH + r * (rowH + gap) + 4;
+      var bh = rowH - 8;
+      var firstCol = Math.max(0, startOff);
+      var lastCol = Math.min(lenDays - 1, endOff);
+      var color = cmap[(t.crew || "").trim().toLowerCase()];
+      var cls = "bar" + (color === undefined ? 0 : color);
+      if (lastCol < firstCol) {
+        /* fully outside the window — nothing to draw here (flagged in list) */
+        return;
+      }
+      var bx = padL + firstCol * colW;
+      var bw = (lastCol - firstCol + 1) * colW;
+      svg += "<rect class='" + cls + "' x='" + (bx + 2) + "' y='" + y + "' width='" + (bw - 4) + "' height='" + bh + "' rx='3'/>";
+      /* clip notches */
+      if (startOff < 0) svg += "<rect class='clip' x='" + bx + "' y='" + y + "' width='3' height='" + bh + "'/>";
+      if (endOff > lenDays - 1) svg += "<rect class='clip' x='" + (padL + plotW - 3) + "' y='" + y + "' width='3' height='" + bh + "'/>";
+      /* label: inside if wide enough, else after */
+      var label = t.name || "(task)";
+      if (bw > label.length * 6.5 + 10) {
+        svg += "<text class='bartext' x='" + (bx + 7) + "' y='" + (y + bh / 2 + 4) + "'>" + esc(label) + "</text>";
+      } else {
+        svg += "<text class='barout' x='" + (bx + bw + 4) + "' y='" + (y + bh / 2 + 4) + "'>" + esc(label) + "</text>";
+      }
+    });
+
+    var g = $("gantt");
+    g.setAttribute("viewBox", "0 0 " + W + " " + H);
+    g.setAttribute("width", W);
+    g.style.maxWidth = W + "px";
+    g.style.width = "100%";
+    g.innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var winStart = parseLocal($("winstart").value) || todayLocal();
+    var lenDays = parseInt($("winlen").value, 10) || 14;
+    var winEnd = addDays(winStart, lenDays - 1);
+
+    var valid = tasks.filter(function (t) { return parseLocal(t.start) && parseFloat(t.dur) > 0; });
+    if (valid.length === 0) { out.hidden = true; saveState(); return; }
+
+    drawGantt(winStart, lenDays);
+
+    /* stats */
+    var inWindow = 0, beyond = 0, flags = [];
+    var cover = {}; // iso -> count for busiest day
+    for (var i = 0; i < lenDays; i++) cover[isoOf(addDays(winStart, i))] = 0;
+
+    valid.forEach(function (t) {
+      var s = parseLocal(t.start);
+      var e = taskEnd(s, parseFloat(t.dur), t.mode);
+      var overlaps = !(e < winStart || s > winEnd);
+      if (overlaps) inWindow++;
+      var runsPast = e > winEnd, startsBefore = s < winStart;
+      if (runsPast || startsBefore || !overlaps) {
+        beyond++;
+        var why = !overlaps ? "outside the window" : (startsBefore && runsPast ? "spans past both ends" : (startsBefore ? "starts before the window" : "runs past the window end"));
+        flags.push((t.name || "(task)") + " — " + why);
+      }
+      /* coverage for busiest day */
+      var d = new Date(s.getTime()), guard = 0;
+      while (d <= e && guard++ < 400) {
+        var k = isoOf(d);
+        if (cover[k] !== undefined) cover[k]++;
+        d = addDays(d, 1);
+      }
+    });
+
+    var busyDay = null, busyN = 0;
+    Object.keys(cover).forEach(function (k) { if (cover[k] > busyN) { busyN = cover[k]; busyDay = k; } });
+
+    $("r-in").textContent = inWindow;
+    $("r-beyond").textContent = beyond;
+    if (busyDay && busyN > 0) {
+      var bd = parseLocal(busyDay);
+      $("r-busy").textContent = bd.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) + " — " + busyN + " task" + (busyN > 1 ? "s" : "");
+    } else {
+      $("r-busy").textContent = "—";
+    }
+
+    var flag = $("flag");
+    if (flags.length) {
+      flag.hidden = false;
+      flag.innerHTML = "<strong>Clipped / outside the window:</strong><br>" + flags.map(esc).join("<br>");
+    } else {
+      flag.hidden = true;
+    }
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  function saveState() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ tasks: tasks, winstart: $("winstart").value, winlen: $("winlen").value }));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (Array.isArray(st.tasks)) tasks = st.tasks;
+      if (st.winstart) $("winstart").value = st.winstart;
+      if (st.winlen) $("winlen").value = st.winlen;
+    } catch (e) {}
+  }
+
+  $("winstart").addEventListener("input", recompute);
+  $("winlen").addEventListener("change", recompute);
+  $("reset-btn").addEventListener("click", function () {
+    if (tasks.length && !window.confirm("This clears every task. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (!$("winstart").value) $("winstart").value = isoOf(todayLocal());
+  if (tasks.length === 0) tasks.push({ name: "", crew: "", start: "", dur: "", mode: "cal" });
+  renderTasks();
+  recompute();
+})();
+</script>
+</body>
+</html>

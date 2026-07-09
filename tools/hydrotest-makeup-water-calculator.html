@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydrotest Makeup Water (Testing Allowance) Calculator</title>
+<meta name="description" content="Offline allowable makeup water for pressure tests on gasketed-joint pipelines: Q = S·D·√P/148,000 gal/hr, total allowance over the test, and a PASS/FAIL against measured makeup. Handles the 148,000 vs 133,200 divisor and zero-allowance specs. Vanilla HTML/CSS/JS.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+  label.inline { display: flex; align-items: center; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Hydrotest Makeup Water (Testing Allowance) Calculator</h1>
+<p class="subtitle">Allowable makeup water for a pressure test on a gasketed-joint pipeline, and a pass/fail against the makeup you actually added. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The testing allowance covers water absorbed as trapped air goes into solution and gaskets seat under pressure &mdash; it is <em>not</em> a leak budget. Any visible leak fails the test regardless of the makeup math. Test pressure, duration, and the allowable makeup formula come from the project specifications; where the spec sets zero allowable makeup (common for gasketed PVC), use the zero-allowance toggle.
+</div>
+
+<fieldset>
+  <legend>Test Section</legend>
+  <div class="row">
+    <div>
+      <label for="len">Length tested S (ft)
+        <input type="number" id="len" min="0" step="any" placeholder="e.g. 1000">
+      </label>
+    </div>
+    <div>
+      <label for="dia">Nominal diameter D (in)
+        <input type="number" id="dia" min="0" step="any" placeholder="e.g. 12">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="press">Average test pressure P (psi)
+        <input type="number" id="press" min="0" step="any" placeholder="e.g. 150">
+      </label>
+    </div>
+    <div>
+      <label for="dur">Test duration (hr)
+        <input type="number" id="dur" min="0" step="any" value="2">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Allowance Basis</legend>
+  <div class="row">
+    <div>
+      <label for="divisor">Formula divisor
+        <select id="divisor">
+          <option value="148000">148,000 — AWWA C600 (current testing-allowance form)</option>
+          <option value="133200">133,200 — joint-count form at 18-ft lengths (older / some specs)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <label class="inline" for="zero" style="margin-top:0.9rem;">
+    <input type="checkbox" id="zero"> <span>Spec allows <strong>zero</strong> makeup water (any measured makeup fails)</span>
+  </label>
+  <p class="small">Several owners specify zero allowable makeup for gasketed PVC. When checked, the allowance is 0 and any measured makeup is a fail. The spec governs.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Measured (optional)</legend>
+  <div class="row">
+    <div>
+      <label for="meas">Makeup water actually added (gal)
+        <input type="number" id="meas" min="0" step="any" placeholder="from a calibrated container/meter">
+      </label>
+      <p class="small">Leave blank to just size the allowance. Enter a value for a PASS/FAIL verdict with the margin.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict" hidden>&mdash;</div>
+  <table>
+    <tr><td>Allowable makeup rate Q</td><td class="val" id="r-rate">&mdash;</td></tr>
+    <tr><td>Allowable makeup over the test</td><td class="val" id="r-total">&mdash;</td></tr>
+    <tr><td>Convenience rate (per 1,000 ft)</td><td class="val" id="r-per1000">&mdash;</td></tr>
+    <tr><td>Measured makeup</td><td class="val" id="r-meas">&mdash;</td></tr>
+    <tr><td>Margin (allowable − measured)</td><td class="val" id="r-margin">&mdash;</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The testing-allowance formula</summary>
+  <p><code>Q = S · D · √P / 148,000</code> gallons per hour &mdash; S the length tested in feet, D the nominal diameter in inches, P the average test pressure in psi. Multiply by the test duration for the total allowable makeup. Worked check: 1,000 ft of 12-inch at 150 psi average gives <code>1000 · 12 · √150 / 148,000 ≈ 0.993 gal/hr</code>, about <code>1.99 gal</code> over a 2-hour test.</p>
+</details>
+
+<details>
+  <summary>148,000 vs. 133,200 — where the divisors come from</summary>
+  <p>The current AWWA C600 testing allowance is written directly in terms of length: <code>Q = S·D·√P / 148,000</code>. Older editions and some specifications use the joint-count form <code>Q = N·D·√P / 7,400</code>, where N is the number of joints in the section. With standard 18-foot laying lengths, <code>N = S / 18</code>, so <code>N·D·√P / 7,400 = S·D·√P / (18 · 7,400) = S·D·√P / 133,200</code>. The 133,200 divisor gives a slightly larger allowance than 148,000 &mdash; they are the same formula expressed per-joint vs. per-foot, differing in the constant. Use whichever your spec cites.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>The allowance is for absorbed air and gasket seating, not leaks. A joint weeping visibly fails even if the makeup is under the number &mdash; write it up and fix it.</li>
+    <li>Temperature moves pressure. In a rigid, full line, roughly 1 psi per °F of change is a workable rule of thumb; a test that quietly bleeds pressure over a hot afternoon may be losing temperature, not water. Log air and water temperature at start and end.</li>
+    <li>Measure makeup with a calibrated container or a meter on the pump, not by eyeballing a drop on the tank stick. The allowable numbers are small &mdash; a couple of gallons on a long line &mdash; so the measurement has to be at least as precise.</li>
+    <li>Fill and stabilize before the clock starts. Fill the volume before test day and let trapped air work out; the pipe-volume and AWWA hydrostatic pressure-test procedures cover the fill and the pressure hold this allowance is checked against.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>AWWA C600 &mdash; Installation of Ductile-Iron Mains and Their Appurtenances (hydrostatic testing and allowable leakage/makeup).</li>
+  <li>AWWA C605 &mdash; Underground Installation of PVC and Molecularly Oriented PVC Pressure Pipe (testing provisions).</li>
+  <li>Contract specifications &mdash; governing test pressure, duration, and allowable makeup (including zero-allowance provisions).</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "hydromakeup.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var x = parseFloat($(id).value); return isFinite(x) ? x : null; }
+  function fmt(x, d) {
+    if (x === null || !isFinite(x)) return "—";
+    if (d === undefined) d = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  }
+
+  function recalc() {
+    var out = $("results");
+    var S = num("len"), D = num("dia"), P = num("press");
+    var dur = num("dur"); if (dur === null) dur = 0;
+    var divisor = parseFloat($("divisor").value) || 148000;
+    var zero = $("zero").checked;
+    var meas = num("meas");
+
+    if (S === null || D === null || P === null || S <= 0 || D <= 0 || P < 0) {
+      out.hidden = true; saveState(); return;
+    }
+
+    var rate = zero ? 0 : S * D * Math.sqrt(P) / divisor;         // gal/hr
+    var totalAllow = rate * dur;                                   // gal
+    var per1000 = zero ? 0 : 1000 * D * Math.sqrt(P) / divisor;    // gal/hr per 1000 ft
+
+    $("r-rate").textContent = zero ? "0 (zero-allowance spec)" : fmt(rate, 3) + " gal/hr";
+    $("r-total").textContent = fmt(totalAllow, 2) + " gal over " + fmt(dur, 2) + " hr";
+    $("r-per1000").textContent = zero ? "0" : fmt(per1000, 3) + " gal/hr per 1,000 ft";
+
+    var verdict = $("verdict");
+    var msgs = [];
+    out.classList.remove("fail");
+    if (meas !== null) {
+      $("r-meas").textContent = fmt(meas, 2) + " gal";
+      var margin = totalAllow - meas;
+      $("r-margin").textContent = fmt(margin, 2) + " gal";
+      verdict.hidden = false;
+      var pass = meas <= totalAllow + 1e-9;
+      if (zero && meas > 0) pass = false;
+      if (pass) {
+        verdict.textContent = "PASS — measured makeup within allowance";
+      } else {
+        verdict.textContent = "FAIL — measured makeup exceeds allowance";
+        out.classList.add("fail");
+      }
+      msgs.push("A pass here is on the makeup number only. Any visible leak fails the test regardless.");
+    } else {
+      $("r-meas").textContent = "—";
+      $("r-margin").textContent = "—";
+      verdict.hidden = true;
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["len", "dia", "press", "dur", "divisor", "meas"];
+  function saveState() {
+    try {
+      var st = { zero: $("zero").checked };
+      FIELDS.forEach(function (id) { st[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(st));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (typeof st.zero === "boolean") $("zero").checked = st.zero;
+      FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+  $("zero").addEventListener("change", recalc);
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>
