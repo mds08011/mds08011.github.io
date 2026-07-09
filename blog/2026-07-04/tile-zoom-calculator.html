@@ -44,7 +44,7 @@
             <p>The inverse gives each tile's NW corner, and the (x+1, y+1) corner completes the bbox. Ground resolution is <code>156,543.034 &middot; cos(lat) / 2^z</code> meters per pixel &mdash; the <code>cos(lat)</code> is why a zoom level covers less ground per pixel in California than at the equator &mdash; and map scale follows at an assumed 96 dpi. There's a z10&ndash;z20 resolution table and the TMS y-flip note (<code>y_tms = 2^z &minus; 1 &minus; y</code>) for when tiles render upside down.</p>
 
             <figure>
-                <img src="/path/to/tile-zoom-screenshot.png" alt="Tile calculator showing z/x/y for a lat/lon, ground resolution, and bounding box printed in two orderings" loading="lazy">
+                <img src="/blog/2026-07-04/tile-zoom-calculator.png" alt="Tile calculator showing z/x/y for a lat/lon, ground resolution, and bounding box printed in two orderings" loading="lazy">
                 <figcaption>Figure 1: A lat/lon resolved to a tile, with the bbox printed in both W,S,E,N and Overpass's S,W,N,E order.</figcaption>
             </figure>
 
