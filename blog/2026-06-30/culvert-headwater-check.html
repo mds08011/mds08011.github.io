@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Hand-Method HDS-5 Culvert Headwater Check | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>A Hand-Method HDS-5 Culvert Headwater Check</h1>
+                <time datetime="2026-06-30">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Culvert hydraulics has a fork in it that confuses everyone the first time: a culvert operates under either <em>inlet control</em> or <em>outlet control</em>, they're governed by completely different physics, and the culvert runs under whichever one produces the higher headwater. You can't pick the convenient one. The full HDS-5 method computes both and takes the max &mdash; and doing it by hand off the nomographs is exactly the kind of fiddly, error-prone arithmetic a single-purpose page should own.</p>
+
+            <h2>The Approach</h2>
+            <p><strong>Inlet control</strong> means the entrance is the bottleneck &mdash; the barrel could carry more than the inlet admits. HDS-5 fits two regression forms to the lab data behind the nomographs, on the discharge parameter <code>Q/(A&middot;D^0.5)</code>: an unsubmerged form (a weir-like power law) below 3.5, a submerged form (the inlet acting as an orifice) above 4.0, and linear interpolation in the transition band between. Six inlet configurations from grooved concrete to projecting CMP each carry their own K, M, c, Y coefficients, and mitered inlets get the <code>+0.7S</code> slope term instead of <code>&minus;0.5S</code> [1].</p>
+            <p><strong>Outlet control</strong> assumes the barrel flows full and sums the losses &mdash; entrance, friction, exit &mdash; <code>H = [1 + K_e + 29n&sup2;L/R^(4/3)]&middot;V&sup2;/2g</code>, with the tailwater and critical depth setting the effective downstream head. <strong>Critical depth</strong> for the circular section is solved by bisection on <code>Q&sup2;T/(gA&sup3;) = 1</code>. The governing headwater is simply the larger of the two.</p>
+
+            <figure>
+                <img src="/path/to/culvert-headwater-screenshot.png" alt="Culvert check showing inlet-control and outlet-control headwater with the governing value and HW/D ratio" loading="lazy">
+                <figcaption>Figure 1: Both control headwaters computed side by side, with the governing max and the HW/D ratio flagged against 1.5.</figcaption>
+            </figure>
+
+            <h3>The verification I actually enjoyed</h3>
+            <p>Two independent checks give confidence the coefficients are transcribed right. The critical-depth solver hits Froude = 1 to six decimals &mdash; that's just the bisection converging. The satisfying one: the unsubmerged and submerged inlet regression forms, which are separate equations fit to the same lab data, agree to within <strong>0.002 in HW/D</strong> right at the 3.5&ndash;4.0 transition zone. Coefficients fit to one dataset <em>should</em> meet in the middle, and watching two different equations shake hands at the seam is how you know the numbers went in correctly.</p>
+
+            <details>
+                <summary>The practical wisdom the warnings carry</summary>
+                <ul>
+                    <li>Typical criteria allow HW/D of 1.2&ndash;1.5 at the design storm; the tool flags beyond 1.5. Overtopping checks compare governing HW to the road profile, not just a ratio.</li>
+                    <li>If inlet control governs by a wide margin, the barrel is being wasted &mdash; an improved inlet (beveled or grooved end, headwall) buys capacity far cheaper than a bigger pipe.</li>
+                    <li>Full-flow outlet velocity above ~10 ft/s wants energy dissipation or riprap at the outlet (HEC-14).</li>
+                    <li>Debris and sediment appear in <em>none</em> of these equations, and they're how culverts actually fail. Maintenance access beats another six inches of diameter.</li>
+                </ul>
+            </details>
+
+            <p>It's a hand check &mdash; for anything past preliminary, FHWA's HY-8 does the full analysis. Single file, vanilla JS, <code>localStorage</code> persistence [1][2][3].</p>
+
+            <p>The tool: <a href="/tools/culvert-headwater-check.html">Culvert Headwater Quick-Check (HDS-5)</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] FHWA HDS-5, <em>Hydraulic Design of Highway Culverts</em> &mdash; the governing method, coefficient tables, and nomographs. <a href="https://www.fhwa.dot.gov/engineering/hydraulics/">https://www.fhwa.dot.gov/engineering/hydraulics/</a></li>
+                <li>[2] FHWA HY-8 &mdash; free culvert analysis software for anything past a hand check.</li>
+                <li>[3] FHWA HEC-14 &mdash; outlet energy dissipators.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

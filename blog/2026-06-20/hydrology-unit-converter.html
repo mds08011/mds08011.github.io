@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Water Units That Cause Real Errors, in One Converter | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>The Water Units That Cause Real Errors, in One Converter</h1>
+                <time datetime="2026-06-20">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Water and wastewater work runs on a fistful of units that don't play nicely together: flow in cfs, GPM, and MGD; volume in gallons, cubic feet, and acre-feet; rainfall as a depth that has to become a volume over an area. A generic unit converter doesn't know that a gallon of water weighs 8.34 pounds, and the mistakes here aren't rounding errors &mdash; they're factor-of-694 pump-sizing catastrophes.</p>
+
+            <h2>The Approach</h2>
+            <p>A domain converter across flow, volume, intensity, area, and rainfall-over-area, with live equivalents tables, plus a dedicated loading calculator built around the one equation plant operators use more than any other [2]:</p>
+            <p><code>lb/day = mg/L &times; MGD &times; 8.34</code></p>
+            <p>&mdash; because a gallon of water weighs 8.34 lb and mg/L is parts per million by mass. The rainfall category extends a depth to a volume over an acreage, closing the loop with the drainage tools.</p>
+
+            <figure>
+                <img src="/path/to/hydrology-unit-converter-screenshot.png" alt="Converter showing a flow value with live equivalents across cfs, GPM, MGD, and acre-feet per day, plus the 8.34 loading calculator" loading="lazy">
+                <figcaption>Figure 1: One flow entry, every equivalent at once &mdash; and the 8.34 loading calculator alongside.</figcaption>
+            </figure>
+
+            <details>
+                <summary>The factors worth memorizing anyway</summary>
+                <ul>
+                    <li><code>1 cfs = 448.83 GPM = 0.6463 MGD &asymp; 1.983 ac-ft/day</code> &mdash; &ldquo;a cfs is about two acre-feet a day.&rdquo;</li>
+                    <li><code>1 MGD = 694.4 GPM = 1.547 cfs</code></li>
+                    <li><code>1 ac-ft = 43,560 cf = 325,851 gal</code>; <code>1 inch over 1 acre = 3,630 cf &asymp; 27,154 gal</code></li>
+                    <li><code>1 cf = 7.4805 gal</code>; <code>1 m&sup3; = 264.17 gal</code></li>
+                </ul>
+            </details>
+
+            <details>
+                <summary>The gotchas that cause the real errors</summary>
+                <ul>
+                    <li><strong>MGD vs. GPM</strong> is the classic pump-sizing catastrophe &mdash; a factor of 694. If a station &ldquo;needs 2&rdquo; of something, make everyone say the unit out loud.</li>
+                    <li><strong>Acre-feet vs. acre-inches:</strong> detention volumes get quoted in both, and a factor of 12 hides in the paperwork.</li>
+                    <li><strong>cfs is instantaneous; MGD usually means daily average.</strong> Converting between them is arithmetic; equating a peak to an average is a design error.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. All gallons are US gallons; feet here are the ordinary international foot, which is fine for volumes &mdash; the survey-foot distinction matters for coordinates, not tanks (see the <a href="/tools/coordinate-converter.html">Coordinate Converter</a> for where it does) [1].</p>
+
+            <p>The tool: <a href="/tools/hydrology-unit-converter.html">Hydrology &amp; Water/Wastewater Unit Converter</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] NIST Handbook 44, Appendix C &mdash; general tables of units of measurement.</li>
+                <li>[2] Any water/wastewater operator certification manual &mdash; the 8.34 formula and its uses.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

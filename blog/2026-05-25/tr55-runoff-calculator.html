@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curve Number Runoff and When Area-Weighting Lies | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Curve Number Runoff and When Area-Weighting Lies</h1>
+                <time datetime="2026-05-25">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>The NRCS curve number method turns a design storm depth into a runoff depth through a single parameter, CN, that rolls up land cover and soil into one number between roughly 30 and 98. It's the backbone of small-site drainage. And most CN calculators quietly do one thing that TR-55 itself warns against &mdash; they area-weight the curve numbers &mdash; without ever mentioning it can understate the runoff.</p>
+
+            <h2>The Approach</h2>
+            <p>The runoff equation, run properly including the zero-runoff branch:</p>
+            <p><code>Q = (P &minus; I&#8320;)&sup2; / (P &minus; I&#8320; + S)</code>, with <code>S = 1000/CN &minus; 10</code> and <code>I&#8320; = 0.2S</code> (inches)</p>
+            <p>If <code>P &le; I&#8320;</code> the storm never exceeds the initial abstraction and runoff is zero. The composite CN builder bakes in the TR-55 Table 2-2 presets &mdash; twelve land-use rows crossed with hydrologic soil group A&ndash;D, prefilling an editable CN &mdash; and the tool is explicit that HSG comes from the NRCS Web Soil Survey, not a guess [1][4]. Output lands in depth (inches), acre-feet, cubic feet, and gallons.</p>
+
+            <figure>
+                <img src="/path/to/tr55-runoff-screenshot.png" alt="Composite curve number table by land use and soil group, with computed runoff depth and volume" loading="lazy">
+                <figcaption>Figure 1: Table 2-2 presets building a composite CN, with runoff depth and volume out the bottom.</figcaption>
+            </figure>
+
+            <h3>Where area-weighting goes wrong</h3>
+            <p>When sub-areas mix low-CN pervious ground with impervious surfaces &mdash; and especially when the impervious area is <em>unconnected</em>, draining across lawn before it reaches a pipe &mdash; averaging the CNs can misstate runoff. TR-55's own Figures 2-3 and 2-4 exist to adjust for exactly this. The honest move when precision matters is to compute runoff <em>per cover type</em> and sum the volumes, rather than run one storm against one blended CN. The tool says so, and adds a companion caveat: a real site with connected impervious area still sheds water even when the composite CN says the storm produced zero runoff [1].</p>
+
+            <details>
+                <summary>The other assumptions worth stating out loud</summary>
+                <ul>
+                    <li>Table values are average antecedent runoff condition (ARC II); wet/dry conversions exist but most criteria just use II.</li>
+                    <li>The method is unreliable when Q computes to a few hundredths of an inch &mdash; real-world scatter swamps it. The tool flags Q under 0.05 in.</li>
+                    <li>This is the runoff-<em>volume</em> half of TR-55. Peak discharge needs Tc, the rainfall distribution type, and the graphical/tabular method or a model.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence [2][3].</p>
+
+            <p>The tool: <a href="/tools/tr55-runoff-calculator.html">TR-55 Curve Number Runoff Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] NRCS TR-55 &mdash; Urban Hydrology for Small Watersheds (runoff equation, Table 2-2, composite CN guidance). <a href="https://www.nrcs.usda.gov/">https://www.nrcs.usda.gov/</a></li>
+                <li>[2] NRCS National Engineering Handbook, Part 630 Ch. 9&ndash;10 &mdash; curve number theory.</li>
+                <li>[3] NOAA Atlas 14 &mdash; design precipitation. <a href="https://hdsc.nws.noaa.gov/pfds/">https://hdsc.nws.noaa.gov/pfds/</a></li>
+                <li>[4] NRCS Web Soil Survey &mdash; hydrologic soil groups. <a href="https://websoilsurvey.nrcs.usda.gov/">https://websoilsurvey.nrcs.usda.gov/</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

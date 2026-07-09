@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinate Conversion from Snyder, Verified Against Its Own Invariants | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Coordinate Conversion from Snyder, Verified Against Its Own Invariants</h1>
+                <time datetime="2026-05-16">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>You get a point in decimal degrees and the plans want California State Plane in survey feet. Or a survey gives you State Plane and you need lat/lon to drop a pin. The usual answer is an online converter you have to trust, or a GIS install you don't have open. I wanted the projection math itself &mdash; the real thing, not a lookup table &mdash; running locally in a page, and I wanted to be able to <em>prove</em> it was right.</p>
+
+            <h2>The Approach</h2>
+            <p>Four-way conversion among decimal degrees, DMS (structured fields, no fragile free-text parsing), UTM (zones 10/11, auto-selected from longitude), and all six California SPCS NAD83 zones in US survey feet. The projection code is straight out of Snyder's <em>Map Projections &mdash; A Working Manual</em> [1]: Lambert Conformal Conic (2 standard parallels) for State Plane, Transverse Mercator for UTM, forward and inverse, on the GRS80 ellipsoid &mdash; about 120 lines of vanilla JS, no library. The series formulas are accurate to well under a millimeter within a zone; the real error budget is datum handling and input quality, not the math.</p>
+
+            <p>One detail that's easy to get wrong and expensive at State Plane magnitudes: the <strong>US survey foot</strong> (1200/3937 m exactly) versus the international foot differ by about 2 ppm, which is real feet when your northing is 500,000. The tool handles that distinction explicitly.</p>
+
+            <figure>
+                <img src="/path/to/coordinate-converter-screenshot.png" alt="Coordinate converter showing a decimal-degrees input with DMS, UTM, and California State Plane outputs" loading="lazy">
+                <figcaption>Figure 1: One point expressed four ways, with copy buttons on every output line.</figcaption>
+            </figure>
+
+            <h3>Verifying against the projection's own invariants</h3>
+            <p>This is the part I promised myself I'd do properly. You can't eyeball whether a Lambert conic is right, but the projection has <em>defining properties</em> you can test against:</p>
+            <ul>
+                <li>The Zone 6 grid origin returns exactly 2,000,000 E / 500,000 N &mdash; the false easting/northing, by definition.</li>
+                <li>SPCS round-trips (forward then inverse) close to zero within floating point; UTM round-trips to 0.00003 m.</li>
+                <li>The UTM central meridian at the equator returns exactly 500,000 / 0.</li>
+                <li>The grid scale factor on Zone 6's standard parallel comes back 1.0000000 &mdash; which is the <em>definition</em> of a standard parallel, where the cone touches the ellipsoid.</li>
+            </ul>
+            <p>When independent test points all land on the values the projection's geometry requires, the coefficients went in right. That last one is the satisfying check &mdash; the scale factor being exactly unity on the standard parallel isn't something you code, it's something that falls out if and only if the math is correct.</p>
+
+            <details>
+                <summary>What happened to Zone 7 (the LA County story)</summary>
+                <p>Under NAD27, California had seven State Plane zones and Zone 7 was Los Angeles County alone. When the system moved to NAD83, Zone 7 was folded into Zone 5, leaving six. So an old LA-area drawing labeled &ldquo;Zone 7&rdquo; is NAD27 coordinates &mdash; different datum, different constants, roughly 90 m off its NAD83 equivalent. Converting those properly needs NADCON grid-shift files (QGIS, proj, or NGS tools do it); no closed-form approximation is safe for anything you'd stake. The tool handles NAD83; it won't pretend to shift datums it can't.</p>
+            </details>
+
+            <details>
+                <summary>Guardrails and the OSM note</summary>
+                <ul>
+                    <li>West longitude is negative; a California point with positive longitude is in China, and the tool says so.</li>
+                    <li>SPCS grid distance is not ground distance &mdash; the combined scale factor matters on long lines. That's survey territory.</li>
+                    <li>For OSM work, treat WGS84 and NAD83 as identical (the 1&ndash;2 m difference is below imagery alignment error). For control, never.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence [2][3].</p>
+
+            <p>The tool: <a href="/tools/coordinate-converter.html">Coordinate Converter</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Snyder, J.P., <em>Map Projections &mdash; A Working Manual</em>, USGS Professional Paper 1395. <a href="https://pubs.usgs.gov/pp/1395/report.pdf">https://pubs.usgs.gov/pp/1395/report.pdf</a></li>
+                <li>[2] NGS &mdash; State Plane Coordinate System zone definitions and datasheets. <a href="https://geodesy.noaa.gov/">https://geodesy.noaa.gov/</a></li>
+                <li>[3] EPSG registry &mdash; CA SPCS NAD83 zones are EPSG 2225&ndash;2230 (meters). <a href="https://epsg.org/">https://epsg.org/</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

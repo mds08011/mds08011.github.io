@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydrology &amp; Water/Wastewater Unit Converter</title>
+<meta name="description" content="Offline unit converter for the units drainage reports and plant operations actually use: flow (cfs/GPM/MGD/ac-ft), volume, rainfall-over-area, intensity, area, plus a mg/L to lb/day loading calculator. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.25rem 0.5rem 0.25rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Hydrology &amp; Water/Wastewater Unit Converter</h1>
+<p class="subtitle">The conversions drainage reports and plant operations actually run on: flow across cfs/GPM/MGD/acre-feet, volumes, rainfall-over-area, intensity, area — plus the mg/L ↔ lb/day loading calculation with the 8.34 factor. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<fieldset>
+  <legend>Converter</legend>
+  <div class="row">
+    <div>
+      <label for="cat">Category
+        <select id="cat">
+          <option value="flow" selected>Flow rate</option>
+          <option value="vol">Volume</option>
+          <option value="rain">Rainfall over an area</option>
+          <option value="intensity">Rainfall intensity</option>
+          <option value="area">Area</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="val">Value
+        <input type="number" id="val" step="any" placeholder="enter a value">
+      </label>
+    </div>
+    <div>
+      <label for="unit">Unit
+        <select id="unit"></select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="rain-extra" hidden>
+    <div>
+      <label for="rain-area">Over area (ac)
+        <input type="number" id="rain-area" min="0" step="any" placeholder="e.g. 25">
+      </label>
+      <p class="small">Rainfall depth × area → volume. The classic "one inch over one acre" family.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Equivalents</h3>
+  <table id="eq-table"></table>
+</div>
+
+<fieldset>
+  <legend>Pollutant / Chemical Loading (the 8.34 factor)</legend>
+  <div class="row">
+    <div>
+      <label for="conc">Concentration (mg/L)
+        <input type="number" id="conc" min="0" step="any" placeholder="e.g. 250">
+      </label>
+    </div>
+    <div>
+      <label for="flow-mgd">Flow (MGD)
+        <input type="number" id="flow-mgd" min="0" step="any" placeholder="e.g. 1.5">
+      </label>
+    </div>
+  </div>
+  <div class="results" id="load-results" hidden>
+    <table>
+      <tr><td>Mass loading</td><td class="val" id="r-load">—</td></tr>
+    </table>
+  </div>
+</fieldset>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The factors worth memorizing anyway</summary>
+  <ul>
+    <li><code>1 cfs = 448.83 GPM = 0.6463 MGD ≈ 1.983 ac-ft/day</code> — "a cfs is about two acre-feet a day" is the estimator's version.</li>
+    <li><code>1 MGD = 694.4 GPM = 1.547 cfs</code></li>
+    <li><code>1 ac-ft = 43,560 cf = 325,851 gal</code>; <code>1 inch over 1 acre = 3,630 cf ≈ 27,154 gal</code></li>
+    <li><code>1 cf = 7.4805 gal</code>; <code>1 m³ = 264.17 gal = 35.315 cf</code></li>
+    <li><code>lb/day = mg/L × MGD × 8.34</code> — because a gallon of water weighs 8.34 lb, and mg/L is parts per million by mass. The single most used equation in plant operations.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Unit gotchas that cause real errors</summary>
+  <ul>
+    <li><strong>MGD vs. GPM confusion</strong> is the classic pump-sizing catastrophe — a factor of 694. If a lift station "needs 2" of something, make everyone say the unit out loud.</li>
+    <li><strong>Acre-feet vs. acre-inches:</strong> detention volumes get quoted in both; a factor of 12 hides in the paperwork.</li>
+    <li><strong>cfs is instantaneous, MGD often means daily average</strong> — converting between them is arithmetic; equating a peak to an average is a design error.</li>
+    <li>All gallons here are US gallons; all feet are the ordinary international foot (fine for volumes — the survey-foot distinction matters for coordinates, not tanks).</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>NIST Handbook 44, Appendix C — general tables of units of measurement.</li>
+  <li>Any water/wastewater operator certification manual — the 8.34 formula and its uses.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "hydrounits.v1";
+
+  /* Each category: base unit + factors to convert INTO base. Display order preserved. */
+  var GAL_PER_CF = 7.480519;
+  var CF_PER_ACFT = 43560;
+
+  var CATS = {
+    flow: {
+      base: "cfs",
+      units: [
+        { key: "cfs", name: "cfs (cubic feet per second)", toBase: 1 },
+        { key: "gpm", name: "GPM (gallons per minute)", toBase: 1 / (GAL_PER_CF * 60) },
+        { key: "mgd", name: "MGD (million gallons per day)", toBase: 1e6 / (GAL_PER_CF * 86400) },
+        { key: "acftd", name: "acre-feet per day", toBase: CF_PER_ACFT / 86400 },
+        { key: "ls", name: "L/s", toBase: 0.0353147 },
+        { key: "m3s", name: "m³/s", toBase: 35.3147 },
+        { key: "m3h", name: "m³/hr", toBase: 35.3147 / 3600 }
+      ]
+    },
+    vol: {
+      base: "cf",
+      units: [
+        { key: "cf", name: "cubic feet", toBase: 1 },
+        { key: "gal", name: "gallons (US)", toBase: 1 / GAL_PER_CF },
+        { key: "mg", name: "million gallons", toBase: 1e6 / GAL_PER_CF },
+        { key: "acft", name: "acre-feet", toBase: CF_PER_ACFT },
+        { key: "acin", name: "acre-inches", toBase: CF_PER_ACFT / 12 },
+        { key: "m3", name: "m³", toBase: 35.3147 },
+        { key: "cy", name: "cubic yards", toBase: 27 }
+      ]
+    },
+    intensity: {
+      base: "inhr",
+      units: [
+        { key: "inhr", name: "in/hr", toBase: 1 },
+        { key: "mmhr", name: "mm/hr", toBase: 1 / 25.4 },
+        { key: "inday", name: "in/day", toBase: 1 / 24 },
+        { key: "cfsac", name: "cfs per acre (at C=1)", toBase: 1 / 1.008 }
+      ]
+    },
+    area: {
+      base: "ac",
+      units: [
+        { key: "ac", name: "acres", toBase: 1 },
+        { key: "sf", name: "square feet", toBase: 1 / 43560 },
+        { key: "ha", name: "hectares", toBase: 2.4710538 },
+        { key: "mi2", name: "square miles", toBase: 640 },
+        { key: "km2", name: "km²", toBase: 247.10538 }
+      ]
+    },
+    rain: {
+      base: "in",
+      units: [
+        { key: "in", name: "inches of rain", toBase: 1 },
+        { key: "mm", name: "mm of rain", toBase: 1 / 25.4 }
+      ]
+    }
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) ? v : null;
+  }
+  function fmt(x) {
+    if (x === null || !isFinite(x)) return "—";
+    if (x !== 0 && (Math.abs(x) < 0.001 || Math.abs(x) >= 1e9)) return x.toExponential(4);
+    var digits = Math.abs(x) >= 100 ? 1 : Math.abs(x) >= 1 ? 3 : 5;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  function populateUnits() {
+    var cat = CATS[$("cat").value];
+    var sel = $("unit");
+    sel.innerHTML = "";
+    cat.units.forEach(function (u, i) {
+      var o = document.createElement("option");
+      o.value = u.key;
+      o.textContent = u.name;
+      if (i === 0) o.selected = true;
+      sel.appendChild(o);
+    });
+    $("rain-extra").hidden = $("cat").value !== "rain";
+  }
+
+  function recalc() {
+    var catKey = $("cat").value;
+    var cat = CATS[catKey];
+    var v = num("val");
+    var out = $("results");
+    if (v === null) { out.hidden = true; saveState(); return; }
+
+    var unitKey = $("unit").value;
+    var unit = cat.units.filter(function (u) { return u.key === unitKey; })[0] || cat.units[0];
+    var base = v * unit.toBase;
+
+    var table = $("eq-table");
+    table.innerHTML = "";
+    cat.units.forEach(function (u) {
+      var tr = document.createElement("tr");
+      var td1 = document.createElement("td");
+      td1.textContent = u.name;
+      var td2 = document.createElement("td");
+      td2.className = "val";
+      td2.textContent = fmt(base / u.toBase);
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      table.appendChild(tr);
+    });
+
+    /* rainfall-over-area extension: depth × area → volumes */
+    if (catKey === "rain") {
+      var ac = num("rain-area");
+      if (ac !== null && ac > 0) {
+        var inches = base; // base unit is inches
+        var cf = inches * ac * CF_PER_ACFT / 12;
+        var rows = [
+          ["→ volume over " + fmt(ac) + " ac (cf)", cf],
+          ["→ volume (gallons)", cf * GAL_PER_CF],
+          ["→ volume (ac-ft)", cf / CF_PER_ACFT],
+          ["→ volume (m³)", cf / 35.3147]
+        ];
+        rows.forEach(function (r) {
+          var tr = document.createElement("tr");
+          var td1 = document.createElement("td");
+          td1.textContent = r[0];
+          var td2 = document.createElement("td");
+          td2.className = "val";
+          td2.textContent = fmt(r[1]);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          table.appendChild(tr);
+        });
+      }
+    }
+
+    out.hidden = false;
+    saveState();
+  }
+
+  function recalcLoad() {
+    var c = num("conc"), q = num("flow-mgd");
+    var out = $("load-results");
+    if (c === null || q === null || c < 0 || q < 0) { out.hidden = true; saveState(); return; }
+    var lbday = c * q * 8.34;
+    $("r-load").textContent = fmt(lbday) + " lb/day (" + fmt(lbday / 2000) + " tons/day | " + fmt(lbday * 0.4536) + " kg/day)";
+    out.hidden = false;
+    saveState();
+  }
+
+  $("cat").addEventListener("change", function () { populateUnits(); recalc(); });
+  $("unit").addEventListener("change", recalc);
+  ["val", "rain-area"].forEach(function (id) { $(id).addEventListener("input", recalc); });
+  ["conc", "flow-mgd"].forEach(function (id) { $(id).addEventListener("input", recalcLoad); });
+
+  var FIELDS = ["cat","val","unit","rain-area","conc","flow-mgd"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (state.cat) $("cat").value = state.cat;
+      populateUnits();
+      FIELDS.forEach(function (id) {
+        if (id !== "cat" && state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) { populateUnits(); }
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (!$("unit").options.length) populateUnits();
+  recalc();
+  recalcLoad();
+})();
+</script>
+</body>
+</html>

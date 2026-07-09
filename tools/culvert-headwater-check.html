@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Culvert Headwater Quick-Check (Inlet/Outlet Control)</title>
+<meta name="description" content="Offline circular culvert headwater check per FHWA HDS-5: inlet control regression equations and full-flow outlet control, governing headwater and HW/D ratio. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  .verdict { font-size: 1.2rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Culvert Headwater Quick-Check</h1>
+<p class="subtitle">Circular culvert headwater per the FHWA HDS-5 method: inlet control from the nomograph regression equations, outlet control assuming full flow, and whichever governs. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is the HDS-5 hand method for a single circular barrel — the right tool for "will this crossing pass the design storm without drowning the road," not a replacement for HY-8 or the drainage report. Outlet control here assumes the barrel flows full (conservative and standard for the hand check; partially full outlet-control profiles need water-surface computations). Box culverts, multiple barrels, improved inlets, and fish passage are HY-8 territory. Regression coefficients are the standard HDS-5 Appendix A values for common circular inlets — verify against the current edition for anything contractual.
+</div>
+
+<fieldset>
+  <legend>Culvert</legend>
+  <div class="row">
+    <div>
+      <label for="dia">Diameter (in)
+        <input type="number" id="dia" min="1" step="any" placeholder="e.g. 36">
+      </label>
+      <label for="config">Material / inlet configuration
+        <select id="config">
+          <option value="c-sq" selected>Concrete — square edge w/ headwall</option>
+          <option value="c-gh">Concrete — groove end w/ headwall</option>
+          <option value="c-gp">Concrete — groove end projecting</option>
+          <option value="m-hw">CMP — headwall</option>
+          <option value="m-mit">CMP — mitered to slope</option>
+          <option value="m-proj">CMP — projecting</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="len">Length (ft)
+        <input type="number" id="len" min="0" step="any" placeholder="e.g. 60">
+      </label>
+      <label for="slope">Slope (ft/ft)
+        <input type="number" id="slope" min="0" step="any" placeholder="e.g. 0.01">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Hydraulics</legend>
+  <div class="row">
+    <div>
+      <label for="q">Design flow Q (cfs)
+        <input type="number" id="q" min="0" step="any" placeholder="e.g. 45">
+      </label>
+    </div>
+    <div>
+      <label for="tw">Tailwater depth above outlet invert (ft)
+        <input type="number" id="tw" min="0" step="any" value="0">
+      </label>
+    </div>
+    <div>
+      <label for="hwallow">Allowable headwater depth (ft) — optional
+        <input type="number" id="hwallow" min="0" step="any" placeholder="e.g. to road subgrade">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">—</div>
+  <table>
+    <tr><td>Inlet control HW</td><td class="val" id="r-inlet">—</td></tr>
+    <tr><td>Outlet control HW (full flow)</td><td class="val" id="r-outlet">—</td></tr>
+    <tr class="total"><td>Governing headwater</td><td class="val" id="r-gov">—</td></tr>
+    <tr><td>HW/D ratio</td><td class="val" id="r-hwd">—</td></tr>
+    <tr><td>Critical depth</td><td class="val" id="r-dc">—</td></tr>
+    <tr><td>Full-flow velocity (outlet scour check)</td><td class="val" id="r-vel">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Inlet control (the nomograph equations)</summary>
+  <p>Inlet control means the entrance is the bottleneck — the barrel could carry more than the inlet lets in. HDS-5 fits two regression forms to the lab data behind the nomographs, using the discharge parameter <code>Q/(A·D<sup>0.5</sup>)</code>:</p>
+  <p>Unsubmerged (≤ 3.5): <code>HW/D = H<sub>c</sub>/D + K·[Q/(A·D<sup>0.5</sup>)]<sup>M</sup> − 0.5·S</code>, where H<sub>c</sub> is critical depth plus critical velocity head.</p>
+  <p>Submerged (≥ 4.0): <code>HW/D = c·[Q/(A·D<sup>0.5</sup>)]² + Y − 0.5·S</code> — the inlet acting as an orifice.</p>
+  <p>Between 3.5 and 4.0 the tool interpolates linearly, per standard practice. Mitered inlets use +0.7·S instead of −0.5·S. K, M, c, Y are inlet-specific (HDS-5 Appendix A); a grooved concrete end genuinely outperforms a square edge, which is why the coefficient table matters.</p>
+</details>
+
+<details>
+  <summary>Outlet control (full flow)</summary>
+  <p>Outlet control means the barrel plus the downstream water surface is the bottleneck. Assuming full flow: <code>HW = H + h<sub>o</sub> − S·L</code>, where the head loss <code>H = [1 + K<sub>e</sub> + 29·n²·L / R<sup>4/3</sup>] · V²/2g</code> (entrance + friction + exit, English units), and <code>h<sub>o</sub> = max(TW, (d<sub>c</sub>+D)/2)</code> approximates the effective downstream head. The governing headwater is simply the larger of inlet and outlet control — the culvert doesn't get to choose the easier one.</p>
+</details>
+
+<details>
+  <summary>Critical depth</summary>
+  <p>Solved for the circular section by bisection on <code>Q²·T / (g·A³) = 1</code> with A = (θ−sin θ)·D²/8 and T = D·sin(θ/2), capped just below the crown. It feeds both the unsubmerged inlet form (through H<sub>c</sub>) and the outlet-control h<sub>o</sub> term.</p>
+</details>
+
+<details>
+  <summary>Field/reviewer notes</summary>
+  <ul>
+    <li>Typical criteria allow HW/D of 1.2–1.5 at the design storm; the tool flags beyond 1.5. Overtopping checks compare governing HW against the road profile, not just a ratio.</li>
+    <li>An inlet-controlled culvert wastes its barrel — if inlet control governs by a wide margin, an improved inlet (beveled/grooved end, headwall) buys capacity far cheaper than a bigger pipe.</li>
+    <li>Full-flow outlet velocity above ~10 ft/s wants energy dissipation or riprap sizing at the outlet (HEC-14).</li>
+    <li>Debris and sediment don't appear in these equations, and they're how real culverts actually fail. Maintenance access beats another six inches of diameter.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>FHWA HDS-5, <em>Hydraulic Design of Highway Culverts</em> — the governing method, coefficient tables, and nomographs. <span class="small">https://www.fhwa.dot.gov/engineering/hydraulics/</span></li>
+  <li>FHWA HY-8 — free culvert analysis software for anything past a hand check.</li>
+  <li>FHWA HEC-14 — outlet energy dissipators.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "culvert.v1";
+  var G = 32.174;
+
+  /* HDS-5 Appendix A regression coefficients + Ke + Manning n for circular inlets */
+  var CONFIGS = {
+    "c-sq":   { K: 0.0098, M: 2.0,  c: 0.0398, Y: 0.67, ke: 0.5, n: 0.012, mit: false, name: "Concrete, square edge w/ headwall" },
+    "c-gh":   { K: 0.0018, M: 2.0,  c: 0.0292, Y: 0.74, ke: 0.2, n: 0.012, mit: false, name: "Concrete, groove end w/ headwall" },
+    "c-gp":   { K: 0.0045, M: 2.0,  c: 0.0317, Y: 0.69, ke: 0.2, n: 0.012, mit: false, name: "Concrete, groove end projecting" },
+    "m-hw":   { K: 0.0078, M: 2.0,  c: 0.0379, Y: 0.69, ke: 0.5, n: 0.024, mit: false, name: "CMP, headwall" },
+    "m-mit":  { K: 0.0210, M: 1.33, c: 0.0463, Y: 0.75, ke: 0.7, n: 0.024, mit: true,  name: "CMP, mitered to slope" },
+    "m-proj": { K: 0.0340, M: 1.50, c: 0.0553, Y: 0.54, ke: 0.9, n: 0.024, mit: false, name: "CMP, projecting" }
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function opt(id) {
+    var v = parseFloat($(id).value);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  /* circular section geometry at depth y in pipe of diameter D (ft) */
+  function circGeom(y, D) {
+    var yy = Math.min(Math.max(y, 0), D);
+    var theta = 2 * Math.acos(1 - 2 * yy / D);
+    var Ax = (theta - Math.sin(theta)) * D * D / 8;
+    var T = D * Math.sin(theta / 2);
+    return { A: Ax, T: T };
+  }
+
+  /* critical depth by bisection on Q^2 T / (g A^3) = 1 */
+  function criticalDepth(Q, D) {
+    var lo = 1e-6 * D, hi = 0.999 * D;
+    function f(y) {
+      var g = circGeom(y, D);
+      if (g.A <= 0) return -1;
+      return Q * Q * g.T / (G * Math.pow(g.A, 3)) - 1;
+    }
+    if (f(hi) > 0) return hi; // flow beyond open-channel critical range — pipe effectively full
+    for (var i = 0; i < 80; i++) {
+      var mid = (lo + hi) / 2;
+      if (f(mid) > 0) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function recalc() {
+    var Din = num("dia");
+    var cfg = CONFIGS[$("config").value];
+    var L = num("len");
+    var S = num("slope", true);
+    var Q = num("q");
+    var TW = num("tw", true);
+    var HWallow = opt("hwallow");
+    var out = $("results");
+
+    if (!Din || !L || S === null || !Q || TW === null) { out.hidden = true; saveState(); return; }
+
+    var D = Din / 12;
+    var Afull = Math.PI * D * D / 4;
+    var msgs = [];
+
+    /* critical depth and Hc */
+    var dc = criticalDepth(Q, D);
+    var gc = circGeom(dc, D);
+    var Vc = Q / gc.A;
+    var Hc = dc + Vc * Vc / (2 * G);
+
+    /* inlet control */
+    var Qp = Q / (Afull * Math.sqrt(D)); // discharge parameter
+    var sTerm = cfg.mit ? 0.7 * S : -0.5 * S;
+    var hwdUnsub = Hc / D + cfg.K * Math.pow(Qp, cfg.M) + sTerm;
+    var hwdSub = cfg.c * Qp * Qp + cfg.Y + sTerm;
+    var hwdIn;
+    if (Qp <= 3.5) hwdIn = hwdUnsub;
+    else if (Qp >= 4.0) hwdIn = hwdSub;
+    else {
+      var frac = (Qp - 3.5) / 0.5;
+      hwdIn = hwdUnsub * (1 - frac) + hwdSub * frac;
+    }
+    var hwInlet = hwdIn * D;
+
+    /* outlet control, full flow */
+    var V = Q / Afull;
+    var R = D / 4;
+    var H = (1 + cfg.ke + 29 * cfg.n * cfg.n * L / Math.pow(R, 4 / 3)) * V * V / (2 * G);
+    var ho = Math.max(TW, (dc + D) / 2);
+    var hwOutlet = H + ho - S * L;
+
+    var governing = Math.max(hwInlet, hwOutlet);
+    var govLabel = hwInlet >= hwOutlet ? "inlet control" : "outlet control";
+    var hwd = governing / D;
+
+    $("r-inlet").textContent = fmt(hwInlet, 2) + " ft (Q/(A·D^0.5) = " + fmt(Qp, 2) + ")";
+    $("r-outlet").textContent = hwOutlet > 0 ? fmt(hwOutlet, 2) + " ft" : fmt(hwOutlet, 2) + " ft (not governing — barrel not full)";
+    $("r-gov").textContent = fmt(governing, 2) + " ft — " + govLabel;
+    $("r-hwd").textContent = fmt(hwd, 2);
+    $("r-dc").textContent = fmt(dc, 2) + " ft" + (dc >= 0.99 * D ? " (at crown — barrel is full at this Q)" : "");
+    $("r-vel").textContent = fmt(V, 1) + " ft/s";
+
+    out.classList.remove("fail");
+    if (HWallow !== null) {
+      if (governing > HWallow) {
+        $("verdict").textContent = "EXCEEDS allowable HW — " + fmt(governing, 2) + " ft vs. " + fmt(HWallow, 2) + " ft";
+        out.classList.add("fail");
+      } else {
+        $("verdict").textContent = "OK — " + fmt(governing, 2) + " ft vs. " + fmt(HWallow, 2) + " ft allowed (" + fmt(HWallow - governing, 2) + " ft margin)";
+      }
+    } else {
+      $("verdict").textContent = "Governing HW: " + fmt(governing, 2) + " ft (" + govLabel + ")";
+    }
+
+    if (hwd > 1.5) msgs.push("HW/D over 1.5 — beyond typical design criteria; check the road profile for overtopping and consider a larger barrel or improved inlet.");
+    if (govLabel === "inlet control" && hwOutlet > 0 && hwInlet > 1.3 * hwOutlet) {
+      msgs.push("Inlet control governs by a wide margin — an improved inlet (grooved/beveled end, headwall) would buy real capacity before upsizing the pipe.");
+    }
+    if (V > 10) msgs.push("Full-flow velocity over 10 ft/s — outlet protection (riprap/energy dissipation per HEC-14) needs attention.");
+    if (Qp > 6) msgs.push("Discharge parameter beyond the regression fit range (~6) — the inlet equation is extrapolating; this culvert is badly undersized anyway.");
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["dia","config","len","slope","q","tw","hwallow"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

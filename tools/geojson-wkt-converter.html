@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoJSON / WKT / CSV Geometry Converter &amp; Inspector</title>
+<meta name="description" content="Offline geometry utility: paste GeoJSON, WKT, or coordinate CSV; get the other formats plus vertex count, bounding box, geodesic length, and area. Vanilla JS parsers, no dependencies, nothing leaves the page.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  textarea, select {
+    width: 100%; padding: 0.45rem; margin-top: 0.2rem; font-size: 0.9rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  textarea {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    min-height: 8rem; resize: vertical;
+  }
+  select { max-width: 20rem; font-size: 1rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.75rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .out-block { margin-top: 0.5rem; }
+  .out-block button.copy {
+    padding: 0.15rem 0.5rem; margin-left: 0.4rem; font-size: 0.8rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset, button.run {
+    margin-top: 1rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border-radius: 4px; cursor: pointer;
+  }
+  button.run { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  button.reset { border: 1px solid var(--border); background: var(--panel); color: var(--fg); }
+</style>
+</head>
+<body>
+
+<h1>GeoJSON / WKT / CSV Geometry Converter &amp; Inspector</h1>
+<p class="subtitle">Paste geometry in one format, get the others — plus vertex count, bounding box, geodesic length, and area. All parsing and math runs locally; nothing leaves this page. Input persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Coordinates are assumed to be WGS84 lon/lat degrees (the GeoJSON spec's only CRS, and what OSM and GPS produce). Lengths and areas are spherical-earth geodesic values (mean radius 6,371,008.8 m) — within about 0.3% of rigorous ellipsoidal values, plenty for inspection and QA, not for legal areas or record boundaries. First supported geometry only: FeatureCollections are read, but the tool inspects the first feature's geometry and says so.
+</div>
+
+<fieldset>
+  <legend>Input</legend>
+  <div class="row">
+    <div>
+      <label for="in-fmt">Format
+        <select id="in-fmt">
+          <option value="auto" selected>Auto-detect</option>
+          <option value="geojson">GeoJSON</option>
+          <option value="wkt">WKT</option>
+          <option value="csv">CSV coordinate list</option>
+        </select>
+      </label>
+    </div>
+    <div id="csv-opts" hidden>
+      <label for="csv-order">CSV column order
+        <select id="csv-order">
+          <option value="lonlat" selected>lon, lat</option>
+          <option value="latlon">lat, lon</option>
+        </select>
+      </label>
+      <label for="csv-as">Interpret rows as
+        <select id="csv-as">
+          <option value="linestring" selected>LineString (path)</option>
+          <option value="polygon">Polygon (auto-closed)</option>
+          <option value="points">MultiPoint</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <label for="geo-in">Geometry
+    <textarea id="geo-in" spellcheck="false" placeholder='e.g. {"type":"Polygon","coordinates":[[[-117.72,33.61],[-117.71,33.61],[-117.71,33.62],[-117.72,33.61]]]}
+or  POLYGON((-117.72 33.61, -117.71 33.61, -117.71 33.62, -117.72 33.61))
+or  one lon,lat pair per line'></textarea>
+  </label>
+  <button type="button" class="run" id="run-btn">Convert &amp; inspect</button>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Inspection</h3>
+  <table>
+    <tr><td>Detected input / geometry</td><td class="val" id="r-type">—</td></tr>
+    <tr><td>Vertices</td><td class="val" id="r-verts">—</td></tr>
+    <tr><td>Bounding box (W, S, E, N)</td><td class="val" id="r-bbox">—</td></tr>
+    <tr id="r-len-row" hidden><td>Geodesic length</td><td class="val" id="r-len">—</td></tr>
+    <tr id="r-area-row" hidden><td>Geodesic area</td><td class="val" id="r-area">—</td></tr>
+  </table>
+
+  <h3>GeoJSON <button type="button" class="copy" data-for="out-geojson">copy</button></h3>
+  <div class="out-block"><textarea id="out-geojson" readonly spellcheck="false"></textarea></div>
+
+  <h3>WKT <button type="button" class="copy" data-for="out-wkt">copy</button></h3>
+  <div class="out-block"><textarea id="out-wkt" readonly spellcheck="false"></textarea></div>
+
+  <h3>CSV (lon,lat vertices) <button type="button" class="copy" data-for="out-csv">copy</button></h3>
+  <div class="out-block"><textarea id="out-csv" readonly spellcheck="false"></textarea></div>
+
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Length and area math</summary>
+  <p>Length: haversine great-circle distance summed over consecutive vertices, R = 6,371,008.8 m (IUGG mean radius). Area: the spherical polygon formula (sum of <code>(λ₂−λ₁)·(2 + sin φ₁ + sin φ₂)</code> over ring edges, times R²/2), holes subtracted — the same approach most GIS "geodesic area" functions use on a sphere. Both are within ~0.3% of ellipsoidal values at mid-latitudes; for record areas, compute on the ellipsoid in real GIS software.</p>
+</details>
+
+<details>
+  <summary>What the parsers accept</summary>
+  <ul>
+    <li><strong>GeoJSON:</strong> a bare geometry, a Feature, or a FeatureCollection (first geometry used, with a note). Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon. A legacy <code>crs</code> member triggers a warning — modern GeoJSON is WGS84 by definition.</li>
+    <li><strong>WKT:</strong> the same seven types, case-insensitive, tolerant of whitespace. No Z/M coordinates, no EWKT SRID prefixes.</li>
+    <li><strong>CSV:</strong> one coordinate pair per line, comma / tab / whitespace separated, header row auto-skipped if non-numeric. You choose column order and whether the rows are a path, a polygon (auto-closed), or loose points.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>The lat/lon swap check</summary>
+  <p>The most common geometry bug in existence is swapped axes. The tool flags input where a "longitude" magnitude never exceeds 90 while a "latitude" does — the signature of lat,lon data read as lon,lat. GeoJSON and WKT are lon-first by spec; most spreadsheets and GPS apps are lat-first by habit. Everyone gets bitten eventually.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>RFC 7946 — The GeoJSON Format. <span class="small">https://datatracker.ietf.org/doc/html/rfc7946</span></li>
+  <li>OGC Simple Features — WKT specification. <span class="small">https://www.ogc.org/standards/sfa</span></li>
+  <li>Chamberlain &amp; Duquette (JPL), <em>Some Algorithms for Polygons on a Sphere</em> — spherical area formula.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. All parsing runs locally. Input is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "geoconv.v1";
+  var R = 6371008.8;
+  var D2R = Math.PI / 180;
+  var SQM_PER_ACRE = 4046.8564224;
+  var FT_PER_M = 3.280839895; // international feet, fine for display
+
+  function $(id) { return document.getElementById(id); }
+
+  /* ================= geometry model =================
+     Normalized form: { type, coords } matching GeoJSON coordinate nesting. */
+
+  /* ---------- WKT parser ---------- */
+  function parseWkt(text) {
+    var s = text.trim();
+    var m = s.match(/^\s*(POINT|MULTIPOINT|LINESTRING|MULTILINESTRING|POLYGON|MULTIPOLYGON)\s*(.*)$/i);
+    if (!m) return null;
+    var type = m[1].toUpperCase();
+    var body = m[2].trim();
+    if (/^EMPTY$/i.test(body)) throw new Error("WKT geometry is EMPTY.");
+
+    /* tokenize parens and numbers */
+    var pos = 0;
+    function skipWs() { while (pos < body.length && /\s|,/.test(body[pos])) pos++; }
+    function expect(ch) {
+      skipWs();
+      if (body[pos] !== ch) throw new Error("WKT parse error near position " + pos + " — expected '" + ch + "'.");
+      pos++;
+    }
+    function peek() { skipWs(); return body[pos]; }
+    function readNumber() {
+      skipWs();
+      var m2 = body.slice(pos).match(/^[-+0-9.eE]+/);
+      if (!m2) throw new Error("WKT parse error near position " + pos + " — expected a number.");
+      pos += m2[0].length;
+      var v = parseFloat(m2[0]);
+      if (!isFinite(v)) throw new Error("Bad number in WKT.");
+      return v;
+    }
+    function readPointCoords() { // "x y" (ignore trailing Z/M numbers)
+      var x = readNumber(), y = readNumber();
+      while (/[-+0-9.]/.test(peek() || "")) readNumber(); // swallow Z/M
+      return [x, y];
+    }
+    function readPointList() { // ( p, p, p )
+      expect("(");
+      var pts = [];
+      for (;;) {
+        /* MULTIPOINT may parenthesize each point */
+        if (peek() === "(") { expect("("); pts.push(readPointCoords()); expect(")"); }
+        else pts.push(readPointCoords());
+        if (peek() === ")") { expect(")"); break; }
+      }
+      return pts;
+    }
+    function readRingList() { // ( (ring), (ring) )
+      expect("(");
+      var rings = [];
+      for (;;) {
+        rings.push(readPointList());
+        if (peek() === ")") { expect(")"); break; }
+      }
+      return rings;
+    }
+
+    if (type === "POINT") { expect("("); var p = readPointCoords(); expect(")"); return { type: "Point", coords: p }; }
+    if (type === "LINESTRING") return { type: "LineString", coords: readPointList() };
+    if (type === "MULTIPOINT") return { type: "MultiPoint", coords: readPointList() };
+    if (type === "POLYGON") return { type: "Polygon", coords: readRingList() };
+    if (type === "MULTILINESTRING") return { type: "MultiLineString", coords: readRingList() };
+    if (type === "MULTIPOLYGON") {
+      expect("(");
+      var polys = [];
+      for (;;) {
+        polys.push(readRingList());
+        if (peek() === ")") { expect(")"); break; }
+      }
+      return { type: "MultiPolygon", coords: polys };
+    }
+    return null;
+  }
+
+  /* ---------- GeoJSON parser ---------- */
+  function parseGeoJson(text, notes) {
+    var obj = JSON.parse(text);
+    if (obj.crs) notes.push("Input carries a legacy 'crs' member — GeoJSON per RFC 7946 is WGS84 only; coordinates are treated as lon/lat degrees.");
+    var g = obj;
+    if (obj.type === "FeatureCollection") {
+      if (!obj.features || !obj.features.length) throw new Error("FeatureCollection has no features.");
+      if (obj.features.length > 1) notes.push("FeatureCollection has " + obj.features.length + " features — inspecting the first only.");
+      g = obj.features[0].geometry;
+    } else if (obj.type === "Feature") {
+      g = obj.geometry;
+    }
+    if (!g || !g.type || g.coordinates === undefined) throw new Error("No geometry found in the GeoJSON.");
+    var ok = ["Point","MultiPoint","LineString","MultiLineString","Polygon","MultiPolygon"];
+    if (ok.indexOf(g.type) === -1) throw new Error("Geometry type '" + g.type + "' is not supported (GeometryCollections aren't).");
+    return { type: g.type, coords: g.coordinates };
+  }
+
+  /* ---------- CSV parser ---------- */
+  function parseCsv(text, order, as, notes) {
+    var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+    var pts = [];
+    lines.forEach(function (line, i) {
+      var parts = line.split(/[,;\t]+|\s{1,}/).filter(Boolean);
+      if (parts.length < 2) return;
+      var a = parseFloat(parts[0]), b = parseFloat(parts[1]);
+      if (!isFinite(a) || !isFinite(b)) {
+        if (i === 0) { notes.push("First CSV row is non-numeric — treated as a header and skipped."); return; }
+        throw new Error("Non-numeric CSV row at line " + (i + 1) + ".");
+      }
+      pts.push(order === "latlon" ? [b, a] : [a, b]);
+    });
+    if (pts.length === 0) throw new Error("No coordinate rows found in the CSV.");
+    if (as === "points") return { type: pts.length === 1 ? "Point" : "MultiPoint", coords: pts.length === 1 ? pts[0] : pts };
+    if (as === "polygon") {
+      if (pts.length < 3) throw new Error("A polygon needs at least 3 points.");
+      var first = pts[0], last = pts[pts.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        pts.push([first[0], first[1]]);
+        notes.push("Polygon ring auto-closed (last vertex duplicated from the first).");
+      }
+      return { type: "Polygon", coords: [pts] };
+    }
+    if (pts.length < 2) throw new Error("A LineString needs at least 2 points.");
+    return { type: "LineString", coords: pts };
+  }
+
+  /* ---------- serializers ---------- */
+  function wktCoords(pts) {
+    return pts.map(function (p) { return p[0] + " " + p[1]; }).join(", ");
+  }
+  function toWkt(g) {
+    if (g.type === "Point") return "POINT (" + g.coords[0] + " " + g.coords[1] + ")";
+    if (g.type === "MultiPoint") return "MULTIPOINT (" + wktCoords(g.coords) + ")";
+    if (g.type === "LineString") return "LINESTRING (" + wktCoords(g.coords) + ")";
+    if (g.type === "MultiLineString") return "MULTILINESTRING (" + g.coords.map(function (l) { return "(" + wktCoords(l) + ")"; }).join(", ") + ")";
+    if (g.type === "Polygon") return "POLYGON (" + g.coords.map(function (r) { return "(" + wktCoords(r) + ")"; }).join(", ") + ")";
+    if (g.type === "MultiPolygon") return "MULTIPOLYGON (" + g.coords.map(function (poly) {
+      return "(" + poly.map(function (r) { return "(" + wktCoords(r) + ")"; }).join(", ") + ")";
+    }).join(", ") + ")";
+    return "";
+  }
+  function toGeoJson(g) {
+    return JSON.stringify({ type: g.type, coordinates: g.coords }, null, 2);
+  }
+  function toCsv(g) {
+    var rows = [];
+    eachVertex(g, function (p, path) {
+      rows.push(p[0] + "," + p[1] + (path ? "," + path : ""));
+    });
+    var multiPart = /^Multi|^Polygon/.test(g.type) && g.type !== "MultiPoint";
+    return "lon,lat" + (multiPart ? ",part" : "") + "\n" + rows.join("\n");
+  }
+
+  /* ---------- geometry walking / stats ---------- */
+  function eachVertex(g, fn) {
+    if (g.type === "Point") { fn(g.coords, ""); return; }
+    if (g.type === "MultiPoint" || g.type === "LineString") { g.coords.forEach(function (p) { fn(p, ""); }); return; }
+    if (g.type === "MultiLineString" || g.type === "Polygon") {
+      g.coords.forEach(function (part, i) { part.forEach(function (p) { fn(p, String(i)); }); });
+      return;
+    }
+    /* MultiPolygon */
+    g.coords.forEach(function (poly, i) {
+      poly.forEach(function (ring, j) {
+        ring.forEach(function (p) { fn(p, i + "." + j); });
+      });
+    });
+  }
+
+  function haversine(p1, p2) {
+    var la1 = p1[1] * D2R, la2 = p2[1] * D2R;
+    var dLa = la2 - la1, dLo = (p2[0] - p1[0]) * D2R;
+    var a = Math.sin(dLa / 2) * Math.sin(dLa / 2) +
+      Math.cos(la1) * Math.cos(la2) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function pathLength(pts) {
+    var L = 0;
+    for (var i = 1; i < pts.length; i++) L += haversine(pts[i - 1], pts[i]);
+    return L;
+  }
+  /* spherical ring area (Chamberlain & Duquette), signed */
+  function ringArea(pts) {
+    if (pts.length < 3) return 0;
+    var total = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p1 = pts[i], p2 = pts[i + 1];
+      total += (p2[0] - p1[0]) * D2R * (2 + Math.sin(p1[1] * D2R) + Math.sin(p2[1] * D2R));
+    }
+    return total * R * R / 2;
+  }
+  function polygonArea(rings) {
+    var a = Math.abs(ringArea(rings[0]));
+    for (var i = 1; i < rings.length; i++) a -= Math.abs(ringArea(rings[i]));
+    return a;
+  }
+
+  function stats(g) {
+    var count = 0;
+    var bbox = [Infinity, Infinity, -Infinity, -Infinity];
+    eachVertex(g, function (p) {
+      count++;
+      if (p[0] < bbox[0]) bbox[0] = p[0];
+      if (p[1] < bbox[1]) bbox[1] = p[1];
+      if (p[0] > bbox[2]) bbox[2] = p[0];
+      if (p[1] > bbox[3]) bbox[3] = p[1];
+    });
+    var len = null, area = null;
+    if (g.type === "LineString") len = pathLength(g.coords);
+    if (g.type === "MultiLineString") {
+      len = 0;
+      g.coords.forEach(function (l) { len += pathLength(l); });
+    }
+    if (g.type === "Polygon") {
+      area = polygonArea(g.coords);
+      len = pathLength(g.coords[0]); // perimeter of exterior
+    }
+    if (g.type === "MultiPolygon") {
+      area = 0; len = 0;
+      g.coords.forEach(function (poly) {
+        area += polygonArea(poly);
+        len += pathLength(poly[0]);
+      });
+    }
+    return { count: count, bbox: bbox, len: len, area: area };
+  }
+
+  /* lat/lon swap heuristic */
+  function swapCheck(g, notes) {
+    var maxAbsLon = 0, maxAbsLat = 0, badLat = false;
+    eachVertex(g, function (p) {
+      maxAbsLon = Math.max(maxAbsLon, Math.abs(p[0]));
+      maxAbsLat = Math.max(maxAbsLat, Math.abs(p[1]));
+      if (Math.abs(p[1]) > 90) badLat = true;
+    });
+    if (badLat && maxAbsLon <= 90) {
+      notes.push("Latitude values exceed 90° while all longitudes fit within ±90° — the classic signature of swapped lat/lon axes. GeoJSON and WKT are lon-first.");
+    } else if (badLat) {
+      notes.push("Latitude values exceed ±90° — geographically invalid; length/area results are meaningless.");
+    }
+  }
+
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 1;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  /* ---------- main ---------- */
+  function run() {
+    var text = $("geo-in").value;
+    var out = $("results");
+    var warn = $("warn");
+    var notes = [];
+    if (!text.trim()) { out.hidden = true; saveState(); return; }
+
+    var fmtSel = $("in-fmt").value;
+    var detected = fmtSel;
+    if (fmtSel === "auto") {
+      var t = text.trim();
+      if (t[0] === "{" || t[0] === "[") detected = "geojson";
+      else if (/^\s*(POINT|MULTIPOINT|LINESTRING|MULTILINESTRING|POLYGON|MULTIPOLYGON)/i.test(t)) detected = "wkt";
+      else detected = "csv";
+    }
+    $("csv-opts").hidden = !(fmtSel === "csv" || (fmtSel === "auto" && detected === "csv"));
+
+    var g;
+    try {
+      if (detected === "geojson") g = parseGeoJson(text, notes);
+      else if (detected === "wkt") g = parseWkt(text);
+      else g = parseCsv(text, $("csv-order").value, $("csv-as").value, notes);
+      if (!g) throw new Error("Could not parse the input as " + detected.toUpperCase() + ".");
+    } catch (e) {
+      out.hidden = false;
+      $("r-type").textContent = "parse error";
+      $("r-verts").textContent = "—";
+      $("r-bbox").textContent = "—";
+      $("r-len-row").hidden = true;
+      $("r-area-row").hidden = true;
+      $("out-geojson").value = "";
+      $("out-wkt").value = "";
+      $("out-csv").value = "";
+      warn.hidden = false;
+      warn.textContent = e.message;
+      saveState();
+      return;
+    }
+
+    swapCheck(g, notes);
+    var st = stats(g);
+
+    $("r-type").textContent = detected.toUpperCase() + " → " + g.type;
+    $("r-verts").textContent = fmt(st.count, 0);
+    $("r-bbox").textContent = st.bbox.map(function (v) { return v.toFixed(6); }).join(", ");
+
+    $("r-len-row").hidden = st.len === null;
+    if (st.len !== null) {
+      $("r-len").textContent = fmt(st.len, 1) + " m  |  " + fmt(st.len * FT_PER_M, 0) + " ft  |  " +
+        fmt(st.len / 1609.344, 3) + " mi" + (g.type.indexOf("Polygon") !== -1 ? " (exterior perimeter)" : "");
+    }
+    $("r-area-row").hidden = st.area === null;
+    if (st.area !== null) {
+      $("r-area").textContent = fmt(st.area / SQM_PER_ACRE, 3) + " ac  |  " +
+        fmt(st.area, 0) + " m²  |  " + fmt(st.area * FT_PER_M * FT_PER_M, 0) + " ft²  |  " +
+        fmt(st.area / 10000, 3) + " ha";
+    }
+
+    $("out-geojson").value = toGeoJson(g);
+    $("out-wkt").value = toWkt(g);
+    $("out-csv").value = toCsv(g);
+
+    warn.hidden = notes.length === 0;
+    warn.textContent = notes.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  $("run-btn").addEventListener("click", run);
+  $("in-fmt").addEventListener("change", function () {
+    $("csv-opts").hidden = this.value !== "csv" && this.value !== "auto";
+    if (this.value !== "csv" && this.value !== "auto") $("csv-opts").hidden = true;
+  });
+
+  /* copy buttons */
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = $(btn.dataset.for);
+      try {
+        navigator.clipboard.writeText(el.value).then(function () {
+          btn.textContent = "copied";
+          setTimeout(function () { btn.textContent = "copy"; }, 1200);
+        }, function () {});
+      } catch (e) {}
+    });
+  });
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["in-fmt","csv-order","csv-as"];
+  function saveState() {
+    try {
+      var state = { text: $("geo-in").value };
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (state.text !== undefined) $("geo-in").value = state.text;
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if ($("geo-in").value.trim()) run();
+})();
+</script>
+</body>
+</html>

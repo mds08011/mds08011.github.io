@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slippy Tile Math and the Overpass Bbox Comma Shuffle | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Slippy Tile Math and the Overpass Bbox Comma Shuffle</h1>
+                <time datetime="2026-07-04">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Web maps are built from square tiles addressed by zoom, x, and y, and sooner or later you need to go between a lat/lon and a tile address, or figure out how many meters a pixel covers at zoom 18, or hand a bounding box to Overpass. The formulas are short and well-documented &mdash; and there's one specific way the bbox handoff goes wrong that this tool is built to prevent.</p>
+
+            <h2>The Approach</h2>
+            <p>The standard OSM slippy scheme, both directions [1]:</p>
+            <p><code>x = &lfloor;(lon+180)/360 &middot; 2^z&rfloor;</code>, &nbsp; <code>y = &lfloor;(1 &minus; ln(tan &phi; + sec &phi;)/&pi;)/2 &middot; 2^z&rfloor;</code></p>
+            <p>The inverse gives each tile's NW corner, and the (x+1, y+1) corner completes the bbox. Ground resolution is <code>156,543.034 &middot; cos(lat) / 2^z</code> meters per pixel &mdash; the <code>cos(lat)</code> is why a zoom level covers less ground per pixel in California than at the equator &mdash; and map scale follows at an assumed 96 dpi. There's a z10&ndash;z20 resolution table and the TMS y-flip note (<code>y_tms = 2^z &minus; 1 &minus; y</code>) for when tiles render upside down.</p>
+
+            <figure>
+                <img src="/path/to/tile-zoom-screenshot.png" alt="Tile calculator showing z/x/y for a lat/lon, ground resolution, and bounding box printed in two orderings" loading="lazy">
+                <figcaption>Figure 1: A lat/lon resolved to a tile, with the bbox printed in both W,S,E,N and Overpass's S,W,N,E order.</figcaption>
+            </figure>
+
+            <h3>The comma shuffle</h3>
+            <p>Here's the bug the tool exists to prevent. Most tools write a bounding box as <strong>W, S, E, N</strong> (min-lon, min-lat, max-lon, max-lat). Overpass wants <strong>S, W, N, E</strong> (min-lat, min-lon, max-lat, max-lon). Same four numbers, different order &mdash; and if you paste one where the other is expected, you don't get an error, you get a query for a box somewhere else entirely (often an empty region, so it just returns nothing and you assume the data isn't mapped). The tool prints the bbox <em>both ways, side by side, labeled</em>, so the comma-shuffle happens to someone else. It pairs with the <a href="/tools/osm-tag-helper.html">OSM tag helper's</a> Overpass builder, which takes the S,W,N,E string directly.</p>
+
+            <details>
+                <summary>Verification, including my own test bug</summary>
+                <p>I checked against the canonical formulas: quadrant placement, the exact zoom-0 resolution (156,543.03 = 2&pi;R/256), and lat/lon &rarr; tile &rarr; lat/lon round-trips. The round-trip test initially &ldquo;failed&rdquo; until I realized my <em>test</em> was wrong &mdash; I'd nudged the sample point north to land it inside a tile when tile y increases <em>southward</em>, so I was walking out of the tile instead of into it. A tidy little demonstration of why you write the tests: the bug was in my assumption about the coordinate direction, which is exactly the assumption the tool is meant to protect its users from.</p>
+            </details>
+
+            <p>One honest note: bulk-downloading tiles from the OSM servers violates the tile usage policy. This is for scoping surveys and Overpass queries, not scraping [3]. Single file, vanilla JS, <code>localStorage</code> persistence [2].</p>
+
+            <p>The tool: <a href="/tools/tile-zoom-calculator.html">Slippy Map Tile &amp; Zoom Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] OSM wiki &mdash; Slippy map tilenames (the canonical formulas). <a href="https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames">https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames</a></li>
+                <li>[2] OSM wiki &mdash; Zoom levels and resolution tables. <a href="https://wiki.openstreetmap.org/wiki/Zoom_levels">https://wiki.openstreetmap.org/wiki/Zoom_levels</a></li>
+                <li>[3] Overpass API language guide &mdash; bbox syntax. <a href="https://wiki.openstreetmap.org/wiki/Overpass_API">https://wiki.openstreetmap.org/wiki/Overpass_API</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

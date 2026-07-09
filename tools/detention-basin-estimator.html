@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detention Basin Storage Estimator</title>
+<meta name="description" content="Offline preliminary detention sizing: Modified Rational critical-duration sweep against an allowable release rate, or simple pre/post volume difference. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table.kv { border-collapse: collapse; width: 100%; }
+  .results table.kv td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results table.kv td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results table.kv tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  table.sweep { border-collapse: collapse; width: 100%; margin-top: 0.75rem; }
+  table.sweep th, table.sweep td {
+    border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: right;
+    font-variant-numeric: tabular-nums; font-size: 0.88rem;
+  }
+  table.sweep th { background: var(--panel); }
+  table.sweep tr.max td { font-weight: 700; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Detention Basin Storage Estimator</h1>
+<p class="subtitle">Preliminary detention volume two ways: a Modified Rational critical-duration sweep against an allowable release rate, or a simple post-minus-pre runoff volume difference. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is screening-level sizing — enough to know whether the corner of the site set aside for the basin is remotely big enough, and to sanity-check a drainage report. Final design is reservoir routing: a real inflow hydrograph through a stage-storage-discharge relationship, per the local criteria (which also set the design storms, release rules, drawdown times, and safety factors). The Modified Rational sweep here uses a rectangular inflow approximation and full allowable release for the storm duration — a common preliminary form; jurisdictions each have their own flavor and theirs governs.
+</div>
+
+<fieldset>
+  <legend>Method</legend>
+  <label for="mode">Sizing approach
+    <select id="mode">
+      <option value="modrat" selected>Modified Rational — critical duration sweep</option>
+      <option value="voldiff">Volume difference — post minus pre runoff volume</option>
+    </select>
+  </label>
+</fieldset>
+
+<div id="modrat-in">
+  <fieldset>
+    <legend>Watershed (post-development)</legend>
+    <div class="row">
+      <div>
+        <label for="c">Runoff coefficient C
+          <input type="number" id="c" min="0" max="1" step="any" placeholder="e.g. 0.65">
+        </label>
+      </div>
+      <div>
+        <label for="area">Area (ac)
+          <input type="number" id="area" min="0" step="any" placeholder="e.g. 12">
+        </label>
+      </div>
+      <div>
+        <label for="tc">Time of concentration (min)
+          <input type="number" id="tc" min="1" step="any" placeholder="e.g. 15">
+        </label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>IDF Equation — i = a / (D + b)ⁿ (D in minutes)</legend>
+    <div class="row">
+      <div>
+        <label for="ia">a
+          <input type="number" id="ia" step="any" placeholder="e.g. 45.0">
+        </label>
+      </div>
+      <div>
+        <label for="ib">b
+          <input type="number" id="ib" step="any" placeholder="e.g. 12.0">
+        </label>
+      </div>
+      <div>
+        <label for="in">n
+          <input type="number" id="in" step="any" placeholder="e.g. 0.85">
+        </label>
+      </div>
+    </div>
+    <p class="small">Coefficients from the local hydrology manual for the detention design storm's return period. The sweep needs the full IDF relationship — a single intensity can't find the critical duration.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Release</legend>
+    <div class="row">
+      <div>
+        <label for="qout">Allowable release rate (cfs)
+          <input type="number" id="qout" min="0" step="any" placeholder="often the pre-development peak">
+        </label>
+      </div>
+      <div>
+        <label for="dmax">Max duration to sweep (min)
+          <input type="number" id="dmax" min="10" step="any" value="360">
+        </label>
+      </div>
+    </div>
+  </fieldset>
+</div>
+
+<div id="voldiff-in" hidden>
+  <fieldset>
+    <legend>Runoff Volumes (e.g. from the TR-55 tool)</legend>
+    <div class="row">
+      <div>
+        <label for="vpost">Post-development runoff volume
+          <input type="number" id="vpost" min="0" step="any" placeholder="e.g. 4.2">
+        </label>
+      </div>
+      <div>
+        <label for="vpre">Pre-development runoff volume
+          <input type="number" id="vpre" min="0" step="any" placeholder="e.g. 1.8">
+        </label>
+      </div>
+      <div>
+        <label for="vunit">Units
+          <select id="vunit">
+            <option value="acft" selected>acre-feet</option>
+            <option value="cf">cubic feet</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <p class="small">Same storm, same method, both sides — run the TR-55 tool twice (existing vs. proposed CN) and bring the volumes here.</p>
+  </fieldset>
+</div>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table class="kv" id="kv-modrat">
+    <tr><td>Critical duration</td><td class="val" id="r-dcrit">—</td></tr>
+    <tr><td>Intensity at critical duration</td><td class="val" id="r-icrit">—</td></tr>
+    <tr><td>Peak inflow at critical duration</td><td class="val" id="r-qin">—</td></tr>
+    <tr class="total"><td>Required storage</td><td class="val" id="r-vol">—</td></tr>
+  </table>
+  <table class="kv" id="kv-voldiff" hidden>
+    <tr class="total"><td>Required storage (post − pre)</td><td class="val" id="r-vdiff">—</td></tr>
+  </table>
+  <table class="sweep" id="sweep" hidden>
+    <thead><tr><th>D (min)</th><th>i (in/hr)</th><th>Q_in (cfs)</th><th>V_req (ac-ft)</th></tr></thead>
+    <tbody id="sweep-body"></tbody>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The Modified Rational sweep</summary>
+  <p>For each trial storm duration D (from Tc up to the sweep limit): intensity <code>i = a/(D+b)ⁿ</code>, inflow <code>Q_in = C·i·A</code>, and required storage <code>V(D) = (Q_in − Q_allow) · D · 60</code> cubic feet — inflow volume for the duration minus what the outlet releases over the same window, using a rectangular inflow approximation. Short storms are intense but brief; long storms are big but weak — somewhere between, V(D) peaks. That maximum is the <em>critical duration</em> and the required storage. It is always longer than Tc, which is why sizing detention with the peak-flow storm alone undersizes it — the counterintuitive result this tool exists to make visible.</p>
+</details>
+
+<details>
+  <summary>Volume-difference mode</summary>
+  <p><code>V = V_post − V_pre</code> for the same design storm. This is the retention/water-quality framing (capture the new runoff the development created) rather than the peak-shaving framing, and some criteria require one, the other, or the larger of both. It's also a quick reasonableness check on a Modified Rational answer.</p>
+</details>
+
+<details>
+  <summary>Why routing governs final design</summary>
+  <ul>
+    <li>A real outlet doesn't release the allowable rate at all stages — orifice and weir flow vary with head, so early in the storm the basin releases less and fills faster than the sweep assumes.</li>
+    <li>Stage-storage is set by the actual grading; the last foot of a shallow basin holds far more than the first.</li>
+    <li>Criteria add requirements the sweep can't see: multi-storm performance (2-, 10-, 100-yr simultaneously), drawdown time limits (vector control is serious business in Southern California), freeboard, and emergency spillway sizing.</li>
+    <li>Rule of thumb: if the preliminary volume barely fits the available footprint, it won't survive routing. Leave margin.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>The local county hydrology/drainage manual — governing method, storms, release rates, and drawdown requirements.</li>
+  <li>NRCS TR-55 / TR-20 and reservoir routing texts — hydrograph methods for final design.</li>
+  <li>ASCE MOP 77 / WEF MOP FD-20 — urban stormwater detention design practice.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "detbasin.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id, allowZero) {
+    var v = parseFloat($(id).value);
+    if (!isFinite(v)) return null;
+    if (!allowZero && v <= 0) return null;
+    return v;
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  $("mode").addEventListener("change", function () {
+    $("modrat-in").hidden = this.value !== "modrat";
+    $("voldiff-in").hidden = this.value !== "voldiff";
+    recalc();
+  });
+
+  function recalc() {
+    var out = $("results");
+    var msgs = [];
+    var mode = $("mode").value;
+
+    $("kv-modrat").hidden = mode !== "modrat";
+    $("kv-voldiff").hidden = mode !== "voldiff";
+    $("sweep").hidden = mode !== "modrat";
+
+    if (mode === "voldiff") {
+      var vpost = num("vpost", true), vpre = num("vpre", true);
+      if (vpost === null || vpre === null) { out.hidden = true; saveState(); return; }
+      var unit = $("vunit").value;
+      var dAcFt = unit === "acft" ? vpost - vpre : (vpost - vpre) / 43560;
+      if (dAcFt < 0) msgs.push("Post volume is less than pre — either the units are mixed up or the project genuinely reduces runoff, in which case detention isn't the question.");
+      $("r-vdiff").textContent = fmt(dAcFt, 3) + " ac-ft (" + fmt(dAcFt * 43560, 0) + " cf | " + fmt(dAcFt * 43560 * 7.480519, 0) + " gal)";
+      var warn0 = $("warn");
+      warn0.hidden = msgs.length === 0;
+      warn0.textContent = msgs.join(" ");
+      out.hidden = false;
+      saveState();
+      return;
+    }
+
+    var C = num("c"), A = num("area"), Tc = num("tc");
+    var a = num("ia"), b = num("ib", true), n = num("in");
+    var Qout = num("qout"), Dmax = num("dmax");
+    if (!C || !A || !Tc || !a || b === null || !n || !Qout || !Dmax) { out.hidden = true; saveState(); return; }
+    if (C > 1) { out.hidden = true; saveState(); return; }
+
+    /* sweep durations from Tc to Dmax */
+    var best = null;
+    var samples = [];
+    var steps = 400;
+    for (var k = 0; k <= steps; k++) {
+      var D = Tc + (Dmax - Tc) * k / steps;
+      var i = a / Math.pow(D + b, n);
+      var Qin = C * i * A;
+      var V = (Qin - Qout) * D * 60; // cf
+      if (best === null || V > best.V) best = { D: D, i: i, Qin: Qin, V: V };
+      samples.push({ D: D, i: i, Qin: Qin, V: V });
+    }
+
+    if (best.V <= 0) {
+      out.hidden = false;
+      $("r-dcrit").textContent = "—";
+      $("r-icrit").textContent = "—";
+      $("r-qin").textContent = "—";
+      $("r-vol").textContent = "no storage required";
+      $("sweep").hidden = true;
+      var warn1 = $("warn");
+      warn1.hidden = false;
+      warn1.textContent = "Peak inflow never exceeds the allowable release at any swept duration — either the release rate is generous or an input is off (check that Q_allow isn't in GPM and C isn't the pre-development value).";
+      saveState();
+      return;
+    }
+
+    $("r-dcrit").textContent = fmt(best.D, 0) + " min";
+    $("r-icrit").textContent = fmt(best.i, 2) + " in/hr";
+    $("r-qin").textContent = fmt(best.Qin, 1) + " cfs vs. " + fmt(Qout, 1) + " cfs allowed";
+    $("r-vol").textContent = fmt(best.V / 43560, 3) + " ac-ft (" + fmt(best.V, 0) + " cf | " + fmt(best.V * 7.480519, 0) + " gal)";
+
+    /* representative sweep rows: a handful spanning the range, plus the max */
+    var body = $("sweep-body");
+    body.innerHTML = "";
+    var picks = [0, 0.1, 0.2, 0.35, 0.5, 0.7, 1.0].map(function (f) {
+      return samples[Math.round(f * steps)];
+    });
+    /* insert best in sorted position, dedupe near-identical durations */
+    picks.push(best);
+    picks.sort(function (x, y) { return x.D - y.D; });
+    var seen = {};
+    picks.forEach(function (s) {
+      var key = Math.round(s.D);
+      if (seen[key]) return;
+      seen[key] = true;
+      var tr = document.createElement("tr");
+      if (Math.abs(s.D - best.D) < (Dmax - Tc) / steps) tr.className = "max";
+      tr.innerHTML =
+        "<td>" + fmt(s.D, 0) + "</td>" +
+        "<td>" + fmt(s.i, 2) + "</td>" +
+        "<td>" + fmt(s.Qin, 1) + "</td>" +
+        "<td>" + (s.V > 0 ? fmt(s.V / 43560, 3) : "0") + "</td>";
+      body.appendChild(tr);
+    });
+    $("sweep").hidden = false;
+
+    if (Math.abs(best.D - Dmax) < (Dmax - Tc) / steps * 2) {
+      msgs.push("The maximum sits at the end of the sweep range — extend the max duration; the true critical duration is longer than " + fmt(Dmax, 0) + " min.");
+    }
+    if (best.Qin < 1.2 * Qout) {
+      msgs.push("Inflow only modestly exceeds the release rate — the rectangular approximation is least reliable in this regime; treat the volume as soft.");
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  var FIELDS = ["mode","c","area","tc","ia","ib","in","qout","dmax","vpost","vpre","vunit"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("mode").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  loadState();
+  recalc();
+})();
+</script>
+</body>
+</html>

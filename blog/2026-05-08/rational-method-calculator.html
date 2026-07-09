@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peak Flow by the Rational Method with a TR-55 Tc Builder | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Peak Flow by the Rational Method with a TR-55 Tc Builder</h1>
+                <time datetime="2026-05-08">May 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p><code>Q = CiA</code> is the first equation anyone learns for storm drainage, and it's deceptively easy: a runoff coefficient, a rainfall intensity, an area, multiply. The catch is the intensity. The Rational Method assumes the peak happens when the whole watershed is contributing at once &mdash; when the storm has lasted exactly as long as the time of concentration &mdash; so you read intensity off the IDF curve <em>at Tc</em>. Get Tc wrong and everything downstream of it is wrong, and Tc is the input people hand-wave.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool has two builders feeding the one equation. A composite-C builder takes line-item sub-areas (roof, pavement, gravel, lawn presets that prefill an editable C) and area-weights them: <code>C = &Sigma;C&middot;A / &Sigma;A</code>. And a Tc builder that sums TR-55 travel-time segments along the flow path, because that's where the real error lives [1]:</p>
+            <ul>
+                <li><strong>Sheet flow</strong> (first &le;100 ft): <code>Tt = 0.007&middot;(nL)^0.8 / (P&#8322;^0.5 &middot; s^0.4)</code>, with the sheet-flow roughness n and the 2-year 24-hour rainfall P&#8322; from Atlas 14 [2].</li>
+                <li><strong>Shallow concentrated flow:</strong> <code>V = 20.328&radic;s</code> paved or <code>16.135&radic;s</code> unpaved, then <code>Tt = L/(3600V)</code>.</li>
+                <li><strong>Channel flow:</strong> you enter V &mdash; and if you want it honestly, compute it in the <a href="/tools/mannings-flow-calculator.html">Manning's calculator</a> for the actual section. The two tools are a natural pair.</li>
+            </ul>
+            <p>Intensity comes either straight off your IDF curve or from the power-law fit <code>i = a/(Tc+b)^n</code> with jurisdiction coefficients, auto-evaluated at the computed Tc. It warns past the method's area applicability limit and when composite C climbs above 0.95.</p>
+
+            <figure>
+                <img src="/path/to/rational-method-screenshot.png" alt="Composite C builder and TR-55 segment table summing to a time of concentration and a peak flow" loading="lazy">
+                <figcaption>Figure 1: Sub-areas compositing to C, flow-path segments summing to Tc, and the resulting Q = CiA.</figcaption>
+            </figure>
+
+            <details>
+                <summary>The reviewer's-eye failure modes</summary>
+                <ul>
+                    <li>The single most common Rational Method error is a Tc path that isn't the hydraulically longest one &mdash; walking the site beats tracing the obvious swale on the plan.</li>
+                    <li>An absurdly short Tc (all pipe, steep site) drives intensity and Q way up. That's the model working correctly, and it's why criteria floor Tc (default 5 min here).</li>
+                    <li>For pre- vs. post-development, keep the same method, storm, and IDF source on both sides or the comparison is meaningless.</li>
+                </ul>
+            </details>
+
+            <p>One code note from building it: the Tc table used to re-render on every keystroke, which stole focus mid-edit. Length/slope/velocity changes now update only the affected computed cell in place. Single file, vanilla JS, <code>localStorage</code> persistence. Southern California counties mostly run their own Modified Rational procedures &mdash; the county manual governs [3].</p>
+
+            <p>The tool: <a href="/tools/rational-method-calculator.html">Rational Method Peak Flow Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] NRCS TR-55 &mdash; Urban Hydrology for Small Watersheds (travel time methods). <a href="https://www.nrcs.usda.gov/">https://www.nrcs.usda.gov/</a></li>
+                <li>[2] NOAA Atlas 14 &mdash; Precipitation-Frequency Data Server. <a href="https://hdsc.nws.noaa.gov/pfds/">https://hdsc.nws.noaa.gov/pfds/</a></li>
+                <li>[3] The local county hydrology manual &mdash; governing C values, Tc method, IDF data, and applicability limits.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

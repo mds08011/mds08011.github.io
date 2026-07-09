@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tagging Water Infrastructure in OSM, and Where the Line Is | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Tagging Water Infrastructure in OSM, and Where the Line Is</h1>
+                <time datetime="2026-07-07">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>This one is pure hobby, and it's the capstone of the mapping set. Once you spend your days around hydrants, manholes, and pump stations, you start noticing how little of it is mapped in OpenStreetMap &mdash; and how easy it is to tag <em>wrong</em>, because water infrastructure has a pile of specific conventions and one genuinely important rule about not breaking waterway connectivity. I wanted a cheat sheet for the tags a water/wastewater engineer actually meets on the street, plus a small Overpass query builder to see what's already there.</p>
+
+            <h2>The Approach</h2>
+            <p>A tagging reference for the surface-visible infrastructure &mdash; fire hydrants, sewer and storm manholes, pumping stations, treatment plants, basins &mdash; with lifecycle prefixes, changeset etiquette, and the culvert rule (tag the culvert on the <em>waterway</em>, never break the waterway line to do it). Paired with an Overpass QL builder that takes a tag and a bounding box (straight from the <a href="/tools/tile-zoom-calculator.html">tile calculator's</a> S,W,N,E output) and writes the query [1][3].</p>
+
+            <figure>
+                <img src="/path/to/osm-tag-helper-screenshot.png" alt="Tag reference table for water infrastructure with an Overpass QL query builder output below" loading="lazy">
+                <figcaption>Figure 1: The tag cheat sheet, with the Overpass builder generating a ready-to-run query for a bbox.</figcaption>
+            </figure>
+
+            <p>The query it generates is the template worth memorizing: <code>nwr[key=value](bbox);out geom;</code> &mdash; nodes, ways, and relations with the tag inside the box, returned with geometry. Paste it into Overpass Turbo and run.</p>
+
+            <h3>Where the line is</h3>
+            <p>This tool is disclaimer-forward in a way the calculators aren't, and deliberately so. Mapping hydrants has real emergency-response value, and manhole covers are honest, surveyable, surface-visible facts &mdash; a mapped pattern of sewer manholes is a legitimate public record assembled from what anyone can see from the sidewalk. But there's a bright line: <strong>surface-visible features observed in person are fair game; buried alignments, depths, and anything from restricted as-builts or licensed GIS are not.</strong> That's partly a licensing question &mdash; you can't launder proprietary data into OSM &mdash; and partly a professional-judgment one, because publishing detailed utility data you hold in a professional capacity is a decision to make carefully before it's a mapping task at all. The OSM wiki governs every tag, taginfo shows real-world usage before any mass edit, and organized-editing guidelines are required reading before anything bulk [1][2][4].</p>
+
+            <details>
+                <summary>Overpass QL beyond the builder</summary>
+                <p>Variations on the template: <code>["key"~"regex"]</code> for pattern matching, multiple filter brackets AND together, <code>around:50,lat,lon</code> instead of a bbox for proximity, and <code>out count;</code> when you just want numbers. The Overpass Turbo wizard writes decent queries from plain English when the syntax fights back.</p>
+            </details>
+
+            <p>Single file, vanilla JS, the query builder persisted in <code>localStorage</code>.</p>
+
+            <p>The tool: <a href="/tools/osm-tag-helper.html">OSM Water Infrastructure Tag Reference &amp; Overpass Query Builder</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] OSM wiki &mdash; the governing documentation for every tag (check before mass edits). <a href="https://wiki.openstreetmap.org/">https://wiki.openstreetmap.org/</a></li>
+                <li>[2] taginfo &mdash; real-world tag usage statistics. <a href="https://taginfo.openstreetmap.org/">https://taginfo.openstreetmap.org/</a></li>
+                <li>[3] Overpass Turbo. <a href="https://overpass-turbo.eu/">https://overpass-turbo.eu/</a></li>
+                <li>[4] OSM organized editing &amp; import guidelines &mdash; required reading before anything bulk.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

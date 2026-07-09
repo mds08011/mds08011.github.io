@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flood Elevation &amp; Freeboard Checker</title>
+<meta name="description" content="Offline checker for base flood elevation compliance: line-item elevations against BFE plus required freeboard, AE and AO zone modes, with datum mismatch warnings. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail: #b3261e; --pass: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail: #e46962; --pass: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.92rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input { margin-top: 0; padding: 0.3rem; font-size: 0.95rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items td.pass { color: var(--pass); font-weight: 700; }
+  table.items td.fail { color: var(--fail); font-weight: 700; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Flood Elevation &amp; Freeboard Checker</h1>
+<p class="subtitle">Line-item elevation compliance against the base flood elevation plus required freeboard — finished floors, equipment pads, electrical gear, wet well rims. AE (BFE-based) and AO (depth-based) modes. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits — and the datum trap:</strong> Every elevation in this check must be on the <em>same vertical datum</em>. FIRMs published over the decades mix NGVD29 and NAVD88, which differ by roughly 2–2.5 ft in Southern California — comfortably more than most freeboard requirements, meaning a datum mixup can flip a pass to a fail (or worse, a fail to a paper pass). Check the FIRM panel's datum note against the survey's. The flood zone, BFE, and required freeboard come from the effective FIRM/FIS and the local floodplain ordinance (which often exceeds NFIP minimums); this tool just does the arithmetic.
+</div>
+
+<fieldset>
+  <legend>Flood Basis</legend>
+  <div class="row">
+    <div>
+      <label for="mode">Zone type
+        <select id="mode">
+          <option value="ae" selected>AE / A (numbered) — BFE published</option>
+          <option value="ao">AO — depth-based sheet flow</option>
+        </select>
+      </label>
+    </div>
+    <div id="ae-in">
+      <label for="bfe">Base flood elevation (ft)
+        <input type="number" id="bfe" step="any" placeholder="from the FIRM/FIS">
+      </label>
+    </div>
+    <div id="ao-in" hidden>
+      <label for="aodepth">AO zone depth number (ft)
+        <input type="number" id="aodepth" min="0" step="any" placeholder="e.g. 2">
+      </label>
+      <label for="hag">Highest adjacent grade at the structure (ft)
+        <input type="number" id="hag" step="any">
+      </label>
+    </div>
+    <div>
+      <label for="freeboard">Required freeboard (ft)
+        <input type="number" id="freeboard" min="0" step="any" value="1">
+      </label>
+      <p class="small">NFIP minimum for AO is depth + (locally required freeboard); many California communities require 1–2 ft above BFE. The ordinance governs.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Items to Check</legend>
+  <table class="items">
+    <thead><tr><th>Item</th><th>Proposed elevation (ft)</th><th>Required min</th><th>Margin</th><th>Status</th><th></th></tr></thead>
+    <tbody id="item-body"></tbody>
+  </table>
+  <button type="button" class="add" id="item-add">+ Add item</button>
+  <p class="small">Typical items: finished floor, lowest adjacent grade, electrical service, HVAC/mechanical, generator pad, wet well top, control panel. Utility equipment usually must meet the same elevation as the lowest floor.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Summary</h3>
+  <table>
+    <tr><td>Required minimum elevation</td><td class="val" id="r-req">—</td></tr>
+    <tr><td>Items passing</td><td class="val" id="r-pass">—</td></tr>
+    <tr><td>Lowest margin</td><td class="val" id="r-margin">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The arithmetic (and where each number comes from)</summary>
+  <p>AE/numbered A zones: <code>required = BFE + freeboard</code>. AO zones (shallow sheet flow, no BFE): <code>required = highest adjacent grade + depth number + freeboard</code>. Margin = proposed − required. The arithmetic is trivial by design — the whole game is the inputs: the effective FIRM panel and FIS profile for BFE (interpolate between cross-sections on the profile where the panel shows a range), the community's floodplain ordinance for freeboard, and a surveyed elevation on the right datum for the proposed value.</p>
+</details>
+
+<details>
+  <summary>Zone cheat sheet</summary>
+  <ul>
+    <li><strong>AE / A1–A30:</strong> 1% annual chance with BFE published. The workhorse zone for this check.</li>
+    <li><strong>A (unnumbered):</strong> 1% annual chance, no BFE — the community or a study establishes one; don't guess.</li>
+    <li><strong>AO:</strong> shallow flooding 1–3 ft, published as a depth number instead of an elevation.</li>
+    <li><strong>AH:</strong> shallow ponding with a BFE — treat like AE.</li>
+    <li><strong>VE:</strong> coastal wave action — freeboard measured to the lowest horizontal structural member, plus construction requirements far beyond this tool.</li>
+    <li><strong>X (shaded/unshaded):</strong> outside the 1% floodplain — but critical facilities are often held to the 0.2% (500-yr) event by policy.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Why utility equipment keeps failing this check</summary>
+  <p>Buildings get designed to the flood ordinance; the electrical gear, generators, and control panels get placed by whoever had space on the site plan. NFIP and most ordinances require utilities and service equipment elevated (or dry-floodproofed) to the same standard as the lowest floor — and a lift station whose motor control center goes underwater at the design flood is a lift station that fails exactly when the wet weather flows peak. Elevation certificates (FEMA form) document the as-built answer; this tool is for catching the problem while it's still a markup.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Effective FIRM panel and Flood Insurance Study — BFE/depth, zone, and datum. <span class="small">https://msc.fema.gov/</span></li>
+  <li>44 CFR §60.3 — NFIP floodplain management criteria.</li>
+  <li>The community's floodplain ordinance — governing freeboard and equipment requirements.</li>
+  <li>NGS VDatum / datasheets — NGVD29 ↔ NAVD88 conversion where datums collide. <span class="small">https://vdatum.noaa.gov/</span></li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "freeboard.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function fnum(v) { var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function num(id) { return fnum($(id).value); }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var items = []; // { name, elev }
+
+  $("mode").addEventListener("change", function () {
+    $("ae-in").hidden = this.value !== "ae";
+    $("ao-in").hidden = this.value !== "ao";
+    recalc(false);
+  });
+
+  function requiredMin() {
+    var fb = num("freeboard");
+    if (fb === null || fb < 0) return null;
+    if ($("mode").value === "ae") {
+      var bfe = num("bfe");
+      if (bfe === null) return null;
+      return bfe + fb;
+    }
+    var d = num("aodepth"), hag = num("hag");
+    if (d === null || d < 0 || hag === null) return null;
+    return hag + d + fb;
+  }
+
+  function renderItems(req) {
+    var body = $("item-body");
+    body.innerHTML = "";
+    items.forEach(function (it, idx) {
+      var tr = document.createElement("tr");
+      var margin = (req !== null && it.elev !== null) ? it.elev - req : null;
+      var status = margin === null ? "—" : (margin >= 0 ? "PASS" : "FAIL");
+      tr.innerHTML =
+        "<td><input class='i-name' type='text' maxlength='40' value='" + (it.name || "").replace(/'/g, "&#39;") + "' placeholder='e.g. Finished floor'></td>" +
+        "<td><input class='i-elev' type='number' step='any' value='" + (it.elev !== null && it.elev !== undefined ? it.elev : "") + "'></td>" +
+        "<td class='calc'>" + fmt(req) + "</td>" +
+        "<td class='calc i-margin'>" + (margin !== null ? fmt(margin) : "—") + "</td>" +
+        "<td class='" + (status === "PASS" ? "pass" : status === "FAIL" ? "fail" : "") + " i-status'>" + status + "</td>" +
+        "<td><button type='button' class='i-del' aria-label='Remove'>×</button></td>";
+      tr.querySelector(".i-name").addEventListener("input", function () {
+        items[idx].name = this.value; saveState();
+      });
+      tr.querySelector(".i-elev").addEventListener("input", function () {
+        items[idx].elev = fnum(this.value);
+        updateRow(idx);
+        summarize();
+      });
+      tr.querySelector(".i-del").addEventListener("click", function () {
+        items.splice(idx, 1); recalc(true);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function updateRow(idx) {
+    var req = requiredMin();
+    var row = $("item-body").rows[idx];
+    if (!row) return;
+    var it = items[idx];
+    var margin = (req !== null && it.elev !== null) ? it.elev - req : null;
+    var status = margin === null ? "—" : (margin >= 0 ? "PASS" : "FAIL");
+    row.querySelector(".i-margin").textContent = margin !== null ? fmt(margin) : "—";
+    var st = row.querySelector(".i-status");
+    st.textContent = status;
+    st.className = "i-status " + (status === "PASS" ? "pass" : status === "FAIL" ? "fail" : "");
+  }
+
+  function summarize() {
+    var req = requiredMin();
+    var out = $("results");
+    var withElev = items.filter(function (it) { return it.elev !== null && it.elev !== undefined; });
+    if (req === null || withElev.length === 0) { out.hidden = true; saveState(); return; }
+
+    var passCount = 0, minMargin = Infinity, minName = "";
+    withElev.forEach(function (it) {
+      var m = it.elev - req;
+      if (m >= 0) passCount++;
+      if (m < minMargin) { minMargin = m; minName = it.name || "(unnamed)"; }
+    });
+
+    var basis = $("mode").value === "ae"
+      ? "BFE " + fmt(num("bfe")) + " + " + fmt(num("freeboard")) + " ft freeboard"
+      : "HAG " + fmt(num("hag")) + " + depth " + fmt(num("aodepth")) + " + " + fmt(num("freeboard")) + " ft freeboard";
+    $("r-req").textContent = fmt(req) + " ft (" + basis + ")";
+    $("r-pass").textContent = passCount + " of " + withElev.length;
+    $("r-margin").textContent = fmt(minMargin) + " ft — " + minName;
+
+    var msgs = [];
+    if (passCount < withElev.length) msgs.push("One or more items sit below the required elevation — see the FAIL rows.");
+    if (isFinite(minMargin) && minMargin >= 0 && minMargin < 0.3) {
+      msgs.push("Lowest margin under 0.3 ft — thinner than typical survey and construction tolerance combined. Grade-setting error alone can eat that.");
+    }
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  function recalc(fullRender) {
+    var req = requiredMin();
+    if (fullRender) renderItems(req);
+    else {
+      /* update computed columns in place */
+      for (var i = 0; i < items.length; i++) {
+        var row = $("item-body").rows[i];
+        if (row) row.cells[2].textContent = fmt(req);
+        updateRow(i);
+      }
+    }
+    summarize();
+  }
+
+  $("item-add").addEventListener("click", function () {
+    items.push({ name: "", elev: null });
+    recalc(true);
+  });
+
+  var FIELDS = ["mode","bfe","aodepth","hag","freeboard"];
+  function saveState() {
+    try {
+      var state = { items: items };
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.items)) items = state.items;
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("mode").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", function () { recalc(false); });
+    $(id).addEventListener("change", function () { recalc(false); });
+  });
+
+  loadState();
+  if (items.length === 0) items = [{ name: "Finished floor", elev: null }, { name: "Electrical service", elev: null }];
+  recalc(true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walking a Metes-and-Bounds Traverse, with Closure Diagnostics | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Walking a Metes-and-Bounds Traverse, with Closure Diagnostics</h1>
+                <time datetime="2026-06-23">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A deed describes a parcel as a chain of calls: &ldquo;thence N 45&deg;00'00&quot; E, 100.00 feet, thence S 45&deg;00'00&quot; E&hellip;&rdquo; To know whether it closes &mdash; whether the last call lands back on the point of beginning &mdash; you convert each quadrant bearing to an azimuth, walk the coordinates, and see how far off you end up. It's rote, error-prone, and exactly what you want a page to do while you read calls off a scanned deed.</p>
+
+            <h2>The Approach</h2>
+            <p>A leg table in deed form &mdash; quadrant (NE/SE/SW/NW), degrees/minutes/seconds, distance &mdash; with running coordinates computed per leg so you watch the traverse walk as you type. Each quadrant bearing becomes an azimuth (NE&rarr;&theta;, SE&rarr;180&minus;&theta;, SW&rarr;180+&theta;, NW&rarr;360&minus;&theta;), then <code>&Delta;N = d&middot;cos(az)</code>, <code>&Delta;E = d&middot;sin(az)</code>. Closure error is the straight-line miss from the final point back to start; precision is perimeter &divide; closure as 1:X; area is the shoelace formula on the closed polygon [1].</p>
+
+            <figure>
+                <img src="/path/to/bearing-distance-traverse-screenshot.png" alt="Leg table with quadrant bearings and distances, running coordinates, and closure error with precision ratio" loading="lazy">
+                <figcaption>Figure 1: Calls in deed form on the left, closure error and precision ratio out the bottom.</figcaption>
+            </figure>
+
+            <h3>Closure as a debugging tool</h3>
+            <p>The precision ratio isn't just a quality score &mdash; it's a diagnostic. Modern boundary surveys close 1:10,000 and better; older deeds check out around 1:5,000; and worse than about 1:3,000 almost always means a <em>transcription</em> error rather than sloppy original surveying &mdash; a transposed digit, a dropped leg, or a bearing read from the wrong quadrant. The tool encodes the folklore fix in its warnings: when a description won't close, flip the quadrant on the most suspicious leg first. NE mis-keyed as SE is the single most common deed-entry typo, and it produces a distinctive, large misclosure that the ratio catches immediately.</p>
+
+            <h3>The work-hobby crossover: anchored export</h3>
+            <p>Give it the point of beginning's lat/lon and the planar traverse maps to geographic coordinates via the local ellipsoidal radii &mdash; <code>&Delta;lat = &Delta;N/M(&phi;)</code>, <code>&Delta;lon = &Delta;E/(N(&phi;)&middot;cos&phi;)</code>, GRS80, US survey foot &mdash; and exports GeoJSON or WKT. At parcel scale that's accurate to well under a centimeter, and the polygon drops straight into QGIS, JOSM, or the <a href="/tools/geojson-wkt-converter.html">GeoJSON/WKT inspector</a>. The anchor's own accuracy governs, though: a phone-GPS point of beginning puts the whole parcel within phone-GPS accuracy of reality.</p>
+
+            <details>
+                <summary>How I verified the traverse math</summary>
+                <ul>
+                    <li>A rotated square (N45E / S45E / S45W / N45W, 100 ft each) closes to exactly zero with exactly 10,000 sf.</li>
+                    <li>An axis-aligned rectangle via due bearings closes exactly at 20,000 sf.</li>
+                    <li>A deliberately flipped quadrant produces 141 ft of misclosure at 1:3 precision &mdash; and the warning fires as designed.</li>
+                    <li>The lat/lon export round-trips 1,000 ft north and east to a millionth of a foot.</li>
+                </ul>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The deed or record map (and its basis-of-bearings note) governs [2].</p>
+
+            <p>The tool: <a href="/tools/bearing-distance-traverse.html">Bearing &amp; Distance Traverse Tool</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Ghilani &amp; Wolf, <em>Elementary Surveying</em> &mdash; traverse computation, closure, and precision standards.</li>
+                <li>[2] The deed or record map being walked &mdash; the governing description and its basis of bearings.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

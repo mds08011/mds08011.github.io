@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flood Freeboard Checks and the NGVD29/NAVD88 Datum Trap | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Flood Freeboard Checks and the NGVD29/NAVD88 Datum Trap</h1>
+                <time datetime="2026-07-05">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Flood compliance is subtraction: is the proposed elevation above the base flood elevation plus the required freeboard? A middle-schooler can do the arithmetic. The reason the check goes wrong in practice is never the subtraction &mdash; it's that the two elevations being subtracted are measured from <em>different vertical datums</em>, and the difference between them is bigger than the freeboard you're checking against.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool is a line-item table: finished floor, electrical service, generator pad, wet well rim &mdash; each checked as <code>margin = proposed &minus; (BFE + freeboard)</code> for AE/numbered-A zones, or <code>proposed &minus; (highest adjacent grade + depth number + freeboard)</code> for depth-based AO zones. The arithmetic is trivial by design; the value is in structuring the inputs and carrying the warnings [1][3].</p>
+
+            <h3>The datum trap</h3>
+            <p>Here's the headline. NGVD29 and NAVD88 are two different vertical datums, and in Southern California they differ by roughly <strong>2 to 2.5 feet</strong> &mdash; more than most freeboard requirements. An older FIRM or FIS profile may publish BFE in NGVD29 while your surveyor shot the site in NAVD88 (the modern standard). Mix them and the check flips: a compliant design reads as failing, or worse, a non-compliant one reads as passing. The tool carries a standing datum warning and points at NOAA's VDatum for the conversion, because this single mistake has cost real projects real money [4].</p>
+
+            <figure>
+                <img src="/path/to/flood-freeboard-screenshot.png" alt="Line-item elevation table checking finished floor and equipment against BFE plus freeboard, with a datum warning banner" loading="lazy">
+                <figcaption>Figure 1: Equipment line items checked against BFE + freeboard, with the datum-mismatch warning standing guard over all of it.</figcaption>
+            </figure>
+
+            <p>It also flags margins thinner than 0.3 ft &mdash; below the combined survey-plus-construction tolerance, a &ldquo;passing&rdquo; number that thin isn't really passing.</p>
+
+            <details>
+                <summary>Why utility equipment keeps failing this check</summary>
+                <p>Buildings get designed to the flood ordinance. The electrical gear, generators, and control panels get placed by whoever had room on the site plan &mdash; and NFIP and most ordinances require service equipment elevated or dry-floodproofed to the same standard as the lowest floor. A lift station whose motor control center goes underwater at the design event is a lift station that fails <em>exactly</em> when the wet-weather flows peak and it's needed most. This tool is for catching that while it's still a markup, before the elevation certificate documents it as built [2].</p>
+            </details>
+
+            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The effective FIRM/FIS and the community's floodplain ordinance govern.</p>
+
+            <p>The tool: <a href="/tools/flood-freeboard-checker.html">Flood Elevation &amp; Freeboard Checker</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Effective FIRM panel and Flood Insurance Study &mdash; BFE/depth, zone, and datum. <a href="https://msc.fema.gov/">https://msc.fema.gov/</a></li>
+                <li>[2] 44 CFR &sect;60.3 &mdash; NFIP floodplain management criteria.</li>
+                <li>[3] The community's floodplain ordinance &mdash; governing freeboard and equipment requirements.</li>
+                <li>[4] NGS VDatum &mdash; NGVD29 &harr; NAVD88 conversion where datums collide. <a href="https://vdatum.noaa.gov/">https://vdatum.noaa.gov/</a></li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

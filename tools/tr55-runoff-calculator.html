@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TR-55 Curve Number Runoff Calculator</title>
+<meta name="description" content="Offline calculator for NRCS curve number runoff: composite CN from land use and hydrologic soil group, runoff depth and volume for a 24-hour design storm. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.92rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input, table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.95rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.05rem; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>TR-55 Curve Number Runoff Calculator</h1>
+<p class="subtitle">NRCS runoff equation with a composite curve number built from land use and hydrologic soil group: runoff depth and volume for a 24-hour design storm. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This is the runoff-depth/volume half of TR-55 at average antecedent conditions (ARC II). Peak discharge needs the rest of the method (graphical peak or tabular hydrograph — Tc, rainfall distribution type, pond/swamp factor), or a model. CN values are the standard TR-55 Table 2-2 entries; the local hydrology manual's values and its rules about compositing govern where they differ. Soil groups come from the NRCS Web Soil Survey, not from guessing.
+</div>
+
+<fieldset>
+  <legend>Design Storm</legend>
+  <div class="row">
+    <div>
+      <label for="pstorm">24-hr precipitation P (in)
+        <input type="number" id="pstorm" min="0" step="any" placeholder="from NOAA Atlas 14">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<h2>Composite Curve Number</h2>
+<fieldset>
+  <legend>Sub-Areas</legend>
+  <table class="items">
+    <thead><tr><th>Land use / cover</th><th>HSG</th><th>Area (ac)</th><th>CN</th><th>CN·A</th><th></th></tr></thead>
+    <tbody id="cn-body"></tbody>
+  </table>
+  <button type="button" class="add" id="cn-add">+ Add sub-area</button>
+  <p class="small">Selecting a land use + soil group fills the TR-55 Table 2-2 CN, which stays editable. HSG comes from the Web Soil Survey; use "Custom" for a manual CN.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Total area</td><td class="val" id="r-area">—</td></tr>
+    <tr><td>Composite CN (area-weighted)</td><td class="val" id="r-cn">—</td></tr>
+    <tr><td>Potential retention S = 1000/CN − 10</td><td class="val" id="r-s">—</td></tr>
+    <tr><td>Initial abstraction Ia = 0.2S</td><td class="val" id="r-ia">—</td></tr>
+    <tr><td>Runoff depth Q</td><td class="val" id="r-q">—</td></tr>
+    <tr class="total"><td>Runoff volume</td><td class="val" id="r-vol">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The runoff equation</summary>
+  <p><code>Q = (P − Iₐ)² / (P − Iₐ + S)</code>, with <code>S = 1000/CN − 10</code> and <code>Iₐ = 0.2S</code> (all inches). If P ≤ Iₐ, runoff is zero — the storm never exceeds the initial abstraction. Volume = depth × area (1 inch over 1 acre = 3,630 cf ≈ 27,154 gal; 12 acre-inches = 1 acre-ft).</p>
+</details>
+
+<details>
+  <summary>Compositing caveats (the fine print that changes answers)</summary>
+  <ul>
+    <li><strong>Area-weighting CN is standard but not always right.</strong> TR-55 itself warns that compositing pervious and impervious CNs can misstate runoff when the pervious CN is low or impervious areas are <em>unconnected</em> (drain across lawn before reaching the system) — Figures 2-3/2-4 in TR-55 adjust for that. When precision matters, compute runoff separately per cover and sum the volumes.</li>
+    <li><strong>ARC/AMC:</strong> Table values are average antecedent runoff condition (ARC II). Wet (III) or dry (I) conversions exist but most design criteria just use II — follow the manual.</li>
+    <li><strong>Low CN + small storm:</strong> the method is unreliable when Q computes to a few hundredths of an inch — real-world scatter swamps the estimate.</li>
+  </ul>
+</details>
+
+<details>
+  <summary>Where the inputs come from</summary>
+  <ul>
+    <li><strong>P:</strong> NOAA Atlas 14 Precipitation-Frequency Data Server for the design return period, 24-hr duration.</li>
+    <li><strong>HSG:</strong> NRCS Web Soil Survey — draw the site, read the hydrologic soil group per map unit. Dual classifications (e.g. A/D) use the drained/undrained letter per the drainage condition.</li>
+    <li><strong>CN:</strong> TR-55 Table 2-2 (built into the presets here) or the local manual's table.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>NRCS TR-55 — Urban Hydrology for Small Watersheds (runoff equation, Table 2-2, composite CN guidance). <span class="small">https://www.nrcs.usda.gov/</span></li>
+  <li>NRCS National Engineering Handbook, Part 630 Ch. 9–10 — curve number theory.</li>
+  <li>NOAA Atlas 14 — design precipitation. <span class="small">https://hdsc.nws.noaa.gov/pfds/</span></li>
+  <li>NRCS Web Soil Survey — hydrologic soil groups. <span class="small">https://websoilsurvey.nrcs.usda.gov/</span></li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "tr55.v1";
+
+  /* TR-55 Table 2-2 (ARC II). CN by HSG A/B/C/D. null = user must enter (custom). */
+  var COVERS = [
+    { name: "Impervious (roofs, paving)", cn: [98, 98, 98, 98] },
+    { name: "Gravel roads/surfaces", cn: [76, 85, 89, 91] },
+    { name: "Dirt roads/surfaces", cn: [72, 82, 87, 89] },
+    { name: "Open space — good (grass >75%)", cn: [39, 61, 74, 80] },
+    { name: "Open space — fair (grass 50–75%)", cn: [49, 69, 79, 84] },
+    { name: "Woods — good condition", cn: [30, 55, 70, 77] },
+    { name: "Brush — good condition", cn: [30, 48, 65, 73] },
+    { name: "Commercial (85% imp.)", cn: [89, 92, 94, 95] },
+    { name: "Industrial (72% imp.)", cn: [81, 88, 91, 93] },
+    { name: "Residential 1/4-ac lots (38% imp.)", cn: [61, 75, 83, 87] },
+    { name: "Residential 1/2-ac lots (25% imp.)", cn: [54, 70, 80, 85] },
+    { name: "Residential 1-ac lots (20% imp.)", cn: [51, 68, 79, 84] },
+    { name: "Custom (enter CN)", cn: null }
+  ];
+  var HSG = ["A", "B", "C", "D"];
+
+  function $(id) { return document.getElementById(id); }
+  function fnum(v) { var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var rows = []; // { cover, hsg, area, cn }
+
+  function coverHtml(sel) {
+    return "<select class='c-cover'>" + COVERS.map(function (c, i) {
+      return "<option value='" + i + "'" + (i === sel ? " selected" : "") + ">" + c.name + "</option>";
+    }).join("") + "</select>";
+  }
+  function hsgHtml(sel) {
+    return "<select class='c-hsg'>" + HSG.map(function (h, i) {
+      return "<option value='" + i + "'" + (i === sel ? " selected" : "") + ">" + h + "</option>";
+    }).join("") + "</select>";
+  }
+  function defaultCn(cover, hsg) {
+    var c = COVERS[cover];
+    return c.cn ? c.cn[hsg] : null;
+  }
+
+  function renderRows() {
+    var body = $("cn-body");
+    body.innerHTML = "";
+    rows.forEach(function (r, idx) {
+      var tr = document.createElement("tr");
+      var cna = (r.area > 0 && r.cn !== null) ? r.area * r.cn : null;
+      tr.innerHTML =
+        "<td>" + coverHtml(r.cover) + "</td>" +
+        "<td>" + hsgHtml(r.hsg) + "</td>" +
+        "<td><input class='c-area' type='number' min='0' step='any' value='" + (r.area || "") + "'></td>" +
+        "<td><input class='c-cn' type='number' min='30' max='100' step='any' value='" + (r.cn !== null ? r.cn : "") + "'></td>" +
+        "<td class='calc'>" + fmt(cna, 1) + "</td>" +
+        "<td><button type='button' class='c-del' aria-label='Remove'>×</button></td>";
+      tr.querySelector(".c-cover").addEventListener("change", function () {
+        rows[idx].cover = parseInt(this.value, 10);
+        var d = defaultCn(rows[idx].cover, rows[idx].hsg);
+        if (d !== null) rows[idx].cn = d;
+        renderRows(); recalc();
+      });
+      tr.querySelector(".c-hsg").addEventListener("change", function () {
+        rows[idx].hsg = parseInt(this.value, 10);
+        var d = defaultCn(rows[idx].cover, rows[idx].hsg);
+        if (d !== null) rows[idx].cn = d;
+        renderRows(); recalc();
+      });
+      tr.querySelector(".c-area").addEventListener("input", function () {
+        rows[idx].area = fnum(this.value) || 0; updateCell(idx); recalc();
+      });
+      tr.querySelector(".c-cn").addEventListener("input", function () {
+        rows[idx].cn = fnum(this.value); updateCell(idx); recalc();
+      });
+      tr.querySelector(".c-del").addEventListener("click", function () {
+        rows.splice(idx, 1); renderRows(); recalc();
+      });
+      body.appendChild(tr);
+    });
+  }
+  function updateCell(idx) {
+    var row = $("cn-body").rows[idx];
+    if (!row) return;
+    var r = rows[idx];
+    var cna = (r.area > 0 && r.cn !== null) ? r.area * r.cn : null;
+    row.querySelector(".calc").textContent = fmt(cna, 1);
+  }
+  $("cn-add").addEventListener("click", function () {
+    rows.push({ cover: 3, hsg: 2, area: 0, cn: defaultCn(3, 2) });
+    renderRows(); recalc();
+  });
+
+  function recalc() {
+    var P = fnum($("pstorm").value);
+    var out = $("results");
+    var msgs = [];
+
+    var totA = 0, sumCNA = 0, valid = false;
+    rows.forEach(function (r) {
+      if (r.area > 0 && r.cn !== null && r.cn >= 30 && r.cn <= 100) {
+        totA += r.area;
+        sumCNA += r.area * r.cn;
+        valid = true;
+      }
+    });
+    if (!valid || totA <= 0 || P === null || P <= 0) { out.hidden = true; saveState(); return; }
+
+    var CN = sumCNA / totA;
+    var S = 1000 / CN - 10;
+    var Ia = 0.2 * S;
+    var Q;
+    if (P <= Ia) {
+      Q = 0;
+      msgs.push("P ≤ Iₐ — the storm never exceeds the initial abstraction; computed runoff is zero. Real sites with any connected impervious area still shed some water, which is the compositing caveat in action.");
+    } else {
+      Q = Math.pow(P - Ia, 2) / (P - Ia + S);
+    }
+
+    var volAcIn = Q * totA;               // acre-inches
+    var volAcFt = volAcIn / 12;
+    var volCf = volAcIn * 3630;
+    var volGal = volCf * 7.480519;
+
+    $("r-area").textContent = fmt(totA, 2) + " ac";
+    $("r-cn").textContent = fmt(CN, 1);
+    $("r-s").textContent = fmt(S, 2) + " in";
+    $("r-ia").textContent = fmt(Ia, 2) + " in";
+    $("r-q").textContent = fmt(Q, 2) + " in over the watershed";
+    $("r-vol").textContent = fmt(volAcFt, 2) + " ac-ft  |  " + fmt(volCf, 0) + " cf  |  " + fmt(volGal, 0) + " gal";
+
+    if (Q > 0 && Q < 0.05) msgs.push("Runoff depth under 0.05 in — below the method's reliable range; treat the volume as indicative only.");
+    var hasLowPerv = rows.some(function (r) { return r.area > 0 && r.cn !== null && r.cn < 60; });
+    var hasImperv = rows.some(function (r) { return r.area > 0 && r.cn !== null && r.cn >= 95; });
+    if (hasLowPerv && hasImperv) {
+      msgs.push("Mix of low-CN pervious and impervious areas — area-weighted composite CN can understate runoff here (see TR-55 Figs. 2-3/2-4). Consider computing runoff per cover and summing volumes.");
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  function saveState() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ rows: rows, p: $("pstorm").value }));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.rows)) rows = state.rows;
+      if (state.p !== undefined) $("pstorm").value = state.p;
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  $("pstorm").addEventListener("input", recalc);
+
+  loadState();
+  if (rows.length === 0) rows.push({ cover: 3, hsg: 2, area: 0, cn: defaultCn(3, 2) });
+  renderRows();
+  recalc();
+})();
+</script>
+</body>
+</html>

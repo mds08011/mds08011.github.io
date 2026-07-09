@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Detention Basins Size on a Storm Longer Than Tc | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Why Detention Basins Size on a Storm Longer Than Tc</h1>
+                <time datetime="2026-06-06">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>There's a genuinely counterintuitive result buried in detention design, and it trips up people who are perfectly comfortable with peak-flow hydrology: the storm that fills a detention basin fullest is <em>not</em> the storm that produces the peak flow. Size a basin on the time-of-concentration storm &mdash; the one you'd use for the pipe &mdash; and you'll undersize the basin. This tool exists mostly to make that visible.</p>
+
+            <h2>The Approach</h2>
+            <p>The Modified Rational method sweeps storm duration. For each trial duration D from Tc up to the sweep limit: intensity <code>i = a/(D+b)&#8319;</code>, inflow <code>Q_in = C&middot;i&middot;A</code>, and required storage as inflow volume minus what the outlet releases over the same window:</p>
+            <p><code>V(D) = (Q_in &minus; Q_allow) &middot; D &middot; 60</code> &nbsp;(cubic feet, rectangular inflow approximation)</p>
+            <p>Short storms are intense but brief; long storms are big but weak. In between, <code>V(D)</code> peaks &mdash; that maximum is the <strong>critical duration</strong> and the required storage. The tool sweeps 400 durations, finds the max, and shows a representative table with the critical row bolded. And the critical duration always lands longer than Tc, which is the whole point [1].</p>
+
+            <figure>
+                <img src="/path/to/detention-basin-screenshot.png" alt="Duration sweep table with required storage peaking at a critical duration longer than the time of concentration" loading="lazy">
+                <figcaption>Figure 1: Storage climbing, peaking, and falling across the duration sweep &mdash; the peak sits well past Tc.</figcaption>
+            </figure>
+
+            <p>A second tab does the volume-difference framing &mdash; post minus pre runoff volume for the same storm &mdash; built to take the <a href="/tools/tr55-runoff-calculator.html">TR-55 tool's</a> output directly: run it twice, existing vs. proposed CN, bring the two volumes here. Some criteria want peak-shaving, some want the captured volume, some want the larger of both.</p>
+
+            <details>
+                <summary>Why this is screening, not final design</summary>
+                <ul>
+                    <li>A real outlet doesn't release the allowable rate at every stage &mdash; orifice and weir flow vary with head, so the basin fills faster early than the rectangular approximation assumes.</li>
+                    <li>Stage-storage comes from the actual grading; the last foot of a shallow basin holds far more than the first.</li>
+                    <li>The sweep can't see multi-storm criteria, drawdown-time limits (vector control is serious business in Southern California), freeboard, or spillway sizing. Routing through a real stage-storage-discharge relationship governs the final number.</li>
+                    <li>If the preliminary volume barely fits the footprint, it won't survive routing. Leave margin.</li>
+                </ul>
+            </details>
+
+            <p>The tool's warnings carry the practical wisdom too: a max landing at the end of the sweep range means extend it (the true critical duration is longer still), and a never-exceeds-release result gets a &ldquo;check that Q_allow isn't in GPM&rdquo; nudge. Single file, vanilla JS, <code>localStorage</code> persistence [2][3].</p>
+
+            <p>The tool: <a href="/tools/detention-basin-estimator.html">Detention Basin Storage Estimator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] The local county hydrology/drainage manual &mdash; governing method, storms, release rates, and drawdown requirements.</li>
+                <li>[2] NRCS TR-55 / TR-20 and reservoir routing texts &mdash; hydrograph methods for final design.</li>
+                <li>[3] ASCE MOP 77 / WEF MOP FD-20 &mdash; urban stormwater detention design practice.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

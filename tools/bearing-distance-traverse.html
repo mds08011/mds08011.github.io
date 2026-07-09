@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bearing &amp; Distance Traverse Tool</title>
+<meta name="description" content="Offline metes-and-bounds traverse calculator: quadrant bearings and distances to coordinates, closure error and precision ratio, shoelace area, and GeoJSON/WKT export. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  textarea {
+    width: 100%; padding: 0.45rem; margin-top: 0.2rem; font-size: 0.85rem;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 4px; min-height: 6rem; resize: vertical;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.25rem 0.3rem; text-align: left; font-size: 0.9rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input, table.items select { margin-top: 0; padding: 0.25rem; font-size: 0.9rem; }
+  table.items input.tiny { max-width: 3.6rem; }
+  table.items input.dist { max-width: 6rem; }
+  table.items select.quad { max-width: 4rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 0.85rem; }
+  table.items button {
+    padding: 0.2rem 0.5rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0.75rem; font-size: 1rem; }
+  .results h3:first-child { margin-top: 0; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .results button.copy {
+    padding: 0.15rem 0.5rem; margin-left: 0.4rem; font-size: 0.8rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Bearing &amp; Distance Traverse Tool</h1>
+<p class="subtitle">Walks a metes-and-bounds description leg by leg: quadrant bearings and distances to coordinates, closure error and precision ratio, shoelace area — with optional GeoJSON/WKT export when anchored to a lat/lon. Runs entirely offline; the traverse persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This checks the arithmetic of a description; it is not a survey. Bearings in a deed are relative to that deed's basis of bearings (grid, true, or an assumed line) — walking them here on an assumed north is fine for "does this close and how big is it," not for staking anything. Curved boundaries entered as chord bearing + chord distance close correctly but understate the boundary length and misstate area slightly; deeds with significant curves belong in COGO software. Record boundaries belong to a licensed land surveyor.
+</div>
+
+<fieldset>
+  <legend>Starting Point</legend>
+  <div class="row">
+    <div>
+      <label for="n0">Start Northing (ft)
+        <input type="number" id="n0" step="any" value="5000">
+      </label>
+    </div>
+    <div>
+      <label for="e0">Start Easting (ft)
+        <input type="number" id="e0" step="any" value="5000">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="lat0">Anchor latitude (° — optional, enables GeoJSON/WKT export)
+        <input type="number" id="lat0" step="any" placeholder="e.g. 33.612345">
+      </label>
+    </div>
+    <div>
+      <label for="lon0">Anchor longitude (°)
+        <input type="number" id="lon0" step="any" placeholder="e.g. -117.712345">
+      </label>
+      <p class="small">The point of beginning's real-world position. Planar offsets are mapped to lat/lon on a local tangent plane — sub-centimeter at parcel scale.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Legs (quadrant bearing + distance)</legend>
+  <table class="items">
+    <thead><tr><th>#</th><th>Quad</th><th>°</th><th>′</th><th>″</th><th>Distance (ft)</th><th>End N</th><th>End E</th><th></th></tr></thead>
+    <tbody id="leg-body"></tbody>
+  </table>
+  <button type="button" class="add" id="leg-add">+ Add leg</button>
+  <p class="small">"N 45°30′00″ E, 231.50 ft" → Quad NE, 45 / 30 / 00, 231.50. Due north/east/south/west: 0° or 90° in a matching quadrant (e.g. due East = NE 90°).</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Closure &amp; Area</h3>
+  <table>
+    <tr><td>Perimeter (sum of legs)</td><td class="val" id="r-perim">—</td></tr>
+    <tr><td>Closure error (end point → start point)</td><td class="val" id="r-close">—</td></tr>
+    <tr><td>Precision ratio</td><td class="val" id="r-prec">—</td></tr>
+    <tr><td>Misclosure direction</td><td class="val" id="r-closebrg">—</td></tr>
+    <tr><td>Area (shoelace, as-entered polygon)</td><td class="val" id="r-area">—</td></tr>
+  </table>
+
+  <h3 id="exp-head" hidden>Export (anchored) 
+    <button type="button" class="copy" data-for="out-geojson">copy GeoJSON</button>
+    <button type="button" class="copy" data-for="out-wkt">copy WKT</button>
+  </h3>
+  <div id="exp-block" hidden>
+    <textarea id="out-geojson" readonly spellcheck="false"></textarea>
+    <textarea id="out-wkt" readonly spellcheck="false"></textarea>
+  </div>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear traverse</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Traverse math</summary>
+  <p>Each quadrant bearing converts to an azimuth from north: NE → θ, SE → 180°−θ, SW → 180°+θ, NW → 360°−θ. Each leg advances the coordinates by <code>ΔN = d·cos(az)</code>, <code>ΔE = d·sin(az)</code>. Closure error is the straight-line distance from the final computed point back to the point of beginning; the precision ratio is perimeter ÷ closure, expressed 1:X. Area is the planar shoelace formula on the traverse polygon (closed to the start point), so a misclosure slightly distorts area — another reason to care about the ratio.</p>
+</details>
+
+<details>
+  <summary>What the precision ratio means</summary>
+  <p>1:X says the traverse missed closing by one part in X of its length. Rules of thumb: modern boundary surveys run 1:10,000 and better; older deeds and rural descriptions commonly check out around 1:5,000; worse than about 1:3,000 usually means a transcription error — a transposed digit, a dropped leg, or a bearing read from the wrong quadrant — rather than sloppy original surveying. When a description won't close, try flipping the quadrant on the most suspicious leg first; it's the most common typo.</p>
+</details>
+
+<details>
+  <summary>Anchored export</summary>
+  <p>With an anchor lat/lon at the point of beginning, planar offsets map to geographic coordinates using the local ellipsoidal radii: <code>Δlat = ΔN / M(φ)</code>, <code>Δlon = ΔE / (N(φ)·cos φ)</code>, on GRS80, with feet converted at the US survey foot. At parcel scale (a mile or less) this is accurate to well under a centimeter — the exported polygon drops cleanly into QGIS, JOSM, or the GeoJSON/WKT inspector tool. Remember the anchor's own accuracy governs: a phone-GPS anchor puts the whole parcel within phone-GPS accuracy of reality.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Ghilani &amp; Wolf, <em>Elementary Surveying</em> — traverse computation, closure, and precision standards.</li>
+  <li>The deed or record map being walked — the governing description (and its basis-of-bearings note).</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. The traverse is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "traverse.v1";
+  var D2R = Math.PI / 180, R2D = 180 / Math.PI;
+  var A = 6378137.0, F = 1 / 298.257222101;
+  var E2 = F * (2 - F);
+  var M_PER_USFT = 1200 / 3937;
+
+  var QUADS = ["NE", "SE", "SW", "NW"];
+
+  function $(id) { return document.getElementById(id); }
+  function fnum(v) { var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var legs = []; // { quad, d, m, s, dist }
+
+  function azimuth(leg) {
+    if (leg.d === null || leg.d === undefined) return null;
+    var theta = (leg.d || 0) + (leg.m || 0) / 60 + (leg.s || 0) / 3600;
+    if (theta < 0 || theta > 90) return null;
+    switch (leg.quad) {
+      case "NE": return theta;
+      case "SE": return 180 - theta;
+      case "SW": return 180 + theta;
+      case "NW": return 360 - theta;
+    }
+    return null;
+  }
+
+  function walk() {
+    var n0 = fnum($("n0").value), e0 = fnum($("e0").value);
+    if (n0 === null || e0 === null) return null;
+    var pts = [{ n: n0, e: e0 }];
+    var perim = 0;
+    for (var i = 0; i < legs.length; i++) {
+      var leg = legs[i];
+      var az = azimuth(leg);
+      if (az === null || !(leg.dist > 0)) return null;
+      var last = pts[pts.length - 1];
+      pts.push({
+        n: last.n + leg.dist * Math.cos(az * D2R),
+        e: last.e + leg.dist * Math.sin(az * D2R)
+      });
+      perim += leg.dist;
+    }
+    return { pts: pts, perim: perim };
+  }
+
+  function shoelace(pts) { // closed to start
+    var s = 0;
+    var ring = pts.slice();
+    ring.push(pts[0]);
+    for (var i = 0; i < ring.length - 1; i++) {
+      s += ring[i].e * ring[i + 1].n - ring[i + 1].e * ring[i].n;
+    }
+    return Math.abs(s / 2);
+  }
+
+  function quadHtml(sel) {
+    return "<select class='l-quad quad'>" + QUADS.map(function (q) {
+      return "<option value='" + q + "'" + (q === sel ? " selected" : "") + ">" + q + "</option>";
+    }).join("") + "</select>";
+  }
+
+  function renderLegs(walked) {
+    var body = $("leg-body");
+    body.innerHTML = "";
+    legs.forEach(function (leg, idx) {
+      var tr = document.createElement("tr");
+      var end = walked && walked.pts[idx + 1];
+      tr.innerHTML =
+        "<td>" + (idx + 1) + "</td>" +
+        "<td>" + quadHtml(leg.quad) + "</td>" +
+        "<td><input class='l-d tiny' type='number' min='0' max='90' step='1' value='" + (leg.d !== null && leg.d !== undefined ? leg.d : "") + "'></td>" +
+        "<td><input class='l-m tiny' type='number' min='0' max='59' step='1' value='" + (leg.m || 0) + "'></td>" +
+        "<td><input class='l-s tiny' type='number' min='0' step='any' value='" + (leg.s || 0) + "'></td>" +
+        "<td><input class='l-dist dist' type='number' min='0' step='any' value='" + (leg.dist || "") + "'></td>" +
+        "<td class='calc l-en'>" + (end ? fmt(end.n, 2) : "—") + "</td>" +
+        "<td class='calc l-ee'>" + (end ? fmt(end.e, 2) : "—") + "</td>" +
+        "<td><button type='button' class='l-del' aria-label='Remove'>×</button></td>";
+      function bind(cls, key, parse) {
+        tr.querySelector(cls).addEventListener("input", function () {
+          legs[idx][key] = parse(this.value);
+          recalc(false);
+        });
+      }
+      tr.querySelector(".l-quad").addEventListener("change", function () {
+        legs[idx].quad = this.value; recalc(false);
+      });
+      bind(".l-d", "d", function (v) { return fnum(v); });
+      bind(".l-m", "m", function (v) { return fnum(v) || 0; });
+      bind(".l-s", "s", function (v) { return fnum(v) || 0; });
+      bind(".l-dist", "dist", function (v) { return fnum(v) || 0; });
+      tr.querySelector(".l-del").addEventListener("click", function () {
+        legs.splice(idx, 1); recalc(true);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function updateEndCells(walked) {
+    var rows = $("leg-body").rows;
+    for (var i = 0; i < legs.length; i++) {
+      var row = rows[i];
+      if (!row) continue;
+      var end = walked && walked.pts[i + 1];
+      row.querySelector(".l-en").textContent = end ? fmt(end.n, 2) : "—";
+      row.querySelector(".l-ee").textContent = end ? fmt(end.e, 2) : "—";
+    }
+  }
+
+  /* local tangent-plane mapping for export */
+  function toLatLon(pts, lat0, lon0, n0, e0) {
+    var phi = lat0 * D2R;
+    var sin2 = Math.sin(phi) * Math.sin(phi);
+    var Mrad = A * (1 - E2) / Math.pow(1 - E2 * sin2, 1.5);
+    var Nrad = A / Math.sqrt(1 - E2 * sin2);
+    return pts.map(function (p) {
+      var dNm = (p.n - n0) * M_PER_USFT;
+      var dEm = (p.e - e0) * M_PER_USFT;
+      return [
+        lon0 + dEm / (Nrad * Math.cos(phi)) * R2D,
+        lat0 + dNm / Mrad * R2D
+      ];
+    });
+  }
+
+  function recalc(fullRender) {
+    var walked = walk();
+    if (fullRender) renderLegs(walked); else updateEndCells(walked);
+
+    var out = $("results");
+    if (!walked || legs.length < 2) {
+      out.hidden = true;
+      saveState();
+      return;
+    }
+
+    var pts = walked.pts;
+    var start = pts[0], last = pts[pts.length - 1];
+    var dn = start.n - last.n, de = start.e - last.e;
+    var closure = Math.hypot(dn, de);
+    var prec = closure > 1e-9 ? walked.perim / closure : Infinity;
+    var areaSf = shoelace(pts);
+    var msgs = [];
+
+    $("r-perim").textContent = fmt(walked.perim, 2) + " ft";
+    $("r-close").textContent = fmt(closure, 3) + " ft (ΔN " + fmt(dn, 3) + ", ΔE " + fmt(de, 3) + ")";
+    $("r-prec").textContent = isFinite(prec) ? "1 : " + fmt(prec, 0) : "exact closure";
+    if (closure > 1e-9) {
+      var az = Math.atan2(de, dn) * R2D;
+      if (az < 0) az += 360;
+      $("r-closebrg").textContent = fmt(az, 1) + "° azimuth from last point back to POB";
+    } else {
+      $("r-closebrg").textContent = "—";
+    }
+    $("r-area").textContent = fmt(areaSf, 0) + " sf (" + fmt(areaSf / 43560, 4) + " ac)";
+
+    if (isFinite(prec) && prec < 3000) {
+      msgs.push("Precision worse than 1:3,000 — almost certainly a transcription error (transposed digits, dropped leg, or wrong quadrant), not a bad survey. Check the legs against the deed.");
+    } else if (isFinite(prec) && prec < 5000) {
+      msgs.push("Precision between 1:3,000 and 1:5,000 — plausible for an old description, worth a second read of the deed.");
+    }
+
+    /* export */
+    var lat0 = fnum($("lat0").value), lon0 = fnum($("lon0").value);
+    var hasAnchor = lat0 !== null && lon0 !== null && Math.abs(lat0) <= 90 && Math.abs(lon0) <= 180;
+    $("exp-head").hidden = !hasAnchor;
+    $("exp-block").hidden = !hasAnchor;
+    if (hasAnchor) {
+      var n0v = fnum($("n0").value), e0v = fnum($("e0").value);
+      var ll = toLatLon(pts, lat0, lon0, n0v, e0v);
+      var ring = ll.slice();
+      ring.push([ll[0][0], ll[0][1]]);
+      var rounded = ring.map(function (c) {
+        return [Math.round(c[0] * 1e8) / 1e8, Math.round(c[1] * 1e8) / 1e8];
+      });
+      var gj = {
+        type: "Feature",
+        properties: {
+          closure_ft: Math.round(closure * 1000) / 1000,
+          area_ac: Math.round(areaSf / 43560 * 10000) / 10000
+        },
+        geometry: { type: "Polygon", coordinates: [rounded] }
+      };
+      $("out-geojson").value = JSON.stringify(gj, null, 2);
+      $("out-wkt").value = "POLYGON ((" + rounded.map(function (c) {
+        return c[0] + " " + c[1];
+      }).join(", ") + "))";
+    }
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  $("leg-add").addEventListener("click", function () {
+    legs.push({ quad: "NE", d: null, m: 0, s: 0, dist: 0 });
+    recalc(true);
+  });
+
+  /* copy buttons */
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = $(btn.dataset.for);
+      try {
+        navigator.clipboard.writeText(el.value).then(function () {
+          var orig = btn.textContent;
+          btn.textContent = "copied";
+          setTimeout(function () { btn.textContent = orig; }, 1200);
+        }, function () {});
+      } catch (e) {}
+    });
+  });
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["n0","e0","lat0","lon0"];
+  function saveState() {
+    try {
+      var state = { legs: legs };
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.legs)) legs = state.legs;
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    if (legs.length > 1 && !window.confirm("This clears the whole traverse. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", function () { recalc(false); });
+  });
+
+  loadState();
+  if (legs.length === 0) legs.push({ quad: "NE", d: null, m: 0, s: 0, dist: 0 });
+  recalc(true);
+})();
+</script>
+</body>
+</html>

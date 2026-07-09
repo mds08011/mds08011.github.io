@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rational Method Peak Flow Calculator</title>
+<meta name="description" content="Offline calculator for small-watershed peak flow: Q = CiA with a composite runoff coefficient builder and TR-55 time of concentration (sheet, shallow concentrated, and channel segments). Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.92rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input, table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.95rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.1rem; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Rational Method Peak Flow Calculator</h1>
+<p class="subtitle">Small-watershed peak flow, Q = CiA, with a composite runoff coefficient built from sub-areas and time of concentration built from TR-55 flow segments. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The Rational Method is for small, simple watersheds — most local criteria cap it around 100–200 acres and require the jurisdiction's own C values, Tc method, and IDF data. This tool implements the textbook/TR-55 forms; where the county hydrology manual differs (and in Southern California it usually does — several counties use their own Modified Rational procedures), the manual governs. Design storm intensity comes from your jurisdiction's IDF curves or NOAA Atlas 14, not from this tool.
+</div>
+
+<h2>Composite Runoff Coefficient</h2>
+<fieldset>
+  <legend>Sub-Areas</legend>
+  <table class="items">
+    <thead><tr><th>Surface</th><th>Area (ac)</th><th>C</th><th>C·A</th><th></th></tr></thead>
+    <tbody id="area-body"></tbody>
+  </table>
+  <button type="button" class="add" id="area-add">+ Add sub-area</button>
+  <p class="small">Preset C values are typical textbook ranges — the jurisdiction's table governs. Selecting a surface fills a default C you can edit.</p>
+</fieldset>
+
+<h2>Time of Concentration (TR-55 segments)</h2>
+<fieldset>
+  <legend>Flow Path Segments</legend>
+  <table class="items">
+    <thead><tr><th>Type</th><th>Length (ft)</th><th>Slope (ft/ft)</th><th>Surface / n / V</th><th>Tt (min)</th><th></th></tr></thead>
+    <tbody id="tc-body"></tbody>
+  </table>
+  <button type="button" class="add" id="tc-add">+ Add segment</button>
+  <div class="row">
+    <div>
+      <label for="p2">2-yr 24-hr rainfall P₂ (in) — needed for sheet flow segments
+        <input type="number" id="p2" min="0" step="any" placeholder="from NOAA Atlas 14">
+      </label>
+    </div>
+    <div>
+      <label for="tcmin">Minimum Tc floor (min)
+        <input type="number" id="tcmin" min="0" step="any" value="5">
+      </label>
+      <p class="small">Most criteria floor Tc at 5–10 minutes so intensity doesn't blow up.</p>
+    </div>
+  </div>
+</fieldset>
+
+<h2>Intensity</h2>
+<fieldset>
+  <legend>Design Storm Intensity at Tc</legend>
+  <div class="row">
+    <div>
+      <label for="i-mode">Source
+        <select id="i-mode">
+          <option value="direct">Enter intensity directly (from IDF curve at Tc)</option>
+          <option value="eq">IDF equation: i = a / (Tc + b)^n</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="i-direct">
+    <div>
+      <label for="intensity">Intensity i (in/hr)
+        <input type="number" id="intensity" min="0" step="any" placeholder="e.g. 2.1">
+      </label>
+      <p class="small">Read from the jurisdiction's IDF curve (or NOAA Atlas 14 intensity table) at the computed Tc and the required return period.</p>
+    </div>
+  </div>
+  <div class="row" id="i-eq" hidden>
+    <div>
+      <label for="ia">a
+        <input type="number" id="ia" step="any" placeholder="e.g. 45.0">
+      </label>
+    </div>
+    <div>
+      <label for="ib">b
+        <input type="number" id="ib" step="any" placeholder="e.g. 12.0">
+      </label>
+    </div>
+    <div>
+      <label for="in">n
+        <input type="number" id="in" step="any" placeholder="e.g. 0.85">
+      </label>
+      <p class="small">Coefficients from the local hydrology manual for the required return period. Tc in minutes.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Total area</td><td class="val" id="r-area">—</td></tr>
+    <tr><td>Composite C (area-weighted)</td><td class="val" id="r-c">—</td></tr>
+    <tr><td>Time of concentration</td><td class="val" id="r-tc">—</td></tr>
+    <tr><td>Intensity used</td><td class="val" id="r-i">—</td></tr>
+    <tr class="total"><td>Peak flow Q = CiA</td><td class="val" id="r-q">—</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The Rational Method</summary>
+  <p><code>Q = C · i · A</code> — Q in cfs, i in in/hr, A in acres. (The unit conversion factor is 1.008, universally taken as 1.0.) Composite C is the area-weighted average: <code>ΣC·A / ΣA</code>. The core assumption: peak flow occurs when the entire watershed contributes, i.e. when storm duration equals Tc — which is why intensity is read at Tc.</p>
+</details>
+
+<details>
+  <summary>TR-55 travel time segments</summary>
+  <p><strong>Sheet flow</strong> (first ≤100 ft of the path): <code>Tt = 0.007·(nL)^0.8 / (P₂^0.5 · s^0.4)</code> hours — n is the sheet-flow roughness (smooth surfaces 0.011, short grass 0.15, dense grass 0.24, light woods 0.40), L in ft, s in ft/ft, P₂ the 2-yr 24-hr rainfall in inches. Current NRCS guidance limits sheet flow length to 100 ft; the tool warns beyond that.</p>
+  <p><strong>Shallow concentrated flow:</strong> <code>V = 20.328·√s</code> (paved) or <code>16.135·√s</code> (unpaved) ft/s, then <code>Tt = L / (3600·V)</code>.</p>
+  <p><strong>Channel flow:</strong> <code>Tt = L / (3600·V)</code> with V entered directly — compute it with the Manning's tool for the actual channel or pipe section.</p>
+  <p>Tc is the sum of segment travel times along the hydraulically longest path, floored at the entered minimum.</p>
+</details>
+
+<details>
+  <summary>Typical C values (verify against the local table)</summary>
+  <p>Roofs and pavement 0.85–0.95 · gravel 0.35–0.70 · lawns, flat sandy 0.05–0.10 · lawns, steep clayey 0.25–0.35 · undeveloped brush 0.20–0.40. Many manuals adjust C upward for rarer storms (e.g. ×1.1–1.25 for 25–100 yr) — apply that per the manual if required, it is not automatic here.</p>
+</details>
+
+<details>
+  <summary>Field/reviewer notes</summary>
+  <ul>
+    <li>The single most common error in Rational Method submittals is a Tc path that isn't actually the hydraulically longest one — walking the site beats tracing the obvious swale on the plan.</li>
+    <li>An absurdly short Tc (all pipe, steep site) drives intensity — and Q — way up. That's the model working correctly; it's also why criteria floor Tc.</li>
+    <li>For pre- vs. post-development comparisons, keep the same method, storm, and IDF source on both sides or the comparison is meaningless.</li>
+    <li>Above the method's area limit, or with significant storage/attenuation in the watershed, switch to a hydrograph method (TR-55/TR-20, or the county's unit hydrograph).</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>NRCS TR-55 — Urban Hydrology for Small Watersheds (travel time methods). <span class="small">https://www.nrcs.usda.gov/</span></li>
+  <li>NOAA Atlas 14 — Precipitation-Frequency Data Server. <span class="small">https://hdsc.nws.noaa.gov/pfds/</span></li>
+  <li>The local county hydrology manual — governing C values, Tc method, IDF data, and method applicability limits.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "rational.v1";
+
+  var SURFACES = [
+    { name: "Roof", c: 0.90 },
+    { name: "Pavement (asphalt/concrete)", c: 0.90 },
+    { name: "Gravel", c: 0.50 },
+    { name: "Lawn, flat", c: 0.15 },
+    { name: "Lawn, steep", c: 0.30 },
+    { name: "Undeveloped/brush", c: 0.30 },
+    { name: "Custom", c: 0.50 }
+  ];
+
+  var SHEET_N = [
+    { name: "Smooth (concrete/asphalt/bare soil)", n: 0.011 },
+    { name: "Short grass", n: 0.15 },
+    { name: "Dense grass", n: 0.24 },
+    { name: "Light woods/underbrush", n: 0.40 }
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function fnum(v) {
+    var x = parseFloat(v);
+    return isFinite(x) ? x : null;
+  }
+  function num(id) {
+    return fnum($(id).value);
+  }
+  function fmt(x, digits) {
+    if (x === null || !isFinite(x)) return "—";
+    if (digits === undefined) digits = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+
+  var areas = []; // { surf, area, c }
+  var tcs = [];   // { type, len, slope, n, v }  type: sheet|shallow-paved|shallow-unpaved|channel
+
+  /* ---------- composite C table ---------- */
+  function surfSelectHtml(sel) {
+    return "<select class='a-surf'>" + SURFACES.map(function (s, i) {
+      return "<option value='" + i + "'" + (i === sel ? " selected" : "") + ">" + s.name + "</option>";
+    }).join("") + "</select>";
+  }
+
+  function renderAreas() {
+    var body = $("area-body");
+    body.innerHTML = "";
+    areas.forEach(function (a, idx) {
+      var tr = document.createElement("tr");
+      var ca = (a.area > 0 && a.c !== null) ? a.area * a.c : null;
+      tr.innerHTML =
+        "<td>" + surfSelectHtml(a.surf) + "</td>" +
+        "<td><input class='a-area' type='number' min='0' step='any' value='" + (a.area || "") + "'></td>" +
+        "<td><input class='a-c' type='number' min='0' max='1' step='any' value='" + (a.c !== null ? a.c : "") + "'></td>" +
+        "<td class='calc'>" + fmt(ca, 3) + "</td>" +
+        "<td><button type='button' class='a-del' aria-label='Remove'>×</button></td>";
+      tr.querySelector(".a-surf").addEventListener("change", function () {
+        areas[idx].surf = parseInt(this.value, 10);
+        areas[idx].c = SURFACES[areas[idx].surf].c;
+        renderAreas(); recalc();
+      });
+      tr.querySelector(".a-area").addEventListener("input", function () {
+        areas[idx].area = fnum(this.value) || 0; updateAreaRow(idx); recalc();
+      });
+      tr.querySelector(".a-c").addEventListener("input", function () {
+        areas[idx].c = fnum(this.value); updateAreaRow(idx); recalc();
+      });
+      tr.querySelector(".a-del").addEventListener("click", function () {
+        areas.splice(idx, 1); renderAreas(); recalc();
+      });
+      body.appendChild(tr);
+    });
+  }
+  function updateAreaRow(idx) {
+    var a = areas[idx];
+    var cell = $("area-body").rows[idx].querySelector(".calc");
+    var ca = (a.area > 0 && a.c !== null) ? a.area * a.c : null;
+    cell.textContent = fmt(ca, 3);
+  }
+  $("area-add").addEventListener("click", function () {
+    areas.push({ surf: 1, area: 0, c: SURFACES[1].c });
+    renderAreas(); recalc();
+  });
+
+  /* ---------- Tc segments ---------- */
+  var TC_TYPES = [
+    { key: "sheet", label: "Sheet flow" },
+    { key: "shallow-paved", label: "Shallow conc. — paved" },
+    { key: "shallow-unpaved", label: "Shallow conc. — unpaved" },
+    { key: "channel", label: "Channel / pipe (enter V)" }
+  ];
+  function tcTypeHtml(sel) {
+    return "<select class='t-type'>" + TC_TYPES.map(function (t) {
+      return "<option value='" + t.key + "'" + (t.key === sel ? " selected" : "") + ">" + t.label + "</option>";
+    }).join("") + "</select>";
+  }
+  function tcExtraHtml(seg) {
+    if (seg.type === "sheet") {
+      return "<select class='t-n'>" + SHEET_N.map(function (s) {
+        return "<option value='" + s.n + "'" + (Math.abs(s.n - seg.n) < 1e-9 ? " selected" : "") + ">" + s.name + " (n=" + s.n + ")</option>";
+      }).join("") + "</select>";
+    }
+    if (seg.type === "channel") {
+      return "<input class='t-v' type='number' min='0' step='any' placeholder='V (ft/s)' value='" + (seg.v || "") + "'>";
+    }
+    return "<span class='small'>—</span>";
+  }
+
+  function segTt(seg, p2) {
+    if (!seg.len || seg.len <= 0) return null;
+    if (seg.type === "sheet") {
+      if (!seg.slope || seg.slope <= 0 || !p2 || p2 <= 0 || !seg.n) return null;
+      var hrs = 0.007 * Math.pow(seg.n * seg.len, 0.8) / (Math.pow(p2, 0.5) * Math.pow(seg.slope, 0.4));
+      return hrs * 60;
+    }
+    if (seg.type === "channel") {
+      if (!seg.v || seg.v <= 0) return null;
+      return seg.len / (3600 * seg.v) * 60;
+    }
+    if (!seg.slope || seg.slope <= 0) return null;
+    var k = seg.type === "shallow-paved" ? 20.328 : 16.135;
+    var V = k * Math.sqrt(seg.slope);
+    return seg.len / (3600 * V) * 60;
+  }
+
+  function renderTc() {
+    var body = $("tc-body");
+    body.innerHTML = "";
+    var p2 = num("p2");
+    tcs.forEach(function (seg, idx) {
+      var tr = document.createElement("tr");
+      var needsSlope = seg.type !== "channel";
+      var tt = segTt(seg, p2);
+      tr.innerHTML =
+        "<td>" + tcTypeHtml(seg.type) + "</td>" +
+        "<td><input class='t-len' type='number' min='0' step='any' value='" + (seg.len || "") + "'></td>" +
+        "<td>" + (needsSlope
+          ? "<input class='t-slope' type='number' min='0' step='any' value='" + (seg.slope || "") + "'>"
+          : "<span class='small'>—</span>") + "</td>" +
+        "<td>" + tcExtraHtml(seg) + "</td>" +
+        "<td class='calc'>" + fmt(tt, 1) + "</td>" +
+        "<td><button type='button' class='t-del' aria-label='Remove'>×</button></td>";
+      tr.querySelector(".t-type").addEventListener("change", function () {
+        tcs[idx].type = this.value;
+        if (this.value === "sheet" && !tcs[idx].n) tcs[idx].n = 0.15;
+        renderTc(); recalc();
+      });
+      tr.querySelector(".t-len").addEventListener("input", function () {
+        tcs[idx].len = fnum(this.value) || 0; updateTcCell(idx); recalc();
+      });
+      var sl = tr.querySelector(".t-slope");
+      if (sl) sl.addEventListener("input", function () {
+        tcs[idx].slope = fnum(this.value) || 0; updateTcCell(idx); recalc();
+      });
+      var nn = tr.querySelector(".t-n");
+      if (nn) nn.addEventListener("change", function () {
+        tcs[idx].n = parseFloat(this.value); updateTcCell(idx); recalc();
+      });
+      var vv = tr.querySelector(".t-v");
+      if (vv) vv.addEventListener("input", function () {
+        tcs[idx].v = fnum(this.value) || 0; updateTcCell(idx); recalc();
+      });
+      tr.querySelector(".t-del").addEventListener("click", function () {
+        tcs.splice(idx, 1); renderTc(); recalc();
+      });
+      body.appendChild(tr);
+    });
+  }
+  $("tc-add").addEventListener("click", function () {
+    tcs.push({ type: "sheet", len: 0, slope: 0, n: 0.15, v: 0 });
+    renderTc(); recalc();
+  });
+
+  /* update only the computed Tt cell so typing doesn't lose focus to a re-render */
+  function updateTcCell(idx) {
+    var row = $("tc-body").rows[idx];
+    if (!row) return;
+    var cell = row.querySelector(".calc");
+    if (cell) cell.textContent = fmt(segTt(tcs[idx], num("p2")), 1);
+  }
+
+  /* ---------- intensity mode ---------- */
+  $("i-mode").addEventListener("change", function () {
+    $("i-direct").hidden = this.value !== "direct";
+    $("i-eq").hidden = this.value !== "eq";
+    recalc();
+  });
+
+  /* ---------- main calc ---------- */
+  function recalc() {
+    var out = $("results");
+    var msgs = [];
+
+    /* composite C */
+    var totA = 0, sumCA = 0, valid = false;
+    areas.forEach(function (a) {
+      if (a.area > 0 && a.c !== null && a.c >= 0) {
+        totA += a.area;
+        sumCA += a.area * a.c;
+        valid = true;
+      }
+    });
+    if (!valid || totA <= 0) { out.hidden = true; saveState(); return; }
+    var C = sumCA / totA;
+
+    /* Tc */
+    var p2 = num("p2");
+    var tcFloor = num("tcmin");
+    if (tcFloor === null || tcFloor < 0) tcFloor = 0;
+    var tcSum = 0, tcOk = tcs.length > 0;
+    var sheetTotal = 0;
+    tcs.forEach(function (seg) {
+      var tt = segTt(seg, p2);
+      if (tt === null) { tcOk = false; return; }
+      tcSum += tt;
+      if (seg.type === "sheet") sheetTotal += seg.len;
+    });
+    if (!tcOk) { out.hidden = true; saveState(); return; }
+    var tcRaw = tcSum;
+    var tc = Math.max(tcSum, tcFloor);
+    if (sheetTotal > 100) msgs.push("Sheet flow totals " + fmt(sheetTotal, 0) + " ft — current NRCS guidance limits sheet flow to 100 ft before it becomes shallow concentrated flow.");
+    if (tcRaw < tcFloor) msgs.push("Computed Tc (" + fmt(tcRaw, 1) + " min) is below the floor — using " + fmt(tcFloor, 0) + " min.");
+
+    /* intensity */
+    var i;
+    if ($("i-mode").value === "direct") {
+      i = num("intensity");
+      if (!i || i <= 0) { out.hidden = true; saveState(); return; }
+    } else {
+      var a = num("ia"), b = num("ib"), n = num("in");
+      if (a === null || b === null || n === null) { out.hidden = true; saveState(); return; }
+      i = a / Math.pow(tc + b, n);
+      if (!isFinite(i) || i <= 0) { out.hidden = true; saveState(); return; }
+    }
+
+    var Q = C * i * totA;
+
+    $("r-area").textContent = fmt(totA, 2) + " ac";
+    $("r-c").textContent = fmt(C, 3);
+    $("r-tc").textContent = fmt(tc, 1) + " min" + (tcRaw !== tc ? " (computed " + fmt(tcRaw, 1) + ")" : "");
+    $("r-i").textContent = fmt(i, 2) + " in/hr";
+    $("r-q").textContent = fmt(Q, 1) + " cfs (" + fmt(Q * 448.831, 0) + " GPM)";
+
+    if (totA > 200) msgs.push("Watershed exceeds 200 acres — beyond typical Rational Method applicability; use a hydrograph method.");
+    else if (totA > 100) msgs.push("Watershed over 100 acres — check the local criteria's area limit for the Rational Method.");
+    if (C > 0.95) msgs.push("Composite C over 0.95 — check the sub-area C values.");
+
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["p2","tcmin","i-mode","intensity","ia","ib","in"];
+  function saveState() {
+    try {
+      var state = { areas: areas, tcs: tcs };
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      if (Array.isArray(state.areas)) areas = state.areas;
+      if (Array.isArray(state.tcs)) tcs = state.tcs;
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("i-mode").dispatchEvent(new Event("change"));
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", function () { renderTc(); recalc(); });
+    $(id).addEventListener("change", function () { renderTc(); recalc(); });
+  });
+
+  loadState();
+  if (areas.length === 0) areas.push({ surf: 1, area: 0, c: SURFACES[1].c });
+  if (tcs.length === 0) tcs.push({ type: "sheet", len: 0, slope: 0, n: 0.15, v: 0 });
+  renderAreas();
+  renderTc();
+  recalc();
+})();
+</script>
+</body>
+</html>

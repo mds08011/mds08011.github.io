@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSM Water Infrastructure Tag Reference &amp; Overpass Query Builder</title>
+<meta name="description" content="Offline OpenStreetMap tagging reference focused on water and wastewater infrastructure, plus an Overpass QL query builder with bbox. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="text"], input[type="number"], select {
+    width: 100%; max-width: 22rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  textarea {
+    width: 100%; padding: 0.45rem; margin-top: 0.2rem; font-size: 0.85rem;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 4px; min-height: 7rem; resize: vertical;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  table.tags { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.tags th, table.tags td {
+    border: 1px solid var(--border); padding: 0.35rem 0.5rem; text-align: left; font-size: 0.9rem;
+    vertical-align: top;
+  }
+  table.tags th { background: var(--panel); }
+  table.tags code { white-space: nowrap; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results button.copy {
+    padding: 0.15rem 0.5rem; margin-left: 0.4rem; font-size: 0.8rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>OSM Water Infrastructure Tag Reference &amp; Overpass Query Builder</h1>
+<p class="subtitle">A tagging cheat sheet for the infrastructure a water/wastewater engineer actually notices on the street, plus a small Overpass QL builder for querying what's already mapped. Runs entirely offline; the query builder persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>The wiki governs:</strong> OSM tagging is a living convention — tags gain and lose favor, and regional practice varies. This page is a starting point for the common, stable cases; before any mass edit, import, or unfamiliar tag, check the current wiki page (and taginfo for real-world usage counts). When in doubt, tag conservatively, add a <code>note=*</code>, and let the local community weigh in. Also: <strong>never copy from Google Maps, county GIS with restrictive licensing, or as-builts you don't have the right to publish</strong> — OSM requires compatible sources (your own survey, Bing/Esri imagery where permitted, open-licensed data).</p>
+</div>
+
+<h2>Tag Cheat Sheet</h2>
+
+<details open>
+  <summary>Water &amp; wastewater infrastructure</summary>
+  <table class="tags">
+    <thead><tr><th>Feature</th><th>Core tags</th><th>Useful extras</th></tr></thead>
+    <tbody>
+      <tr><td>Fire hydrant</td><td><code>emergency=fire_hydrant</code></td><td><code>fire_hydrant:type=pillar/underground/wall</code>, <code>colour=*</code>, <code>ref=*</code></td></tr>
+      <tr><td>Manhole (sewer)</td><td><code>man_made=manhole</code> + <code>manhole=sewer</code></td><td><code>ref=*</code>, <code>operator=*</code></td></tr>
+      <tr><td>Manhole (storm)</td><td><code>man_made=manhole</code> + <code>manhole=drain</code></td><td><code>ref=*</code></td></tr>
+      <tr><td>Water valve (surface-visible)</td><td><code>man_made=valve</code></td><td><code>substance=water</code>, <code>location=underground</code>, <code>valve=gate/butterfly</code></td></tr>
+      <tr><td>Water tower / tank</td><td><code>man_made=water_tower</code> / <code>man_made=storage_tank</code> + <code>content=water</code></td><td><code>height=*</code>, <code>operator=*</code></td></tr>
+      <tr><td>Covered reservoir</td><td><code>man_made=reservoir_covered</code></td><td><code>operator=*</code></td></tr>
+      <tr><td>Well</td><td><code>man_made=water_well</code></td><td><code>pump=yes/no</code></td></tr>
+      <tr><td>Pump / lift station</td><td><code>man_made=pumping_station</code> + <code>substance=water</code> or <code>sewage</code></td><td><code>building=*</code> on the structure, <code>operator=*</code>, <code>name=*</code></td></tr>
+      <tr><td>Treatment plant (wastewater)</td><td><code>man_made=wastewater_plant</code> (area)</td><td><code>operator=*</code>, <code>name=*</code></td></tr>
+      <tr><td>Treatment plant (drinking water)</td><td><code>man_made=water_works</code> (area)</td><td><code>operator=*</code>, <code>name=*</code></td></tr>
+      <tr><td>Pipeline (where mappable)</td><td><code>man_made=pipeline</code> + <code>substance=water/sewage</code></td><td><code>location=underground</code>, <code>diameter=*</code> (mm)</td></tr>
+      <tr><td>Open channel / ditch</td><td><code>waterway=ditch</code> or <code>waterway=drain</code> (lined/urban)</td><td><code>tunnel=culvert</code> + <code>layer=-1</code> where it crosses under</td></tr>
+      <tr><td>Culvert crossing</td><td>the waterway way gets <code>tunnel=culvert</code>, <code>layer=-1</code></td><td>never break the waterway — it flows through</td></tr>
+      <tr><td>Retention/detention basin</td><td><code>landuse=basin</code> + <code>basin=retention/detention/infiltration</code></td><td><code>intermittent=yes</code> as applicable</td></tr>
+    </tbody>
+  </table>
+  <p class="small">The valve row above shows the honest state of things: some utility features have settled tags, others are still contested — which is exactly why the wiki check matters. Anything not surface-visible and not open-licensed generally shouldn't be mapped at all.</p>
+</details>
+
+<details>
+  <summary>Syntax &amp; lifecycle patterns worth knowing</summary>
+  <ul>
+    <li>Tags are <code>key=value</code>; multiple values use semicolons (<code>ref=A;B</code>) but sparingly — separate features usually beat semicolon lists.</li>
+    <li>Lifecycle prefixes: <code>construction:man_made=pumping_station</code> (being built), <code>disused:*</code> (intact but unused), <code>abandoned:*</code>, <code>demolished:*</code>. A facility under construction should never carry the live tag — routers and data consumers believe you.</li>
+    <li><code>source=survey</code> / <code>source=local knowledge</code> on the changeset; <code>note=*</code> talks to other mappers; <code>fixme=*</code> flags known problems.</li>
+    <li><code>ref=*</code> is the bridge between OSM and the utility's asset IDs — enormously useful, but only where the ID itself is publishable.</li>
+    <li>Changeset comments: say what and where ("added hydrants and sewer manholes, Foo St between 1st and 3rd, field survey"). Future-you doing QA will be grateful.</li>
+  </ul>
+</details>
+
+<h2>Overpass Query Builder</h2>
+<fieldset>
+  <legend>Query</legend>
+  <div class="row">
+    <div>
+      <label for="preset">Feature preset
+        <select id="preset">
+          <option value='emergency=fire_hydrant' selected>Fire hydrants</option>
+          <option value='man_made=manhole'>Manholes (all)</option>
+          <option value='manhole=sewer'>Manholes — sewer</option>
+          <option value='manhole=drain'>Manholes — storm</option>
+          <option value='man_made=pumping_station'>Pumping stations</option>
+          <option value='man_made=wastewater_plant'>Wastewater plants</option>
+          <option value='man_made=water_works'>Water treatment works</option>
+          <option value='man_made=water_tower'>Water towers</option>
+          <option value='landuse=basin'>Basins (retention/detention)</option>
+          <option value='waterway=drain'>Drains (open channels)</option>
+          <option value='custom'>Custom key=value…</option>
+        </select>
+      </label>
+      <input type="text" id="custom-tag" placeholder="key=value" hidden>
+    </div>
+    <div>
+      <label for="bbox">Bbox — south, west, north, east
+        <input type="text" id="bbox" placeholder="33.59,-117.75,33.63,-117.70">
+      </label>
+      <p class="small">Get one from the tile calculator's "Overpass bbox" line, or from the Overpass Turbo map. Order matters: S,W,N,E.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Overpass QL <button type="button" class="copy" data-for="out-query">copy</button></h3>
+  <textarea id="out-query" readonly spellcheck="false"></textarea>
+  <p class="small">Paste into <a href="https://overpass-turbo.eu" rel="noopener">overpass-turbo.eu</a> and Run. The query asks for nodes, ways, and relations with the tag inside the bbox, and returns geometry.</p>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear</button>
+
+<h2>Notes</h2>
+
+<details>
+  <summary>Why map utility infrastructure at all</summary>
+  <p>Hydrants in OSM have genuine emergency-response value and are unambiguous street furniture. Manhole covers are honest, surveyable, surface-visible facts — and a mapped pattern of sewer manholes is a legitimate public record of where public infrastructure runs, assembled from what anyone can see from the sidewalk. The line to respect: surface-visible features observed in person are fair game; buried alignments, depths, and anything from restricted as-builts or licensed GIS are not — both for licensing reasons and because publishing detailed utility data you hold in a professional capacity is a professional-judgment question before it's a mapping one.</p>
+</details>
+
+<details>
+  <summary>Overpass QL beyond the builder</summary>
+  <p>The generated query is the template worth memorizing: <code>nwr[key=value](bbox);out geom;</code>. Variations: <code>["key"~"regex"]</code> for pattern matching, multiple filter brackets AND together, <code>around:50,lat,lon</code> instead of a bbox for proximity, and <code>out count;</code> when you just want numbers. The Overpass Turbo wizard writes decent queries from plain English if the syntax fights back.</p>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>OSM wiki — the governing documentation for every tag above (check before mass edits). <span class="small">https://wiki.openstreetmap.org/</span></li>
+  <li>taginfo — real-world tag usage statistics. <span class="small">https://taginfo.openstreetmap.org/</span></li>
+  <li>Overpass Turbo. <span class="small">https://overpass-turbo.eu/</span></li>
+  <li>OSM organized editing &amp; import guidelines — required reading before anything bulk.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "osmtags.v1";
+
+  function $(id) { return document.getElementById(id); }
+
+  $("preset").addEventListener("change", function () {
+    $("custom-tag").hidden = this.value !== "custom";
+    build();
+  });
+
+  function build() {
+    var tag = $("preset").value === "custom" ? $("custom-tag").value.trim() : $("preset").value;
+    var bbox = $("bbox").value.trim();
+    var out = $("results");
+
+    if (!tag || tag.indexOf("=") === -1) { out.hidden = true; saveState(); return; }
+    var parts = tag.split("=");
+    var key = parts[0].trim(), val = parts.slice(1).join("=").trim();
+    if (!key || !val) { out.hidden = true; saveState(); return; }
+
+    /* bbox validation: 4 numbers, s<n, w<e */
+    var bboxStr = "";
+    if (bbox) {
+      var nums = bbox.replace(/[()]/g, "").split(",").map(function (s) { return parseFloat(s.trim()); });
+      if (nums.length === 4 && nums.every(isFinite) && nums[0] < nums[2] && nums[1] < nums[3] &&
+          Math.abs(nums[0]) <= 90 && Math.abs(nums[2]) <= 90 && Math.abs(nums[1]) <= 180 && Math.abs(nums[3]) <= 180) {
+        bboxStr = "(" + nums.join(",") + ")";
+      }
+    }
+    if (!bboxStr) { out.hidden = true; saveState(); return; }
+
+    var q = "[out:json][timeout:25];\n" +
+      "nwr[\"" + key + "\"=\"" + val + "\"]" + bboxStr + ";\n" +
+      "out geom;";
+    $("out-query").value = q;
+    out.hidden = false;
+    saveState();
+  }
+
+  /* copy */
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      try {
+        navigator.clipboard.writeText($(btn.dataset.for).value).then(function () {
+          btn.textContent = "copied";
+          setTimeout(function () { btn.textContent = "copy"; }, 1200);
+        }, function () {});
+      } catch (e) {}
+    });
+  });
+
+  var FIELDS = ["preset","custom-tag","bbox"];
+  function saveState() {
+    try {
+      var state = {};
+      FIELDS.forEach(function (id) { state[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      FIELDS.forEach(function (id) {
+        if (state[id] !== undefined) $(id).value = state[id];
+      });
+      $("custom-tag").hidden = $("preset").value !== "custom";
+    } catch (e) {}
+  }
+
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", build);
+    $(id).addEventListener("change", build);
+  });
+
+  loadState();
+  build();
+})();
+</script>
+</body>
+</html>

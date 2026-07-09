@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converting GeoJSON, WKT, and CSV Geometry, with a Lat/Lon Swap Detector | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Converting GeoJSON, WKT, and CSV Geometry, with a Lat/Lon Swap Detector</h1>
+                <time datetime="2026-06-09">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Geometry arrives in whatever format the last tool spat out &mdash; GeoJSON from a web API, WKT from a database, a CSV of coordinates from a GPS export &mdash; and you need it in a different one, plus a quick sanity check: how many vertices, what's the bounding box, roughly how big is this thing. Pasting it into a public converter means shipping possibly-sensitive geometry to someone else's server. This does all three formats locally, and flags the one bug that bites everyone.</p>
+
+            <h2>The Approach</h2>
+            <p>Three hand-rolled parsers, zero dependencies. GeoJSON (bare geometry, Feature, or FeatureCollection, with a note when it uses the first of several features and a warning on a legacy <code>crs</code> member). A tokenizing WKT parser for all seven simple-feature types, case-insensitive and whitespace-tolerant, that swallows Z/M values. And CSV with header auto-skip, selectable lon/lat vs lat/lon column order, and a choice of interpreting rows as a path, a polygon (auto-closed, with a note), or loose points. Parse errors surface as readable messages &mdash; with position info from the WKT tokenizer &mdash; instead of a blank screen [1][2].</p>
+
+            <figure>
+                <img src="/path/to/geojson-wkt-screenshot.png" alt="Geometry pasted as WKT with GeoJSON output, vertex count, bounding box, and geodesic area inspection" loading="lazy">
+                <figcaption>Figure 1: WKT in, GeoJSON out, with vertex count, bbox, and geodesic length/area alongside.</figcaption>
+            </figure>
+
+            <h3>The lat/lon swap detector</h3>
+            <p>Swapped axes is the most common geometry bug in existence, and it's insidious because the data still parses &mdash; it just plots your California parcel somewhere in the Arctic Ocean. GeoJSON and WKT are <strong>longitude-first</strong> by specification; spreadsheets, GPS apps, and human habit are <strong>latitude-first</strong>. So the two conventions collide constantly. The tool's heuristic: if a &ldquo;longitude&rdquo; magnitude never exceeds 90 while a &ldquo;latitude&rdquo; does exceed 90, that's the signature of lat,lon data being read as lon,lat &mdash; because latitude can't exceed 90&deg; but longitude routinely does. It names the problem instead of silently computing a nonsense area, and there's a whole details block on lon-first specs versus lat-first habits, because everyone gets bitten eventually.</p>
+
+            <details>
+                <summary>The length and area math</summary>
+                <p>Length is haversine great-circle distance summed over vertices (R = 6,371,008.8 m). Area is the spherical polygon formula with holes subtracted &mdash; the same Chamberlain &amp; Duquette approach most GIS &ldquo;geodesic area&rdquo; functions use on a sphere [3]. Both land within about 0.3% of ellipsoidal values at mid-latitudes: fine for a QA gut-check, not for a record boundary, and the tool says exactly that rather than implying survey precision.</p>
+            </details>
+
+            <p>Single file, vanilla JS, input persisted in <code>localStorage</code>, copy buttons on all three output formats. It pairs naturally with the <a href="/tools/bearing-distance-traverse.html">traverse tool</a> (which exports here) and the <a href="/tools/coordinate-converter.html">coordinate converter</a>.</p>
+
+            <p>The tool: <a href="/tools/geojson-wkt-converter.html">GeoJSON / WKT / CSV Geometry Converter &amp; Inspector</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] RFC 7946 &mdash; The GeoJSON Format. <a href="https://datatracker.ietf.org/doc/html/rfc7946">https://datatracker.ietf.org/doc/html/rfc7946</a></li>
+                <li>[2] OGC Simple Features &mdash; WKT specification. <a href="https://www.ogc.org/standards/sfa">https://www.ogc.org/standards/sfa</a></li>
+                <li>[3] Chamberlain &amp; Duquette (JPL), <em>Some Algorithms for Polygons on a Sphere</em> &mdash; spherical area formula.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# Site Architecture & Publishing Standard
+﻿# Site Architecture & Publishing Standard
 
 This repository serves as a personal knowledge base and technical testing environment. It is governed by a strict, privacy-respecting philosophy focused on software independence and longevity.
 
@@ -39,4 +39,4 @@ To maintain uniformity and technical rigor, all future blog posts and tools must
 
 ## Appendix
 
-Additional resources used in the creation of this website can be found here: https://malcolmdsmith.com/online/web-dev.html
+Additional resources used in the creation of this website can be found here: https://mds08011.github.io/online/web-dev.html

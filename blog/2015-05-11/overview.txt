@@ -1,5 +1,5 @@
-"<p> </p>
-<div id=""attachment_74"" style=""width: 310px"" class=""wp-caption aligncenter""><a href=""http://malcolmdsmith.com/content/images/2015/05/Mali_map_africa.png""><img class=""size-medium wp-image-74"" src=""http://malcolmdsmith.com/content/images/2015/05/Mali_map_africa-300x300.png"" alt=""Mali's location in Africa."" width=""300"" height=""300"" /></a><p class=""wp-caption-text"">Mali’s location in Africa.</p></div>
+﻿"<p> </p>
+<div id=""attachment_74"" style=""width: 310px"" class=""wp-caption aligncenter""><a href=""https://mds08011.github.io/content/images/2015/05/Mali_map_africa.png""><img class=""size-medium wp-image-74"" src=""https://mds08011.github.io/content/images/2015/05/Mali_map_africa-300x300.png"" alt=""Mali's location in Africa."" width=""300"" height=""300"" /></a><p class=""wp-caption-text"">Mali’s location in Africa.</p></div>
 <p><strong>History</strong><br />
 Mali is the heir to the succession of ancient African empires—Ghana, Mande (Malinke) and Songhai—that occupied the West African savannah. These empires controlled Saharan trade and were in touch with Mediterranean and Middle Eastern centers of civilization.<br />
 The Ghana empire, dominated by the Soninke or Sarakole people, was centered in the area along the modern-day Mali- Mauritania border. It was a powerful trading state from 700 to 1075 A.D.<br />
