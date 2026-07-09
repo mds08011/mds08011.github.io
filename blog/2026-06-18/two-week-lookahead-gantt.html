@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Look-Ahead Gantt That Deliberately Has No Dependency Logic | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>A Look-Ahead Gantt That Deliberately Has No Dependency Logic</h1>
+                <time datetime="2026-06-18">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>The two-week look-ahead is the most useful planning artifact on a jobsite and the one most often built wrong. Hand a foreman a fragment of the P6 schedule with logic ties and float and it becomes an argument about the master schedule; hand them a blank grid and they'll fill it with what they actually intend to do next week. I wanted a Gantt that draws the second thing &mdash; tasks as bars across a short date axis &mdash; and pointedly refuses to be the first.</p>
+
+            <h2>The Approach</h2>
+            <p>You set a window start and a length (7, 14, or 21 days) and add tasks: a name, an optional crew label, a start date, a duration, and a toggle for whether that duration is calendar or working days. The chart shades weekend columns, drops a line on today, and draws one bar per task, colored by crew. Tasks that run past the window get a clipped bar and a line in a flag list; a small stats panel reports how many tasks fall in the window and which day is busiest. That's the whole tool. There is no field for a predecessor, because there is no predecessor.</p>
+
+            <figure>
+                <img src="/blog/2026-06-18/two-week-lookahead-gantt.png" alt="A 14-day Gantt with weekend shading, a today line, six crew-colored task bars, and a stats panel flagging a task outside the window" loading="lazy">
+                <figcaption>Figure 1: Bars across a two-week window, weekends shaded and today marked &mdash; and a flag for the task that runs past the window's end.</figcaption>
+            </figure>
+
+            <h3>Working-day durations, computed the way a foreman means them</h3>
+            <p>The one bit of arithmetic worth getting right is the working-day mode. A five-working-day task starting on a Friday does not end four days later on Tuesday &mdash; it spans Friday, then Monday through Thursday, and ends the following Thursday, six calendar days out. The tool walks the calendar counting only weekdays until it has counted the duration, and draws the bar as one continuous block so the shaded weekend shows the skip underneath it. Dates are parsed as local values, split from the <code>YYYY-MM-DD</code> string, so the axis never drifts a day across a timezone boundary [2].</p>
+
+            <details>
+                <summary>Why no dependencies is a feature, not an omission</summary>
+                <ul>
+                    <li>A look-ahead is a commitment device. It works when it's built <em>with</em> the foreman and updated weekly &mdash; not printed once and taped to the trailer wall.</li>
+                    <li>Its real job is make-ready: surfacing constraints &mdash; material, access, information, manpower &mdash; early enough to clear them before the work is due [1].</li>
+                    <li>Anything still on the look-ahead three weeks running is a constraint problem, not a scheduling problem. Bumping it another week doesn't make it ready.</li>
+                    <li>If moving one bar should move another, you're describing logic ties, and those belong in the master schedule where float and the critical path actually live &mdash; not in a bigger look-ahead.</li>
+                </ul>
+            </details>
+
+            <p>The master schedule is still the governing document for dates and sequence [2]. This is the near-term commitment view that sits in front of it. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/two-week-lookahead-gantt.html">Two-Week Look-Ahead Gantt</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Ballard, G. (2000). <em>The Last Planner System of Production Control</em> &mdash; look-ahead planning and make-ready (lean construction).</li>
+                <li>[2] The project master schedule (Primavera P6, MS Project, or equivalent) &mdash; the governing document for dates, durations, logic, and float.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

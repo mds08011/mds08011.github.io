@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydrotest Makeup Water and the 148,000 vs 133,200 Divisor | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Hydrotest Makeup Water and the 148,000 vs 133,200 Divisor</h1>
+                <time datetime="2026-07-09">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Pressure-testing a gasketed-joint water main, you fill it, pump it up to the test pressure, and hold. A little water always goes in over the hold &mdash; trapped air dissolving, gaskets seating &mdash; and the spec gives you an allowance for it. The formula is short: <code>Q = S &middot; D &middot; &radic;P / 148,000</code> gallons per hour, length times diameter times the square root of pressure over a constant. What sent me down a small rabbit hole was that constant, because I kept seeing <code>133,200</code> in older specs and I wanted to know whether someone was wrong.</p>
+
+            <h2>The Approach</h2>
+            <p>The tool takes the length tested, the nominal diameter, the average test pressure, and the duration, and returns the allowable makeup rate and the total over the test, plus a convenience per-1,000-foot number. Enter the makeup you actually measured and it renders a pass/fail with the margin. As a sanity check on the arithmetic: 1,000 feet of 12-inch at 150 psi average is <code>1000 &middot; 12 &middot; &radic;150 / 148,000 &asymp; 0.993 gal/hr</code>, about 1.99 gallons over a two-hour test &mdash; a genuinely small number, which is the whole point.</p>
+
+            <figure>
+                <img src="/blog/2026-07-09/hydrotest-makeup-water-calculator.png" alt="Calculator populated with 1000 ft of 12-inch at 150 psi over 2 hours, showing a 1.99-gallon allowance and a PASS verdict against 1.5 gallons measured" loading="lazy">
+                <figcaption>Figure 1: 1,000 ft of 12-inch at 150 psi &rarr; 1.99 gal allowable over two hours; 1.5 gal measured passes with 0.49 gal to spare.</figcaption>
+            </figure>
+
+            <h3>Where 133,200 comes from</h3>
+            <p>Neither divisor is wrong &mdash; they're the same formula written two ways. The current AWWA C600 testing allowance is expressed per foot of pipe, straight to <code>S &middot; D &middot; &radic;P / 148,000</code> [1]. Older editions and some specifications use the per-joint form, <code>N &middot; D &middot; &radic;P / 7,400</code>, where N is the number of joints. With standard 18-foot laying lengths, <code>N = S / 18</code>, so the per-joint form becomes <code>S &middot; D &middot; &radic;P / (18 &times; 7,400) = S &middot; D &middot; &radic;P / 133,200</code>. The 133,200 divisor is simply the older joint-count allowance re-expressed per foot, and it yields a slightly larger allowance. The tool lets you pick whichever the spec cites &mdash; and, because several owners set <em>zero</em> allowable makeup for gasketed PVC, it has a zero-allowance toggle that turns any measured makeup into a fail [2][3].</p>
+
+            <details>
+                <summary>Field notes on the hold</summary>
+                <ul>
+                    <li>The allowance covers absorbed air and gasket seating, not leaks. A joint weeping visibly fails even if the makeup is under the number &mdash; write it up and fix it.</li>
+                    <li>Temperature moves pressure. In a rigid, full line, roughly 1 psi per &deg;F is a workable rule of thumb; a test that quietly bleeds pressure over a hot afternoon may be losing temperature, not water. Log air and water temperature at start and end.</li>
+                    <li>Measure makeup with a calibrated container or a meter on the pump, not a guess off the tank stick. The numbers are small, so the measurement has to be at least as precise.</li>
+                    <li>Fill and stabilize before the clock starts, so trapped air has worked out before you're on the record.</li>
+                </ul>
+            </details>
+
+            <p>Test pressure, duration, and the allowable makeup all come from the project specifications [3] &mdash; this just does the archaeology and the arithmetic so the number on the test report matches the standard the spec actually cites. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/hydrotest-makeup-water-calculator.html">Hydrotest Makeup Water (Testing Allowance) Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] AWWA C600 &mdash; Installation of Ductile-Iron Mains and Their Appurtenances (hydrostatic testing and allowable leakage/makeup).</li>
+                <li>[2] AWWA C605 &mdash; Underground Installation of PVC and Molecularly Oriented PVC Pressure Pipe (testing provisions).</li>
+                <li>[3] Contract specifications &mdash; governing test pressure, duration, and allowable makeup, including any zero-allowance provision.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

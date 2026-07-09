@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Earned Value S-Curve, CPI Stability, and the 90% Syndrome | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>The Earned Value S-Curve, CPI Stability, and the 90% Syndrome</h1>
+                <time datetime="2026-06-25">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Earned value is a small amount of arithmetic wrapped around one hard question: how complete is the work, really? Get that number honestly and the three curves &mdash; planned value, earned value, actual cost &mdash; tell you whether you're ahead or behind and over or under, in a picture anyone can read. Get it from a gut percentage and you've built a very official-looking way to lie to yourself. I wanted a calculator that draws the picture and computes the standard metrics, so the only thing left to argue about is the input that deserves the argument.</p>
+
+            <h2>The Approach</h2>
+            <p>You enter a budget at completion and, period by period, the planned value, earned value, and actual cost for that period. The tool accumulates and works at the data date &mdash; the last period with an EV entry. From the cumulative figures it computes the variances (<code>SV = EV &minus; PV</code>, <code>CV = EV &minus; AC</code>), the indices (<code>SPI = EV / PV</code>, <code>CPI = EV / AC</code>), and the forecast (<code>EAC = BAC / CPI</code>, then <code>ETC</code> and <code>VAC</code>). The S-curve draws planned value the full length of the job and earned and actual cost through the data date, with a marker on that date so the gap between plan and progress is literally the horizontal distance you can see.</p>
+
+            <figure>
+                <img src="/blog/2026-06-25/earned-value-s-curve.png" alt="Three cumulative curves — planned, earned, and actual — with a data-date marker, above a metrics panel showing SPI, CPI, EAC, and variances" loading="lazy">
+                <figcaption>Figure 1: Planned value runs the full length; earned and actual cost stop at the data date. SPI 0.94 and CPI 0.92 flag in the fail tone.</figcaption>
+            </figure>
+
+            <h3>CPI is a forecast, not a blip</h3>
+            <p>The detail worth internalizing isn't in the code, it's in the numbers the code produces: the cost performance index is remarkably stable once a project passes roughly 20% complete [1]. A CPI of 0.92 at the quarter pole is not a bad month you'll claw back &mdash; it is, empirically, close to the number you'll finish at, which is why the tool colors it red rather than shrugging. The schedule index behaves differently and more treacherously: SPI drifts back toward 1.0 near the end of any job, late or not, because planned value catches up to earned value as the plan runs out. That's why schedule is better judged on the actual dates than on a terminal SPI.</p>
+
+            <details>
+                <summary>The 90% syndrome, and choosing an EAC formula</summary>
+                <ul>
+                    <li>A project that reports 90% complete for months has an EV <em>basis</em> problem, not a productivity problem. If EV came from quantities in place it would keep moving; if it came from a percentage nobody wants to defend, it stalls at 90.</li>
+                    <li>Earn value on the same basis you planned it. If PV was loaded by unit rates, earn EV by units installed &mdash; mixing bases makes the schedule variance meaningless.</li>
+                    <li><code>EAC = BAC / CPI</code> is the most common forecast but not the only one. When schedule and cost both hurt, <code>AC + (BAC &minus; EV) / (CPI &times; SPI)</code> is harsher and sometimes contractually required [2]; late in the job a bottom-up ETC beats any index.</li>
+                    <li>Use whatever formula your contract or PMO mandates for the report of record. This tool shows the textbook chain so you can see how the pieces move.</li>
+                </ul>
+            </details>
+
+            <p>The percent-complete basis is the whole ballgame, and it lives in your quantity tracking, not in this page &mdash; the calculator just does the arithmetic honestly once you've fed it honest numbers. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/earned-value-s-curve.html">Earned Value S-Curve Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] PMI &mdash; <em>The Standard for Earned Value Management</em> (index behavior, variances, and forecasting).</li>
+                <li>[2] AACE International &mdash; recommended practices on earned value and estimate-at-completion methods (e.g. 17R-97).</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

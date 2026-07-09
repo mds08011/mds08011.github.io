@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading the Submittal and RFI Backlog as an Aging Histogram | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Reading the Submittal and RFI Backlog as an Aging Histogram</h1>
+                <time datetime="2026-06-13">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Every monthly progress meeting has a moment where someone asks how the submittals are tracking, and the honest answer is a shrug. The register in the PM platform has the numbers, but a flat list of a hundred line items doesn't tell you <em>what's stuck</em> &mdash; and the count you recite from memory always flatters whoever is doing the reviewing. I wanted the field-side view: log each open submittal and RFI the day it goes out, and see the aging picture as a single histogram I could put on a slide.</p>
+
+            <h2>The Approach</h2>
+            <p>An item is open while its <em>Returned</em> field is blank, and its age is simply <code>today &minus; date sent</code> in calendar days. The open items drop into buckets &mdash; <code>0&ndash;7, 8&ndash;14, 15&ndash;30, 31&ndash;60, 60+</code> days &mdash; and the bars past the review threshold (30 days by default, the typical spec period) draw in a fail tone so the backlog reads at a glance. Returned items leave the histogram but stay in the table with their cycle time shown, so the average review duration is measured, not guessed. Alongside the chart, a stats line calls out the median open age and, crucially, the single oldest item by name and age.</p>
+
+            <figure>
+                <img src="/blog/2026-06-13/submittal-rfi-aging-tracker.png" alt="Aging histogram with five day-in-review buckets, the two oldest in a fail tone, above a stats panel naming the oldest open item" loading="lazy">
+                <figcaption>Figure 1: The histogram is the meeting slide; the oldest-item stat underneath is the action item.</figcaption>
+            </figure>
+
+            <h3>Aging from the date sent, and why R0/R1 are separate lines</h3>
+            <p>Two decisions keep the numbers honest. The first is that aging is measured from the <em>date sent</em>, not from when you remembered to log it &mdash; the same contemporaneous-records habit the working-day and SWPPP trackers lean on [1]. A register reconstructed at month-end quietly understates every age and hides exactly the items that are actually stuck. The second is that a submittal returned &ldquo;revise and resubmit&rdquo; is not closed: it starts a new revision cycle. R1 goes back out as its own line the day it ships. Roll R0 and R1 into one row and the cycle time looks half as long as it really was, which is the opposite of what a cycle-time metric is for.</p>
+
+            <details>
+                <summary>What the stats panel is really telling you</summary>
+                <ul>
+                    <li>The histogram shows the owner's rep where the backlog sits without naming names &mdash; useful in a room where the naming is political.</li>
+                    <li>The oldest-item stat is the sentence that follows: &ldquo;the oldest open submittal is 80 days, here's what it's holding.&rdquo;</li>
+                    <li>Not every old item is the reviewer's fault. Some sit open because the resubmittal is on your side of the fence. The tool shows the age; the cause is the conversation.</li>
+                    <li>When every open item is over threshold, that's a review-capacity problem, not a handful of stragglers &mdash; a different escalation entirely.</li>
+                </ul>
+            </details>
+
+            <p>The submittal register in Procore, Kahua, e-Builder, or ACC is still the contractual log [2] &mdash; this is a field-side mirror that exists so you notice the backlog the week it forms instead of at closeout. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/submittal-rfi-aging-tracker.html">Submittal &amp; RFI Aging Tracker</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Contract specifications &mdash; submittal procedures and review durations (Division 01, typically Section 01 33 00). Governing document.</li>
+                <li>[2] The project's PM platform of record (Procore / Kahua / e-Builder / Autodesk Build) &mdash; the contractual submittal and RFI register.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

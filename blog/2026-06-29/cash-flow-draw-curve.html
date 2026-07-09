@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billed vs. Received, and What Retention Does to the Cash Curve | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Billed vs. Received, and What Retention Does to the Cash Curve</h1>
+                <time datetime="2026-06-29">June 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Every estimator can draw the S-curve of a job's billing. Fewer stop to draw the curve that actually matters to the checking account: the one of cash <em>received</em>, which is the billing curve pushed later by a payment lag and held back by retention. The gap between the two is money you've earned and haven't collected &mdash; the financing you're quietly providing the owner. I wanted a small model that draws both curves side by side and shows that gap without pretending to be a full treasury forecast.</p>
+
+            <h2>The Approach</h2>
+            <p>You either project the billing from a curve shape &mdash; a smoothstep S-curve, <code>3t&sup2; &minus; 2t&sup3;</code>, or front-loaded, back-loaded, or linear presets &mdash; or type in your own monthly amounts. Then the model applies the general contractor's reality: retention is withheld from each payment, the net is shifted later by the payment lag, and the accumulated retention is released as a lump sum a few months after the final billing. The chart draws monthly billing as bars with two cumulative lines over them, billed and received, and the retention release shows up as the late jump in the received line.</p>
+
+            <figure>
+                <img src="/blog/2026-06-29/cash-flow-draw-curve.png" alt="Monthly billing bars under a solid billed curve and a dashed received curve that lags behind and jumps up at the end when retention releases" loading="lazy">
+                <figcaption>Figure 1: Billed (solid) and received net of retention (dashed). The gap between them is the financing exposure; the late jump is the retention release.</figcaption>
+            </figure>
+
+            <h3>The retention tail is a line on the forecast, not an afterthought</h3>
+            <p>The number the picture is built to surface is the peak financing gap &mdash; the largest value of cumulative billed minus cumulative received. On a front-loaded, fast job it can be a meaningful fraction of the contract, and it's real carrying cost. The retention tail is the other half: five percent withheld across the whole job is money that sits for months after you've finished the work, and the release date belongs on the cash forecast as its own line. Watching the received curve crawl up to meet the billed curve only at the release month makes that concrete in a way a spreadsheet cell doesn't.</p>
+
+            <details>
+                <summary>What this model leaves out, and the SOV negotiation</summary>
+                <ul>
+                    <li>This is <em>revenue</em> timing only. Your real cash position also depends on when you pay labor (weekly), suppliers (net 30), and subs (often pay-when-paid). Retention you hold on your subs partially offsets the retention the owner holds on you &mdash; a fuller model nets the two.</li>
+                    <li>Front-loading the schedule of values is common, visible, and a negotiation with the owner's rep. Mobilization line items exist for a reason; padding early activities that aren't really done is a different thing and gets caught.</li>
+                    <li>Stored-materials billing changes both the curve and the paperwork &mdash; you can bill for material on site ahead of installation, but expect to document and insure it.</li>
+                    <li>Release terms vary by contract and by public vs. private work; some release in stages, some at substantial completion plus a punch period. Set the tool to your contract.</li>
+                </ul>
+            </details>
+
+            <p>The contract's payment and retention provisions govern the actual dates and percentages [1]; this page just lets you see the shape before the first pay application goes in. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/cash-flow-draw-curve.html">Cash Flow Draw Curve Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] The contract's payment and retention provisions (progress payment schedule, retention percentage, and release terms). Governing.</li>
+                <li>[2] AGC / CFMA guidance on construction cash flow and the schedule of values.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
