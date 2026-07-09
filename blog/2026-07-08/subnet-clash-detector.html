@@ -44,7 +44,7 @@
             <p>So <code>192.168.17.1 &amp; 255.255.255.0 = 192.168.17.0</code>, while <code>10.215.113.50 &amp; 255.255.255.0 = 10.215.113.0</code>. Different networks &mdash; the tool flashes red and says so in plain words: <em>the devices are invisible to each other; they need a router, or one of them needs an address in the other's network</em>. Matching networks flash green, with the honest caveat that matching addresses on separate switches or VLANs still won't talk &mdash; this answers the addressing question only.</p>
 
             <figure>
-                <img src="/path/to/subnet-clash-screenshot.png" alt="Two device IP and mask inputs with computed network addresses and a red Subnet Mismatch verdict panel" loading="lazy">
+                <img src="/blog/2026-07-08/subnet-clash-detector.png" alt="Two device IP and mask inputs with computed network addresses and a red Subnet Mismatch verdict panel" loading="lazy">
                 <figcaption>Figure 1: The mismatch case &mdash; both computed network addresses shown, so the verdict is explainable in a text to IT.</figcaption>
             </figure>
 
