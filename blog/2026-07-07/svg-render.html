@@ -40,7 +40,7 @@
             <p>This localized implementation utilizes a <code>DOMParser</code> to extract coordinate parameters directly from the <code>viewBox</code> vector constraint. The underlying XML is subsequently converted into a transient <code>Blob</code> and allocated an Object URL. This URL is assigned to a virtual <code>Image</code> object, which is directly painted onto an offscreen <code>canvas</code> utilizing the <code>drawImage()</code> subroutine [1].</p>
             
             <figure>
-                <img src="/path/to/svg-render-screenshot.png" alt="A web application generating a downloadable PNG artifact directly from raw SVG markup" loading="lazy">
+                <img src="/blog/2026-07-07/svg-render.png" alt="A web application generating a downloadable PNG artifact directly from raw SVG markup" loading="lazy">
                 <figcaption>Figure 1: The rasterization pipeline exporting a base64 encoded PNG from XML syntax.</figcaption>
             </figure>
 
