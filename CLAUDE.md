@@ -90,13 +90,34 @@ from Git Bash.
    existing descriptive `alt` and `<figcaption>`; keep `loading="lazy"`.
 5. **Commit** the PNG and the post edit together. Don't push unless asked.
 
-### What can't be auto-screenshotted (leave a placeholder, list it for the user)
+### File-upload tools — inject a synthetic file, don't skip
+
+Tools that only take a file (image-to-jpeg, image-print, svg-render, exif,
+tiff-orientation…) can still be captured: synthesize the input in the injected script
+and hand it to the file input as if the user picked it. Draw a canvas, `toBlob`/`toDataURL`
+it, wrap it in a `File`, and load it via a `DataTransfer`:
+
+```js
+var dt = new DataTransfer();
+dt.items.add(new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+var inp = document.getElementById('fileInput');   // the tool's real input id
+inp.files = dt.files;
+inp.dispatchEvent(new Event('change', { bubbles: true }));
+```
+
+For tools that read **metadata** (exif GPS, tiff-orientation), a plain canvas JPEG has
+none — hand-build a little-endian TIFF/EXIF `APP1` segment (`FF E1 … "Exif\0\0" … II 2A00
+…`) with the tags you want (Orientation `0x0112`, GPS IFD `0x8825` with lat/lon
+RATIONALs) and splice it in right after the SOI (`FF D8`). The values are fabricated demo
+data — fine for a screenshot, and worth a caption that doesn't claim otherwise. Give
+async work (`toBlob`, WASM) time with `--virtual-time-budget=<ms>`.
+
+### What genuinely can't be auto-screenshotted (leave a placeholder, list it for the user)
 
 - **Field photos** — e.g. a wet-well float setup, a weir plate in a channel, a
   confined-space blower. These need real photos.
 - **External apps** — e.g. gifcap.dev, GoldFynch PST viewer. Don't fabricate these.
 - **Terminal how-tos** — a real terminal capture of a command's output.
-- **File-upload-only tools** (image-to-jpeg, exif, image-print, tiff-orientation,
-  image-to-svg, OCR without an example button): the meaningful output needs a user
-  file, so an empty upload state won't match the caption. Skip unless the tool has a
-  "load example" button that self-populates.
+- **Tools that fetch an example over the network** (OCR's "load example" hits a URL that
+  a `file://` origin can't reach) or **load state from the URL + async WASM** (quickjs):
+  they don't reach a finished state under headless automation. Skip and list them.
