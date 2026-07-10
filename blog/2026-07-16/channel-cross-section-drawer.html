@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing a Channel Cross-Section in SVG, and the 94% Quirk | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Drawing a Channel Cross-Section in SVG, and the 94% Quirk</h1>
+                <time datetime="2026-07-16">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>The <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a> already does the hydraulics &mdash; area, wetted perimeter, velocity, flow. What it doesn't do is show you the channel. A row of numbers that says the hydraulic radius is 1.6 feet is correct and forgettable; a drawing of a trapezoid with the water shaded to depth, the top width called out, and the side slopes visible is something you can sanity-check at a glance. So this is the visual companion: same math, plus the picture.</p>
+
+            <h2>The Approach</h2>
+            <p>You pick a trapezoidal or circular section, give it a flow depth (or a design flow to solve normal depth for), and the tool draws the section to scale in inline SVG &mdash; the channel bed as a stroked path, the water area shaded, the water-surface line drawn, and the dimensions labeled. The hydraulic geometry, Manning's velocity and flow, and the Froude regime come out beside it. Critically, it reuses the exact geometry and the same bisection solver as the Manning's calculator, so the two tools agree by construction rather than by coincidence &mdash; the drawing is the only thing that's new.</p>
+
+            <figure>
+                <img src="/blog/2026-07-16/channel-cross-section-drawer.png" alt="A trapezoidal channel drawn to scale with water shaded to 2.5 ft depth, labeled bottom width, top width, and 2:1 side slopes, beside the hydraulic geometry table" loading="lazy">
+                <figcaption>Figure 1: A 6-ft-bottom, 2:1 trapezoid flowing 2.5 ft deep &mdash; Fr 0.77, subcritical, and the geometry matches the Manning's tool exactly.</figcaption>
+            </figure>
+
+            <h3>The 94% quirk, made visible</h3>
+            <p>The reason a drawing earns its keep is the circular pipe. Everyone learns that a pipe's capacity is its full-flow capacity, and everyone who has run the numbers knows that's not quite true: discharge in a circular section <em>peaks near d/D &asymp; 0.94</em> and then decreases toward full, because the last sliver of depth near the crown adds wetted perimeter faster than it adds area. A &ldquo;full&rdquo; pipe actually carries slightly <em>less</em> than a 94%-full one. As a sentence it's a curiosity; as a picture &mdash; the shaded segment at maximum discharge visibly not reaching the crown &mdash; it finally sticks. The solver knows it too, searching only up to the peak and reporting a design flow above it as exceeding gravity capacity.</p>
+
+            <details>
+                <summary>Drawing to scale in vanilla SVG</summary>
+                <ul>
+                    <li>The geometry is computed in feet, then a single scale factor maps world units to the viewBox, chosen so the section fits the width with a little freeboard above the water line. The viewBox height adapts to the section, so a wide shallow channel doesn't leave half the frame empty.</li>
+                    <li>The trapezoid is one stroked path (two banks and a bottom); the water is a four-point polygon; the circular water segment is a polygon sampled along the wetted arc, which sidesteps the SVG elliptical-arc flag arithmetic entirely.</li>
+                    <li>Strokes and fills are CSS custom properties, so the whole thing flips to dark mode with the page and never ships a second color scheme.</li>
+                    <li>Everything redraws on every keystroke &mdash; there's no animation, just a full re-render of a few hundred bytes of SVG, which is instant.</li>
+                </ul>
+            </details>
+
+            <p>Manning's still assumes steady, uniform flow in a prismatic channel, and <code>n</code> is still where the real uncertainty lives &mdash; the drawing doesn't make the assumptions any truer, it just makes the section legible. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/channel-cross-section-drawer.html">Channel Cross-Section Drawer</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] The <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a> &mdash; same equation and section geometry, without the drawing.</li>
+                <li>[2] Chow, <em>Open-Channel Hydraulics</em> &mdash; Manning's equation, section geometry, and flow regime.</li>
+                <li>[3] FHWA HDS-3 (highway hydraulics) and HEC-15 (design of roadside channels with flexible linings).</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>

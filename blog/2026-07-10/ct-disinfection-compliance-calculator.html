@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CT Compliance, T10, and Why Peak Flow Governs Disinfection | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>CT Compliance, T10, and Why Peak Flow Governs Disinfection</h1>
+                <time datetime="2026-07-10">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>CT compliance under the Surface Water Treatment Rule is a small ratio wrapped around two numbers that are easy to get subtly wrong. CT-achieved is residual concentration times contact time; CT-required is a value from a regulatory table. The trap is that both the &ldquo;time&rdquo; and the &ldquo;required&rdquo; hide assumptions &mdash; the time is not the tank's theoretical detention time, and the required value is a specific cell in a table that swings steeply with temperature and pH. I wanted a calculator that does the ratio honestly without pretending to know your table cell for you.</p>
+
+            <h2>The Approach</h2>
+            <p>Each disinfection segment gets a row: contact volume, peak flow, a baffling factor, the measured residual, and the CT-required you read from the governing table. The tool computes <code>T10 = (volume &divide; peak flow) &times; baffling</code>, then <code>CT-achieved = C &middot; T10</code>, then the ratio against your entered CT-required. Sequential segments add their ratios, and compliance needs the sum to reach 1.0. The effective log inactivation is the log target times that sum. Deliberately, the CT tables are <em>not</em> embedded &mdash; the conditions fields (disinfectant, temperature, pH, residual) exist only to make sure you pull the right cell and to put those conditions on the printout.</p>
+
+            <figure>
+                <img src="/blog/2026-07-10/ct-disinfection-compliance-calculator.png" alt="CT calculator with two segments (pipeline and clearwell), their T10, CT-achieved and ratios, and a PASS verdict with the ratios summing to 1.10" loading="lazy">
+                <figcaption>Figure 1: Two segments summing to a ratio of 1.10 &mdash; each below 1.0 on its own, which is normal; compliance is on the sum.</figcaption>
+            </figure>
+
+            <h3>T10 is not detention time, and peak flow is the worst hour</h3>
+            <p>The two field truths the tool is built around. First, <code>T10</code> &mdash; the time the fastest-moving ten percent of the water spends in contact &mdash; is the theoretical detention time knocked down by a baffling factor, and that factor is brutal: an unbaffled basin is 0.1, a well-baffled one 0.7, and only a pipe approaches 1.0. Short-circuiting is the norm, not the exception, and the presets here are for planning &mdash; a tracer study measures the real number. Second, the flow that governs is the <em>peak hourly</em> flow, not the average day, because the worst case is the busiest hour when contact time is shortest. Size CT on the average and you've certified the plant for a condition it doesn't actually run.</p>
+
+            <details>
+                <summary>Why the tool makes you enter CT-required</summary>
+                <ul>
+                    <li>The SWTR CT tables vary steeply and non-linearly with temperature, pH, and residual. Transcribing them from memory into a calculator is how a wrong value gets institutionalized behind a confident interface.</li>
+                    <li>Temperature is the big lever: required CT roughly doubles from summer to winter, so a basin that passes in August can fail in February. Profile the cold-water condition.</li>
+                    <li>Filtration provides most of the Giardia and virus credit; disinfection covers the remainder. Set the log target to the portion your plan assigns to disinfection, not the whole-plant requirement.</li>
+                    <li>Measure the residual at the <em>outlet</em> of the segment it credits &mdash; the concentration that survived the contact, not what went in.</li>
+                </ul>
+            </details>
+
+            <p>This is arithmetic, not certification. The state primacy agency and the system's approved monitoring plan certify compliance; the tool exists so the arithmetic and the conditions behind it are explicit and on the record. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/ct-disinfection-compliance-calculator.html">CT Disinfection Compliance Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] USEPA &mdash; <em>Guidance Manual for Compliance with the Filtration and Disinfection Requirements for Public Water Systems Using Surface Water Sources</em> (the CT tables and T10/baffling guidance).</li>
+                <li>[2] 40 CFR 141 Subpart H &mdash; Surface Water Treatment Rule, and the state primacy agency's adopted version.</li>
+                <li>[3] The system's approved disinfection profiling / benchmarking and monitoring plan &mdash; governing for what must be demonstrated.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
