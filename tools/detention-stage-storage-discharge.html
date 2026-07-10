@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detention Basin Stage-Storage-Discharge Builder</title>
+<meta name="description" content="Offline stage-storage-discharge relationship for a detention basin: average-end-area storage from a stage-area survey or a prism, plus orifice and weir outlet discharge by stage, with the three curves plotted and a CSV of the routing table. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --storage: #00557f; --discharge: #2e6e4e; --invert: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --storage: #6db3d6; --discharge: #5c9d7c; --invert: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; max-width: none; width: 7rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .outlet { border: 1px dashed var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; margin-top: 0.75rem; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .gridline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.5; }
+  .axislabel { fill: var(--muted); font-size: 10px; }
+  .paneltitle { fill: var(--fg); font-size: 11px; font-weight: 700; }
+  .storageline { stroke: var(--storage); stroke-width: 2.5; fill: none; }
+  .dischargeline { stroke: var(--discharge); stroke-width: 2.5; fill: none; }
+  .invertline { stroke: var(--invert); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .invertlabel { fill: var(--invert); font-size: 9px; }
+  table.out { border-collapse: collapse; width: 100%; margin-top: 0.75rem; }
+  table.out th, table.out td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; font-size: 0.88rem; text-align: right; font-variant-numeric: tabular-nums; }
+  table.out th { background: var(--panel); text-align: right; }
+  button.copy {
+    margin-top: 0.6rem; padding: 0.3rem 0.7rem; font-size: 0.85rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Detention Basin Stage-Storage-Discharge Builder</h1>
+<p class="subtitle">Build the stage-storage-discharge relationship &mdash; storage by the average-end-area method and outlet discharge by stage &mdash; and plot the three curves. The routing input table, not the routing. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This builds the storage-discharge <em>relationship</em>; it does not route a hydrograph. Pair it with the <a href="/tools/detention-basin-estimator.html">detention-basin-estimator</a> for the preliminary volume and real routing software (storage-indication / modified Puls) for the final design. Outlet equations here assume <em>free</em> discharge &mdash; a submerged outlet behaves differently, and clogging, the usual failure mode, isn't modeled at all.
+</div>
+
+<fieldset>
+  <legend>Stage &ndash; Storage</legend>
+  <label for="ssmode">Source
+    <select id="ssmode">
+      <option value="table">Stage &ndash; area survey table</option>
+      <option value="prism">Prism (rectangular bottom + side slopes)</option>
+    </select>
+  </label>
+
+  <div id="table-mode">
+    <div class="table-wrap">
+      <table class="items">
+        <thead><tr><th>Elevation (ft)</th><th>Surface area (sf)</th><th>Cum. storage (cf)</th><th></th></tr></thead>
+        <tbody id="sa-body"></tbody>
+      </table>
+    </div>
+    <button type="button" class="add" id="sa-add">+ Add stage</button>
+    <p class="small">Enter increasing elevations with the surveyed water-surface area at each. Storage between stages is the average-end-area (conic) volume, accumulated from the lowest stage.</p>
+  </div>
+
+  <div id="prism-mode" hidden>
+    <div class="row">
+      <div><label for="p-elev">Bottom elevation (ft)<input type="number" id="p-elev" step="any" placeholder="e.g. 100"></label></div>
+      <div><label for="p-l">Bottom length (ft)<input type="number" id="p-l" min="0" step="any" placeholder="e.g. 80"></label></div>
+      <div><label for="p-w">Bottom width (ft)<input type="number" id="p-w" min="0" step="any" placeholder="e.g. 40"></label></div>
+    </div>
+    <div class="row">
+      <div><label for="p-z">Side slope Z (H:1V)<input type="number" id="p-z" min="0" step="any" value="3"></label></div>
+      <div><label for="p-depth">Max depth (ft)<input type="number" id="p-depth" min="0" step="any" placeholder="e.g. 6"></label></div>
+      <div><label for="p-step">Step (ft)<input type="number" id="p-step" min="0.1" step="any" value="1"></label></div>
+    </div>
+    <p class="small">Surface area at height <code>h</code> above the bottom is <code>(L + 2Zh)(W + 2Zh)</code>. Z = 0 gives vertical walls.</p>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Outlets (free discharge)</legend>
+  <div class="outlet" id="outlet1"></div>
+  <div class="outlet" id="outlet2"></div>
+  <p class="small">Give each outlet its own invert/crest elevation; it only flows when the water surface is above it. A low orifice plus an overflow weir is the classic pair.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Stage-storage-discharge</h3>
+  <figure class="chart">
+    <svg id="plot" viewBox="0 0 660 360" role="img" aria-label="Storage vs stage and discharge vs stage curves sharing the elevation axis"></svg>
+  </figure>
+  <div class="table-wrap">
+    <table class="out" id="out-table">
+      <thead><tr><th>Stage (ft)</th><th>Storage (cf)</th><th>Storage (ac-ft)</th><th>Discharge (cfs)</th></tr></thead>
+      <tbody id="out-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="copy" id="copy-btn">copy table as CSV</button>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Average-end-area storage</summary>
+  <p>Between two stages with surface areas <code>A1</code> and <code>A2</code> a vertical distance <code>&Delta;h</code> apart, the incremental storage is the conic (average-end-area) volume <code>&Delta;V = (A1 + A2)/2 &middot; &Delta;h</code>. Cumulative storage sums these from the lowest stage up. On a straight-walled prism (constant area) this returns exactly <code>A &middot; h</code>; on a concave bowl it slightly overestimates &mdash; acceptable for planning, and the stage-area survey is the real accuracy limiter, not the method.</p>
+</details>
+
+<details>
+  <summary>Outlet discharge equations</summary>
+  <p>With head <code>h</code> measured above the outlet's invert/crest:</p>
+  <p><strong>Orifice:</strong> <code>Q = Cd &middot; A &middot; &radic;(2g&middot;h)</code>, <code>Cd</code> default 0.6, <code>A</code> from the orifice diameter, <code>g = 32.174 ft/s&sup2;</code>, head taken to the orifice centerline. <strong>Rectangular weir:</strong> <code>Q = Cw &middot; L &middot; h^1.5</code>, <code>Cw</code> default 3.33. <strong>90&deg; V-notch:</strong> <code>Q = 2.49 &middot; h^2.48</code>. Total discharge at a stage is the sum over outlets that are flowing at that stage. (The sibling <a href="/tools/weir-orifice-flow-calculator.html">weir &amp; orifice tool</a> uses Cd 0.61 for a sharp-edged orifice; use your structure's tested coefficient.)</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>This is the input to routing, not routing itself. The storage-indication (modified Puls) method takes this <code>2S/&Delta;t + Q</code> relationship and marches an inflow hydrograph through it to get the peak stage and outflow.</li>
+    <li>A submerged outlet transitions from weir to orifice behavior; if downstream tailwater can rise above an outlet, the free-discharge equations here overstate flow. The tool warns when a lower outlet sits below a higher one's invert.</li>
+    <li>Clogging is the unmodeled failure mode. Trash racks, a minimum orifice size (many agencies floor it near 3 in.), and a factor of safety on the primary outlet are how it's handled &mdash; not in the hydraulics.</li>
+    <li>The stage-area survey is where the accuracy lives. A basin graded off a rough plan and one shot as-built can differ enough to change the routed peak.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>The <a href="/tools/detention-basin-estimator.html">detention-basin-estimator</a> (preliminary volume) and <a href="/tools/weir-orifice-flow-calculator.html">weir &amp; orifice flow</a> tools.</li>
+  <li>The local hydrology / drainage design manual &mdash; governing outlet coefficients, freeboard, and routing requirements.</li>
+  <li>Reservoir routing references (storage-indication / modified Puls method) &mdash; e.g. NRCS TR-55 / TR-20, HEC-HMS documentation.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "stagestorage.v1";
+  var G = 32.174;
+  var CF_PER_ACFT = 43560;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  function fnum(v) { if (v === "" || v === null || v === undefined) return null; var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmt(x, d) {
+    if (x === null || !isFinite(x)) return "—";
+    if (d === undefined) d = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  }
+  function niceMax(v) {
+    if (v <= 0) return 1;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v / mag;
+    var step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return step * mag;
+  }
+
+  var rows = [];   // stage-area table: { elev, area }
+  var outlets = [
+    { type: "orifice", invert: "", dia: "", cd: "0.6", len: "", cw: "3.33" },
+    { type: "none", invert: "", dia: "", cd: "0.6", len: "", cw: "3.33" }
+  ];
+
+  /* ---------- stage-area input table ---------- */
+  function renderRows() {
+    var body = $("sa-body");
+    body.innerHTML = "";
+    rows.forEach(function (r, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='r-elev' type='number' step='any' value='" + esc(r.elev || "") + "'></td>" +
+        "<td><input class='r-area' type='number' min='0' step='any' value='" + esc(r.area || "") + "'></td>" +
+        "<td class='calc c-stor'>—</td>" +
+        "<td><button type='button' class='r-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".r-elev").addEventListener("input", function () { rows[idx].elev = this.value; updateStorCells(); recompute(); });
+      tr.querySelector(".r-area").addEventListener("input", function () { rows[idx].area = this.value; updateStorCells(); recompute(); });
+      tr.querySelector(".r-del").addEventListener("click", function () { rows.splice(idx, 1); renderRows(); recompute(); });
+      body.appendChild(tr);
+    });
+    updateStorCells();
+  }
+  /* patch the cumulative-storage cells in place (keeps typing focus) */
+  function updateStorCells() {
+    var nodes = tableNodes();
+    var cum = cumulative(nodes);
+    var body = $("sa-body").rows;
+    for (var i = 0; i < rows.length; i++) {
+      var elev = fnum(rows[i].elev);
+      var cell = body[i].querySelector(".c-stor");
+      var v = null;
+      if (elev !== null) { for (var k = 0; k < nodes.length; k++) if (nodes[k].elev === elev) { v = cum[k]; break; } }
+      cell.textContent = fmt(v, 0);
+    }
+  }
+  $("sa-add").addEventListener("click", function () { rows.push({ elev: "", area: "" }); renderRows(); recompute(); });
+
+  function tableNodes() {
+    var ns = rows.map(function (r) { return { elev: fnum(r.elev), area: fnum(r.area) }; })
+                 .filter(function (n) { return n.elev !== null && n.area !== null && n.area >= 0; });
+    ns.sort(function (a, b) { return a.elev - b.elev; });
+    return ns;
+  }
+  function prismNodes() {
+    var e0 = fnum($("p-elev").value), L = fnum($("p-l").value), W = fnum($("p-w").value);
+    var Z = fnum($("p-z").value), depth = fnum($("p-depth").value), step = fnum($("p-step").value);
+    if (e0 === null || !L || !W || Z === null || !depth || !step || step <= 0) return [];
+    var ns = [];
+    for (var h = 0; h <= depth + 1e-9; h += step) {
+      ns.push({ elev: e0 + h, area: (L + 2 * Z * h) * (W + 2 * Z * h) });
+    }
+    if (ns.length && Math.abs(ns[ns.length - 1].elev - (e0 + depth)) > 1e-6) {
+      ns.push({ elev: e0 + depth, area: (L + 2 * Z * depth) * (W + 2 * Z * depth) });
+    }
+    return ns;
+  }
+  function getNodes() {
+    return $("ssmode").value === "prism" ? prismNodes() : tableNodes();
+  }
+  function cumulative(nodes) {
+    var cum = [];
+    for (var i = 0; i < nodes.length; i++) {
+      if (i === 0) cum.push(0);
+      else cum.push(cum[i - 1] + (nodes[i - 1].area + nodes[i].area) / 2 * (nodes[i].elev - nodes[i - 1].elev));
+    }
+    return cum;
+  }
+
+  /* ---------- outlets ---------- */
+  function outletHtml(i, o) {
+    return "<strong>Outlet " + (i + 1) + "</strong>" +
+      "<div class='row'><div><label>Type<select class='o-type'>" +
+        "<option value='none'" + (o.type === "none" ? " selected" : "") + ">None</option>" +
+        "<option value='orifice'" + (o.type === "orifice" ? " selected" : "") + ">Orifice</option>" +
+        "<option value='rectweir'" + (o.type === "rectweir" ? " selected" : "") + ">Rectangular weir</option>" +
+        "<option value='vnotch'" + (o.type === "vnotch" ? " selected" : "") + ">V-notch weir (90&deg;)</option>" +
+      "</select></label></div>" +
+      "<div class='o-invert-wrap'" + (o.type === "none" ? " hidden" : "") + "><label>Invert / crest elev (ft)<input class='o-invert' type='number' step='any' value='" + esc(o.invert || "") + "'></label></div>" +
+      "<div class='o-orif'" + (o.type === "orifice" ? "" : " hidden") + "><label>Diameter (in)<input class='o-dia' type='number' min='0' step='any' value='" + esc(o.dia || "") + "'></label></div>" +
+      "<div class='o-orif'" + (o.type === "orifice" ? "" : " hidden") + "><label>Cd<input class='o-cd' type='number' min='0' step='any' value='" + esc(o.cd || "") + "'></label></div>" +
+      "<div class='o-rect'" + (o.type === "rectweir" ? "" : " hidden") + "><label>Crest length L (ft)<input class='o-len' type='number' min='0' step='any' value='" + esc(o.len || "") + "'></label></div>" +
+      "<div class='o-rect'" + (o.type === "rectweir" ? "" : " hidden") + "><label>Cw<input class='o-cw' type='number' min='0' step='any' value='" + esc(o.cw || "") + "'></label></div>" +
+      "</div>";
+  }
+  function renderOutlets() {
+    [outlets[0], outlets[1]].forEach(function (o, i) {
+      var host = $("outlet" + (i + 1));
+      host.innerHTML = outletHtml(i, o);
+      host.querySelector(".o-type").addEventListener("change", function () { outlets[i].type = this.value; renderOutlets(); recompute(); });
+      var bind = function (sel, key, patch) {
+        var el = host.querySelector(sel);
+        if (el) el.addEventListener("input", function () { outlets[i][key] = this.value; recompute(); });
+      };
+      bind(".o-invert", "invert"); bind(".o-dia", "dia"); bind(".o-cd", "cd");
+      bind(".o-len", "len"); bind(".o-cw", "cw");
+    });
+  }
+  function outletQ(o, E) {
+    if (o.type === "none") return 0;
+    var inv = fnum(o.invert);
+    if (inv === null || E <= inv) return 0;
+    var h = E - inv;
+    if (o.type === "orifice") {
+      var dia = fnum(o.dia), cd = fnum(o.cd);
+      if (!dia || cd === null) return 0;
+      var D = dia / 12, head = E - (inv + D / 2);
+      if (head <= 0) return 0;
+      var A = Math.PI / 4 * D * D;
+      return cd * A * Math.sqrt(2 * G * head);
+    }
+    if (o.type === "rectweir") {
+      var len = fnum(o.len), cw = fnum(o.cw);
+      if (!len || cw === null) return 0;
+      return cw * len * Math.pow(h, 1.5);
+    }
+    if (o.type === "vnotch") return 2.49 * Math.pow(h, 2.48);
+    return 0;
+  }
+  function totalQ(E) { return outletQ(outlets[0], E) + outletQ(outlets[1], E); }
+
+  /* ---------- drawing ---------- */
+  function drawPlot(nodes, cum, dis) {
+    var W = 660, H = 360, padL = 46, padT = 26, padB = 40, gap = 40;
+    var pw = (W - padL - 12 - gap) / 2;
+    var leftX0 = padL, rightX0 = padL + pw + gap;
+    var y0 = H - padB, plotH = H - padT - padB;
+    var minE = nodes[0].elev, maxE = nodes[nodes.length - 1].elev;
+    var eSpan = (maxE - minE) || 1;
+    var maxStor = niceMax(cum[cum.length - 1] || 1);
+    var maxDis = niceMax(Math.max.apply(null, dis) || 1);
+    function Y(e) { return y0 - (e - minE) / eSpan * plotH; }
+    function Xs(v) { return leftX0 + v / maxStor * pw; }
+    function Xd(v) { return rightX0 + v / maxDis * pw; }
+    var svg = "";
+
+    /* elevation gridlines + labels (shared) */
+    for (var g = 0; g <= 4; g++) {
+      var e = minE + eSpan * g / 4, gy = Y(e);
+      svg += "<line class='gridline' x1='" + leftX0 + "' y1='" + gy.toFixed(1) + "' x2='" + (leftX0 + pw) + "' y2='" + gy.toFixed(1) + "'/>";
+      svg += "<line class='gridline' x1='" + rightX0 + "' y1='" + gy.toFixed(1) + "' x2='" + (rightX0 + pw) + "' y2='" + gy.toFixed(1) + "'/>";
+      svg += "<text class='axislabel' x='" + (leftX0 - 5) + "' y='" + (gy + 3).toFixed(1) + "' text-anchor='end'>" + fmt(e, 1) + "</text>";
+    }
+    /* panel baselines */
+    svg += "<line class='axis' x1='" + leftX0 + "' y1='" + y0 + "' x2='" + (leftX0 + pw) + "' y2='" + y0 + "'/>";
+    svg += "<line class='axis' x1='" + rightX0 + "' y1='" + y0 + "' x2='" + (rightX0 + pw) + "' y2='" + y0 + "'/>";
+    svg += "<text class='paneltitle' x='" + leftX0 + "' y='" + (padT - 12) + "'>Storage (cf) vs. stage</text>";
+    svg += "<text class='paneltitle' x='" + rightX0 + "' y='" + (padT - 12) + "'>Discharge (cfs) vs. stage</text>";
+    /* x tick labels */
+    for (var t = 0; t <= 2; t++) {
+      var sv = maxStor * t / 2, dv = maxDis * t / 2;
+      svg += "<text class='axislabel' x='" + Xs(sv).toFixed(1) + "' y='" + (y0 + 14) + "' text-anchor='middle'>" + (sv >= 1000 ? fmt(sv / 1000, 0) + "k" : fmt(sv, 0)) + "</text>";
+      svg += "<text class='axislabel' x='" + Xd(dv).toFixed(1) + "' y='" + (y0 + 14) + "' text-anchor='middle'>" + fmt(dv, dv < 10 ? 1 : 0) + "</text>";
+    }
+
+    /* curves */
+    var sp = [], dp = [];
+    for (var i = 0; i < nodes.length; i++) {
+      sp.push(Xs(cum[i]).toFixed(1) + "," + Y(nodes[i].elev).toFixed(1));
+      dp.push(Xd(dis[i]).toFixed(1) + "," + Y(nodes[i].elev).toFixed(1));
+    }
+    svg += "<polyline class='storageline' points='" + sp.join(" ") + "'/>";
+    svg += "<polyline class='dischargeline' points='" + dp.join(" ") + "'/>";
+
+    /* outlet invert reference lines across both panels */
+    [outlets[0], outlets[1]].forEach(function (o, k) {
+      if (o.type === "none") return;
+      var inv = fnum(o.invert);
+      if (inv === null || inv < minE || inv > maxE) return;
+      var iy = Y(inv);
+      svg += "<line class='invertline' x1='" + leftX0 + "' y1='" + iy.toFixed(1) + "' x2='" + (rightX0 + pw) + "' y2='" + iy.toFixed(1) + "'/>";
+      svg += "<text class='invertlabel' x='" + (rightX0 + pw) + "' y='" + (iy - 2).toFixed(1) + "' text-anchor='end'>outlet " + (k + 1) + " inv " + fmt(inv, 1) + "</text>";
+    });
+
+    $("plot").innerHTML = svg;
+  }
+
+  /* ---------- output table + CSV ---------- */
+  var csvText = "";
+  function buildOutput(nodes, cum, dis) {
+    var body = $("out-body");
+    body.innerHTML = "";
+    var lines = ["stage_ft,storage_cf,storage_acft,discharge_cfs"];
+    for (var i = 0; i < nodes.length; i++) {
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + fmt(nodes[i].elev, 2) + "</td><td>" + fmt(cum[i], 0) +
+        "</td><td>" + fmt(cum[i] / CF_PER_ACFT, 4) + "</td><td>" + fmt(dis[i], dis[i] < 10 ? 3 : 2) + "</td>";
+      body.appendChild(tr);
+      lines.push([nodes[i].elev, Math.round(cum[i]), (cum[i] / CF_PER_ACFT).toFixed(4), dis[i].toFixed(4)].join(","));
+    }
+    csvText = lines.join("\n");
+  }
+  $("copy-btn").addEventListener("click", function () {
+    if (!csvText) return;
+    var btn = this;
+    try {
+      navigator.clipboard.writeText(csvText).then(function () {
+        btn.textContent = "copied";
+        setTimeout(function () { btn.textContent = "copy table as CSV"; }, 1200);
+      }, function () {});
+    } catch (e) {}
+  });
+
+  /* ---------- main ---------- */
+  function recompute() {
+    var out = $("results");
+    var nodes = getNodes();
+    if (nodes.length < 2) { out.hidden = true; saveState(); return; }
+    var cum = cumulative(nodes);
+    var dis = nodes.map(function (n) { return totalQ(n.elev); });
+
+    drawPlot(nodes, cum, dis);
+    buildOutput(nodes, cum, dis);
+
+    var msgs = [];
+    var i1 = fnum(outlets[0].invert), i2 = fnum(outlets[1].invert);
+    if (outlets[0].type !== "none" && outlets[1].type !== "none" && i1 !== null && i2 !== null) {
+      var lo = Math.min(i1, i2);
+      if (lo < nodes[0].elev) msgs.push("An outlet invert is below the lowest stage — it flows over the whole range; check the invert elevation.");
+    }
+    if (dis[dis.length - 1] <= 0) msgs.push("No discharge over the stage range — check that an outlet invert falls within the basin elevations.");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- mode toggle ---------- */
+  $("ssmode").addEventListener("change", function () {
+    $("table-mode").hidden = this.value !== "table";
+    $("prism-mode").hidden = this.value !== "prism";
+    recompute();
+  });
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["ssmode", "p-elev", "p-l", "p-w", "p-z", "p-depth", "p-step"];
+  function saveState() {
+    try {
+      var st = { rows: rows, outlets: outlets };
+      FIELDS.forEach(function (id) { st[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(st));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (Array.isArray(st.rows)) rows = st.rows;
+      if (Array.isArray(st.outlets) && st.outlets.length === 2) outlets = st.outlets;
+      FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recompute);
+    $(id).addEventListener("change", recompute);
+  });
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (rows.length === 0) rows = [{ elev: "", area: "" }];
+  $("table-mode").hidden = $("ssmode").value !== "table";
+  $("prism-mode").hidden = $("ssmode").value !== "prism";
+  renderRows();
+  renderOutlets();
+  recompute();
+})();
+</script>
+</body>
+</html>

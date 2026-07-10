@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CT Disinfection Compliance Calculator (SWTR)</title>
+<meta name="description" content="Offline Surface Water Treatment Rule CT compliance check: CT-achieved (C·T10 with baffling factor) against the CT-required you read from the governing table, summed over sequential disinfection segments. Input-driven, not a transcribed table. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; min-width: 52rem; }
+  table.items th, table.items td {
+    border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.88rem;
+  }
+  table.items th { background: var(--panel); }
+  table.items input { margin-top: 0; padding: 0.3rem; font-size: 0.88rem; max-width: none; }
+  table.items input.lbl { width: 5rem; }
+  table.items input.n { width: 5rem; text-align: right; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  table.items td.calc.ok { color: var(--result-border); font-weight: 700; }
+  table.items td.calc.bad { color: var(--fail-border); font-weight: 700; }
+  table.items button {
+    padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  button.add {
+    margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem;
+    border: 1px solid var(--accent); border-radius: 4px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  .warn {
+    background: var(--warn-bg); border-left: 4px solid var(--warn-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  .danger {
+    background: var(--fail-bg); border-left: 4px solid var(--fail-border);
+    padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem;
+  }
+  .helper-out { font-weight: 700; font-variant-numeric: tabular-nums; }
+  button.copy {
+    margin-left: 0.5rem; padding: 0.15rem 0.5rem; font-size: 0.8rem;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>CT Disinfection Compliance Calculator</h1>
+<p class="subtitle">Surface Water Treatment Rule CT check: compare CT-achieved (<code>C&middot;T10</code>) against the CT-required you read from the governing table, summed over sequential disinfection segments. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="danger">
+  <strong>This calculator does not certify compliance.</strong> The state primacy agency and the system's approved monitoring plan certify compliance &mdash; this tool only does the arithmetic on numbers you supply. It deliberately does <em>not</em> embed the SWTR CT tables: you must read each CT-required value from the current 40 CFR 141 Subpart H tables (or your state's adopted version) and the USEPA Guidance Manual, for your exact disinfectant, temperature, pH, and residual. Required CT shifts steeply with temperature and pH &mdash; a value from the wrong table cell is a wrong answer that looks right.
+</div>
+
+<fieldset>
+  <legend>Conditions (so you look up the right table cell)</legend>
+  <div class="row">
+    <div>
+      <label for="disinf">Disinfectant
+        <select id="disinf">
+          <option value="free">Free chlorine</option>
+          <option value="chloramine">Chloramine</option>
+          <option value="clo2">Chlorine dioxide</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="pathogen">Pathogen target
+        <select id="pathogen">
+          <option value="giardia">Giardia</option>
+          <option value="virus">Virus</option>
+        </select>
+      </label>
+    </div>
+    <div>
+      <label for="logt">Log-inactivation target
+        <select id="logt">
+          <option value="0.5">0.5-log</option>
+          <option value="1">1.0-log</option>
+          <option value="1.5">1.5-log</option>
+          <option value="2">2.0-log</option>
+          <option value="2.5">2.5-log</option>
+          <option value="3" selected>3.0-log</option>
+          <option value="3.5">3.5-log</option>
+          <option value="4">4.0-log</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="temp">Water temperature (&deg;C)
+        <input type="number" id="temp" min="0" step="any" placeholder="e.g. 10">
+      </label>
+    </div>
+    <div>
+      <label for="ph">pH <span class="small">(free chlorine only)</span>
+        <input type="number" id="ph" min="6" max="9" step="any" placeholder="e.g. 7.5">
+      </label>
+    </div>
+  </div>
+  <p class="small">These do not compute CT-required &mdash; they record the conditions so you pull the correct table value for each segment below. SWTR tables are typically published as the 3-log (99.9%) Giardia CT; scale proportionally for other log targets per the Guidance Manual.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Contact Volume Helper (optional)</legend>
+  <div class="row">
+    <div>
+      <label for="geom">Shape
+        <select id="geom">
+          <option value="basin">Rectangular basin (L &times; W &times; depth)</option>
+          <option value="pipe">Pipe (diameter &times; length)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="basin-geom">
+    <div><label for="g-l">Length (ft)<input type="number" id="g-l" min="0" step="any"></label></div>
+    <div><label for="g-w">Width (ft)<input type="number" id="g-w" min="0" step="any"></label></div>
+    <div><label for="g-d">Water depth (ft)<input type="number" id="g-d" min="0" step="any"></label></div>
+  </div>
+  <div class="row" id="pipe-geom" hidden>
+    <div><label for="g-dia">Diameter (in)<input type="number" id="g-dia" min="0" step="any"></label></div>
+    <div><label for="g-len">Length (ft)<input type="number" id="g-len" min="0" step="any"></label></div>
+  </div>
+  <p style="margin-top:0.6rem;">Contact volume: <span class="helper-out" id="g-vol">&mdash;</span><button type="button" class="copy" id="g-copy" hidden>copy</button></p>
+  <p class="small">Copy this into a segment's volume cell. Use only the volume the disinfectant actually contacts before the residual is measured.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Disinfection Segments (sum of ratios must reach 1.0)</legend>
+  <div class="table-wrap">
+    <table class="items">
+      <thead><tr>
+        <th>Segment</th><th>Volume (gal)</th><th>Peak flow (gpm)</th><th>Baffling</th><th>Residual C (mg/L)</th><th>CT-req (from table)</th><th>T10 (min)</th><th>CT-ach</th><th>Ratio</th><th></th>
+      </tr></thead>
+      <tbody id="seg-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="add" id="seg-add">+ Add segment</button>
+  <p class="small">Baffling factors (T10/T): unbaffled 0.1 &middot; poor 0.3 &middot; average 0.5 &middot; superior 0.7 &middot; perfect / pipe flow 1.0 &mdash; editable, and a tracer study governs where one exists. Peak hourly flow (not average) governs; measure residual at the segment outlet.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">&mdash;</div>
+  <table>
+    <tr><td>Sum of inactivation ratios</td><td class="val" id="r-sum">&mdash;</td></tr>
+    <tr><td>Effective log inactivation achieved</td><td class="val" id="r-log">&mdash;</td></tr>
+    <tr><td>Target log inactivation</td><td class="val" id="r-target">&mdash;</td></tr>
+    <tr><td>Conditions on record</td><td class="val" id="r-cond">&mdash;</td></tr>
+  </table>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>CT-achieved and T10</summary>
+  <p><code>CT-achieved = C &middot; T10</code>, with residual <code>C</code> in mg/L and <code>T10</code> in minutes. <code>T10</code> is the detention time the fastest 10% of water experiences: <code>T10 = (contact volume &divide; peak hourly flow) &times; baffling factor</code>. In consistent field units, <code>T10 (min) = volume (gal) &divide; flow (gpm) &times; BF</code>. The baffling factor is the ratio <code>T10/T</code> that accounts for short-circuiting &mdash; 1.0 only for true plug flow like a pipe.</p>
+</details>
+
+<details>
+  <summary>Ratios, sequential segments, and log inactivation</summary>
+  <p>For each segment the inactivation ratio is <code>CT-achieved &divide; CT-required</code>, where CT-required is the value you read from the SWTR table for the log target and conditions. A segment that delivers the full required CT has a ratio of 1.0. Sequential segments (e.g. a pipeline, then a clearwell, then the distribution entry point) <em>add</em> their ratios, and compliance requires <code>&Sigma; ratios &ge; 1.0</code>. The effective log inactivation achieved is <code>log-target &times; &Sigma; ratios</code> &mdash; so a summed ratio of 1.0 exactly meets the target log.</p>
+</details>
+
+<details>
+  <summary>Why this tool makes you enter CT-required</summary>
+  <p>The SWTR CT tables are large lookup tables that vary steeply and non-linearly with temperature, pH, and residual. Transcribing them from memory into a calculator is how subtle errors get institutionalized. So this tool asks you to read each CT-required straight from the governing table for the exact cell your conditions fall in, and it does the ratio arithmetic on that. The conditions fields above exist only to make sure you pull the right cell &mdash; and to put those conditions on the printout.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Peak hourly flow governs T10, not average day &mdash; the worst case is the busiest hour, when contact time is shortest.</li>
+    <li>Baffling-factor presets are for planning. A tracer study (step-dose or slug) measures the real T10/T for a specific basin at a specific level; use it for reporting where it exists.</li>
+    <li>Measure the residual at the <em>outlet</em> of the segment it credits &mdash; the concentration that survived the contact, not what went in.</li>
+    <li>Temperature is the big lever. The same basin that passes in August can fail in February because required CT roughly doubles as water goes cold &mdash; profile the cold-water condition.</li>
+    <li>Filtration provides most of the Giardia/virus credit; disinfection typically covers the remainder. Set the log target to the disinfection portion your plan assigns, not the whole plant requirement.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>USEPA &mdash; <em>Guidance Manual for Compliance with the Filtration and Disinfection Requirements for Public Water Systems Using Surface Water Sources</em> (the CT tables and T10/baffling guidance).</li>
+  <li>40 CFR 141 Subpart H &mdash; Surface Water Treatment Rule (and the state primacy agency's adopted version).</li>
+  <li>The system's approved disinfection profiling/benchmarking and monitoring plan &mdash; governing for what must be demonstrated.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "ctcompliance.v1";
+  var GAL_PER_CF = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  function fnum(v) { if (v === "" || v === null || v === undefined) return null; var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmt(x, d) {
+    if (x === null || !isFinite(x)) return "—";
+    if (d === undefined) d = 2;
+    return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 });
+  }
+
+  var segs = []; // { label, vol, flow, bf, c, ctreq }
+
+  /* ---------- per-segment computed values ---------- */
+  function segCalc(s) {
+    var vol = fnum(s.vol), flow = fnum(s.flow), bf = fnum(s.bf), c = fnum(s.c), ctreq = fnum(s.ctreq);
+    var t10 = (vol && flow && flow > 0 && bf !== null) ? (vol / flow) * bf : null;
+    var ctach = (t10 !== null && c !== null) ? c * t10 : null;
+    var ratio = (ctach !== null && ctreq && ctreq > 0) ? ctach / ctreq : null;
+    return { t10: t10, ctach: ctach, ratio: ratio };
+  }
+
+  function renderSegs() {
+    var body = $("seg-body");
+    body.innerHTML = "";
+    segs.forEach(function (s, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='lbl' type='text' maxlength='16' value='" + esc(s.label || "") + "'></td>" +
+        "<td><input class='n s-vol' type='number' min='0' step='any' value='" + esc(s.vol || "") + "'></td>" +
+        "<td><input class='n s-flow' type='number' min='0' step='any' value='" + esc(s.flow || "") + "'></td>" +
+        "<td><input class='n s-bf' type='number' min='0' max='1' step='any' value='" + esc(s.bf || "") + "'></td>" +
+        "<td><input class='n s-c' type='number' min='0' step='any' value='" + esc(s.c || "") + "'></td>" +
+        "<td><input class='n s-ctreq' type='number' min='0' step='any' value='" + esc(s.ctreq || "") + "'></td>" +
+        "<td class='calc c-t10'>—</td><td class='calc c-ach'>—</td><td class='calc c-ratio'>—</td>" +
+        "<td><button type='button' class='s-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".lbl").addEventListener("input", function () { segs[idx].label = this.value; recompute(); });
+      tr.querySelector(".s-vol").addEventListener("input", function () { segs[idx].vol = this.value; updateRow(idx); recompute(); });
+      tr.querySelector(".s-flow").addEventListener("input", function () { segs[idx].flow = this.value; updateRow(idx); recompute(); });
+      tr.querySelector(".s-bf").addEventListener("input", function () { segs[idx].bf = this.value; updateRow(idx); recompute(); });
+      tr.querySelector(".s-c").addEventListener("input", function () { segs[idx].c = this.value; updateRow(idx); recompute(); });
+      tr.querySelector(".s-ctreq").addEventListener("input", function () { segs[idx].ctreq = this.value; updateRow(idx); recompute(); });
+      tr.querySelector(".s-del").addEventListener("click", function () { segs.splice(idx, 1); renderSegs(); recompute(); });
+      body.appendChild(tr);
+    });
+    updateAllRows();
+  }
+
+  /* patch only the computed cells so typing never loses focus */
+  function updateRow(idx) {
+    var row = $("seg-body").rows[idx];
+    if (!row) return;
+    var c = segCalc(segs[idx]);
+    row.querySelector(".c-t10").textContent = fmt(c.t10, 1);
+    row.querySelector(".c-ach").textContent = fmt(c.ctach, 1);
+    var rc = row.querySelector(".c-ratio");
+    rc.textContent = c.ratio === null ? "—" : fmt(c.ratio, 3);
+    /* no per-row pass/fail color: compliance is on the SUM of ratios, and a
+       segment contributing a fraction below 1.0 is normal, not a failure */
+    rc.className = "calc c-ratio";
+  }
+  function updateAllRows() { for (var i = 0; i < segs.length; i++) updateRow(i); }
+
+  $("seg-add").addEventListener("click", function () {
+    segs.push({ label: "", vol: "", flow: "", bf: "0.5", c: "", ctreq: "" });
+    renderSegs(); recompute();
+  });
+
+  /* ---------- geometry helper ---------- */
+  $("geom").addEventListener("change", function () {
+    $("basin-geom").hidden = this.value !== "basin";
+    $("pipe-geom").hidden = this.value !== "pipe";
+    computeHelper();
+  });
+  ["g-l", "g-w", "g-d", "g-dia", "g-len"].forEach(function (id) {
+    $(id).addEventListener("input", computeHelper);
+  });
+  function computeHelper() {
+    var gal = null;
+    if ($("geom").value === "basin") {
+      var l = fnum($("g-l").value), w = fnum($("g-w").value), d = fnum($("g-d").value);
+      if (l && w && d) gal = l * w * d * GAL_PER_CF;
+    } else {
+      var dia = fnum($("g-dia").value), len = fnum($("g-len").value);
+      if (dia && len) gal = Math.PI / 4 * Math.pow(dia / 12, 2) * len * GAL_PER_CF;
+    }
+    $("g-vol").textContent = gal === null ? "—" : fmt(gal, 0) + " gal";
+    $("g-copy").hidden = gal === null;
+    $("g-copy").dataset.val = gal === null ? "" : Math.round(gal);
+  }
+  $("g-copy").addEventListener("click", function () {
+    var v = this.dataset.val;
+    if (!v) return;
+    var btn = this;
+    try {
+      navigator.clipboard.writeText(v).then(function () {
+        btn.textContent = "copied";
+        setTimeout(function () { btn.textContent = "copy"; }, 1200);
+      }, function () {});
+    } catch (e) {}
+  });
+
+  /* ---------- main ---------- */
+  function recompute() {
+    var out = $("results");
+    var logT = fnum($("logt").value) || 0;
+    var sum = 0, any = false, incomplete = false;
+    segs.forEach(function (s) {
+      var c = segCalc(s);
+      if (c.ratio !== null) { sum += c.ratio; any = true; }
+      else if (fnum(s.vol) || fnum(s.flow) || fnum(s.c) || fnum(s.ctreq)) incomplete = true;
+    });
+    updateAllRows();
+
+    if (!any) { out.hidden = true; saveState(); return; }
+
+    var pass = sum >= 1.0 - 1e-9;
+    var effLog = logT * sum;
+
+    var verdict = $("verdict");
+    out.classList.toggle("fail", !pass);
+    verdict.textContent = pass
+      ? "PASS — CT met (Σ ratio ≥ 1.0)"
+      : "FAIL — CT not met (Σ ratio < 1.0)";
+
+    $("r-sum").textContent = fmt(sum, 3) + (pass ? "" : " (need ≥ 1.0)");
+    $("r-log").textContent = fmt(effLog, 2) + "-log";
+    $("r-target").textContent = fmt(logT, 1) + "-log";
+    var dis = $("disinf").options[$("disinf").selectedIndex].text;
+    var pat = $("pathogen").options[$("pathogen").selectedIndex].text;
+    var t = fnum($("temp").value), ph = fnum($("ph").value);
+    $("r-cond").textContent = dis + " · " + pat +
+      (t !== null ? " · " + fmt(t, 1) + "°C" : "") +
+      ($("disinf").value === "free" && ph !== null ? " · pH " + fmt(ph, 1) : "");
+
+    var msgs = [];
+    if (incomplete) msgs.push("One or more segments have partial data and are not counted — a segment needs volume, flow, baffling, residual, and CT-required to contribute a ratio.");
+    if (t !== null && t <= 5) msgs.push("Cold water (≤5°C) — required CT is near its maximum; confirm the CT-required values are from the cold-water table row, not a milder season.");
+    if ($("disinf").value === "free" && ph === null) msgs.push("Free chlorine CT depends on pH — enter pH so you pull the right table cell.");
+    var warn = $("warn");
+    warn.hidden = msgs.length === 0;
+    warn.textContent = msgs.join(" ");
+
+    out.hidden = false;
+    saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["disinf", "pathogen", "logt", "temp", "ph", "geom", "g-l", "g-w", "g-d", "g-dia", "g-len"];
+  function saveState() {
+    try {
+      var st = { segs: segs };
+      FIELDS.forEach(function (id) { st[id] = $(id).value; });
+      localStorage.setItem(LS_KEY, JSON.stringify(st));
+    } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var st = JSON.parse(raw);
+      if (Array.isArray(st.segs)) segs = st.segs;
+      FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) {
+    $(id).addEventListener("input", recompute);
+    $(id).addEventListener("change", recompute);
+  });
+  $("reset-btn").addEventListener("click", function () {
+    if (segs.length && !window.confirm("This clears the conditions and every segment. Sure?")) return;
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  loadState();
+  if (segs.length === 0) segs.push({ label: "", vol: "", flow: "", bf: "0.5", c: "", ctreq: "" });
+  $("basin-geom").hidden = $("geom").value !== "basin";
+  $("pipe-geom").hidden = $("geom").value !== "pipe";
+  renderSegs();
+  computeHelper();
+  recompute();
+})();
+</script>
+</body>
+</html>
