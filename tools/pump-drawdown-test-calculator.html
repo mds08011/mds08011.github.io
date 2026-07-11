@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump Station Drawdown Test Calculator</title>
+<meta name="description" content="Offline wet-well drawdown test: determine actual pump capacity (GPM) in the field without a flowmeter, correcting for inflow measured during a pump-off fill. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --rise: #b3261e; --fall: #00557f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --rise: #e46962; --fall: #6db3d6;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  input[type="checkbox"] { width: auto; margin-right: 0.4rem; }
+  label.inline { display: flex; align-items: center; margin-top: 0.6rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.1rem; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .gridline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.5; }
+  .axislabel { fill: var(--muted); font-size: 10px; }
+  .axistitle { fill: var(--fg); font-size: 11px; font-weight: 600; }
+  .riseline { stroke: var(--rise); stroke-width: 2.5; fill: none; }
+  .fallline { stroke: var(--fall); stroke-width: 2.5; fill: none; }
+  .seglabel { font-size: 11px; font-weight: 600; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Pump Station Drawdown Test Calculator</h1>
+<p class="subtitle">Measure a pump's actual capacity in the field from a wet-well drawdown test &mdash; no flowmeter &mdash; correcting for the inflow that keeps arriving while you pump. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> This assumes the wet-well plan area is constant over the test band &mdash; run the test between two elevations with straight walls, clear of benches, the influent pipe, and pump-off/on floats. Inflow rarely stops during a test; measure it (pump-off fill) or isolate it, because ignoring it <em>understates</em> the pump. Run several cycles and average, and confirm only the intended pump(s) were running.
+</div>
+
+<fieldset>
+  <legend>Wet-Well Plan Area</legend>
+  <label for="amode">Area from
+    <select id="amode">
+      <option value="rect">Rectangular (L &times; W)</option>
+      <option value="circ">Circular (diameter)</option>
+      <option value="direct">Enter area directly</option>
+    </select>
+  </label>
+  <div class="row" id="rect-in">
+    <div><label for="len">Length (ft)<input type="number" id="len" min="0" step="any" placeholder="e.g. 10"></label></div>
+    <div><label for="wid">Width (ft)<input type="number" id="wid" min="0" step="any" placeholder="e.g. 8"></label></div>
+  </div>
+  <div class="row" id="circ-in" hidden>
+    <div><label for="dia">Diameter (ft)<input type="number" id="dia" min="0" step="any" placeholder="e.g. 10"></label></div>
+  </div>
+  <div class="row" id="direct-in" hidden>
+    <div><label for="area">Plan area (ft&sup2;)<input type="number" id="area" min="0" step="any" placeholder="e.g. 80"></label></div>
+  </div>
+  <p class="small" id="area-note"></p>
+</fieldset>
+
+<fieldset>
+  <legend>Inflow (pump off)</legend>
+  <label class="inline" for="isolated"><input type="checkbox" id="isolated"> Influent isolated &mdash; no inflow during the test</label>
+  <div id="inflow-in">
+    <div class="row">
+      <div><label for="rise">Level rise<input type="number" id="rise" min="0" step="any" placeholder="e.g. 6"></label></div>
+      <div><label for="riseunit">&nbsp;<select id="riseunit"><option value="in">inches</option><option value="ft">feet</option></select></label></div>
+      <div><label for="trise">Over time<input type="number" id="trise" min="0" step="any" placeholder="e.g. 30"></label></div>
+      <div><label for="triseunit">&nbsp;<select id="triseunit"><option value="s">seconds</option><option value="min">minutes</option></select></label></div>
+    </div>
+    <p class="small">With all pumps off, time how far the level rises &mdash; that's the inflow arriving.</p>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Drawdown (pump on)</legend>
+  <div class="row">
+    <div><label for="fall">Level fall<input type="number" id="fall" min="0" step="any" placeholder="e.g. 24"></label></div>
+    <div><label for="fallunit">&nbsp;<select id="fallunit"><option value="in">inches</option><option value="ft">feet</option></select></label></div>
+    <div><label for="tfall">Over time<input type="number" id="tfall" min="0" step="any" placeholder="e.g. 40"></label></div>
+    <div><label for="tfallunit">&nbsp;<select id="tfallunit"><option value="s">seconds</option><option value="min">minutes</option></select></label></div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="npump">Pumps running during drawdown
+        <select id="npump"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select>
+      </label>
+    </div>
+    <div>
+      <label for="design">Rated capacity for comparison (GPM, optional)
+        <input type="number" id="design" min="0" step="any" placeholder="e.g. 2000">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Plan area</td><td class="val" id="r-area">&mdash;</td></tr>
+    <tr><td>Inflow (Q<sub>in</sub>)</td><td class="val" id="r-in">&mdash;</td></tr>
+    <tr><td>Net drawdown rate (pump &minus; inflow)</td><td class="val" id="r-net">&mdash;</td></tr>
+    <tr class="total"><td>Pump capacity (Q<sub>pump</sub> = net + inflow)</td><td class="val" id="r-pump">&mdash;</td></tr>
+    <tr><td>Per pump</td><td class="val" id="r-per">&mdash;</td></tr>
+    <tr><td>Percent of rated</td><td class="val" id="r-pct">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <svg id="plot" viewBox="0 0 640 300" role="img" aria-label="Wet-well level trace: inflow rise then pump drawdown fall"></svg>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The drawdown test</summary>
+  <p>With no flowmeter, a pump's capacity comes from how fast it empties a known volume. Plan area <code>A</code> times a level change <code>d</code> is a volume; divided by the time it took, it's a flow. In field units, <code>Q (gpm) = 7.48 &middot; A (ft&sup2;) &middot; d (ft) / t (min)</code> &mdash; the 7.48 converts cubic feet to gallons.</p>
+  <p>The catch is inflow. While the pump draws the well down, sewage keeps arriving, so the level falls <em>slower</em> than the pump is actually moving water. The <em>net</em> drawdown rate is <code>Q<sub>pump</sub> &minus; Q<sub>in</sub></code>. Measure the inflow first with the pumps off (time the level rise), then <code>Q<sub>pump</sub> = (net drawdown rate) + Q<sub>in</sub></code>. Isolate the influent and <code>Q<sub>in</sub></code> is zero and the net drawdown <em>is</em> the pump.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Constant area is the whole assumption. Benched wet wells, the influent invert, and fillets all change the plan area with depth &mdash; pick a test band where the walls are vertical and uniform.</li>
+    <li>Keep the test band clear of the pump-off and pump-on float/transducer setpoints so the pump doesn't cycle mid-measurement.</li>
+    <li>Run three or more drawdowns and average. A single stopwatch read on a fast pump is noisy; the inflow read especially so.</li>
+    <li>For two pumps in parallel, the per-pump figure is only meaningful if the pumps are identical &mdash; and remember two pumps rarely make twice one pump's flow, because the system curve steepens. Cross-check against the <a href="/tools/pump-system-curve-plotter.html">pump system-curve plotter</a>.</li>
+    <li>Compare the measured capacity to the pump curve at the actual operating head, not the rated point &mdash; a pump can test &ldquo;low&rdquo; simply because the head is higher than rated.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Recommended Standards for Wastewater Facilities (&ldquo;Ten-State Standards&rdquo;) &mdash; pump station testing.</li>
+  <li>Hydraulic Institute / pump field-testing references. Companion tools: <a href="/tools/wet-well-cycle-calculator.html">wet well cycle time</a> and the <a href="/tools/pump-system-curve-plotter.html">pump system-curve plotter</a>.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "pumpdrawdown.v1";
+  var GAL_PER_CF = 7.480519;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : null; }
+  function fmt(x, d) { if (x === null || !isFinite(x)) return "—"; if (d === undefined) d = 0; return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }); }
+  function toFt(v, unit) { return unit === "in" ? v / 12 : v; }
+  function toMin(v, unit) { return unit === "s" ? v / 60 : v; }
+
+  function planArea() {
+    var m = $("amode").value;
+    if (m === "rect") { var l = num("len"), w = num("wid"); return (l && w) ? l * w : null; }
+    if (m === "circ") { var d = num("dia"); return d ? Math.PI / 4 * d * d : null; }
+    return num("area");
+  }
+
+  function updateModes() {
+    $("rect-in").hidden = $("amode").value !== "rect";
+    $("circ-in").hidden = $("amode").value !== "circ";
+    $("direct-in").hidden = $("amode").value !== "direct";
+    $("inflow-in").hidden = $("isolated").checked;
+    recompute();
+  }
+
+  /* flow (gpm) from a level change over a time */
+  function rate(dFt, tMin) { if (!tMin || tMin <= 0 || dFt == null) return null; return GAL_PER_CF * A * dFt / tMin; }
+  var A = null;
+
+  function draw(riseFt, tRiseMin, fallFt, tFallMin, isolated) {
+    var W = 640, H = 300, padL = 46, padR = 14, padT = 16, padB = 40;
+    var plotW = W - padL - padR, plotH = H - padT - padB, y0 = padT + plotH;
+    /* build a two-segment trace: rise (pump off) then fall (pump on) */
+    var t1 = isolated ? 0 : (tRiseMin || 0);
+    var r = isolated ? 0 : (riseFt || 0);
+    var t2 = tFallMin || 0, f = fallFt || 0;
+    var tTot = Math.max(t1 + t2, 0.001);
+    var peak = Math.max(r, f, 0.001);
+    var loBand = -Math.max(f - r, 0);
+    var span = (peak - loBand) || 1;
+    function X(t) { return padL + (t / tTot) * plotW; }
+    function Y(lv) { return y0 - ((lv - loBand) / span) * plotH; }
+    var svg = "";
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH * g / 4;
+      svg += "<line class='gridline' x1='" + padL + "' y1='" + gy.toFixed(1) + "' x2='" + (padL + plotW) + "' y2='" + gy.toFixed(1) + "'/>";
+    }
+    svg += "<line class='axis' x1='" + padL + "' y1='" + y0 + "' x2='" + (padL + plotW) + "' y2='" + y0 + "'/>";
+    svg += "<line class='axis' x1='" + padL + "' y1='" + padT + "' x2='" + padL + "' y2='" + y0 + "'/>";
+    svg += "<text class='axistitle' x='" + (padL + plotW / 2) + "' y='" + (H - 6) + "' text-anchor='middle'>Time</text>";
+    svg += "<text class='axistitle' transform='translate(13," + (padT + plotH / 2) + ") rotate(-90)' text-anchor='middle'>Wet-well level</text>";
+    /* rise segment (pump off) */
+    if (!isolated && t1 > 0) {
+      svg += "<polyline class='riseline' points='" + X(0).toFixed(1) + "," + Y(0).toFixed(1) + " " + X(t1).toFixed(1) + "," + Y(r).toFixed(1) + "'/>";
+      svg += "<text class='seglabel' fill='var(--rise)' x='" + X(t1 / 2).toFixed(1) + "' y='" + (Y(r / 2) - 6).toFixed(1) + "'>inflow (pump off)</text>";
+    }
+    /* fall segment (pump on) */
+    var startLv = isolated ? 0 : r;
+    svg += "<polyline class='fallline' points='" + X(t1).toFixed(1) + "," + Y(startLv).toFixed(1) + " " + X(t1 + t2).toFixed(1) + "," + Y(startLv - f).toFixed(1) + "'/>";
+    svg += "<text class='seglabel' fill='var(--fall)' x='" + X(t1 + t2 / 2).toFixed(1) + "' y='" + (Y(startLv - f / 2) - 6).toFixed(1) + "' text-anchor='middle'>drawdown (pump on)</text>";
+    $("plot").innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    A = planArea();
+    var isolated = $("isolated").checked;
+    var fallFt = null, tFallMin = null;
+    fallFt = (num("fall") != null) ? toFt(num("fall"), $("fallunit").value) : null;
+    tFallMin = (num("tfall") != null) ? toMin(num("tfall"), $("tfallunit").value) : null;
+
+    var riseFt = null, tRiseMin = null, qin = 0;
+    if (!isolated) {
+      riseFt = (num("rise") != null) ? toFt(num("rise"), $("riseunit").value) : null;
+      tRiseMin = (num("trise") != null) ? toMin(num("trise"), $("triseunit").value) : null;
+    }
+
+    if (!A || A <= 0 || fallFt == null || !tFallMin) { out.hidden = true; saveState(); return; }
+    if (!isolated && (riseFt == null || !tRiseMin)) { out.hidden = true; saveState(); return; }
+
+    qin = isolated ? 0 : rate(riseFt, tRiseMin);
+    var qnet = rate(fallFt, tFallMin);
+    if (qnet == null || (!isolated && qin == null)) { out.hidden = true; saveState(); return; }
+    var qpump = qnet + (qin || 0);
+    var N = parseInt($("npump").value, 10) || 1;
+    var design = num("design");
+
+    $("r-area").textContent = fmt(A, 1) + " ft²";
+    $("r-in").textContent = isolated ? "0 (isolated)" : fmt(qin, 0) + " gpm";
+    $("r-net").textContent = fmt(qnet, 0) + " gpm";
+    $("r-pump").textContent = fmt(qpump, 0) + " gpm (" + fmt(qpump / 448.831, 2) + " cfs)";
+    $("r-per").textContent = N > 1 ? fmt(qpump / N, 0) + " gpm/pump (×" + N + ")" : "—";
+    $("r-pct").textContent = (design && design > 0) ? fmt(qpump / design * 100, 0) + " % of rated" : "— (enter rated capacity)";
+
+    var msgs = [];
+    if (!isolated && qin > qpump * 0.5) msgs.push("Inflow is more than half the pump capacity — a big correction, so measure the pump-off rise carefully (or isolate the influent) or the result is mostly the inflow's error.");
+    if (design && design > 0) {
+      var pct = qpump / design * 100;
+      if (pct < 85) msgs.push("Measured capacity is well below rated — but check the actual operating head first; a higher-than-rated head lowers flow legitimately before you suspect the pump.");
+    }
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+
+    var an = $("area-note");
+    an.textContent = "Plan area used: " + fmt(A, 1) + " ft². Volume per foot of depth: " + fmt(A * GAL_PER_CF, 0) + " gal.";
+
+    draw(riseFt, tRiseMin, fallFt, tFallMin, isolated);
+    out.hidden = false; saveState();
+  }
+
+  var FIELDS = ["amode", "len", "wid", "dia", "area", "isolated", "rise", "riseunit", "trise", "triseunit", "fall", "fallunit", "tfall", "tfallunit", "npump", "design"];
+  function saveState() {
+    try { var st = {}; FIELDS.forEach(function (id) { var e = $(id); st[id] = e.type === "checkbox" ? e.checked : e.value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return;
+      FIELDS.forEach(function (id) { var e = $(id); if (st[id] === undefined) return; if (e.type === "checkbox") e.checked = !!st[id]; else e.value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("amode").addEventListener("change", updateModes);
+  $("isolated").addEventListener("change", updateModes);
+  $("reset-btn").addEventListener("click", function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  updateModes();
+})();
+</script>
+</body>
+</html>
