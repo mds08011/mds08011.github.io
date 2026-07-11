@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shutdown Window Planner</title>
+<meta name="description" content="Offline planner for a planned shutdown / tie-in: sequence the steps, track the running clock, add a contingency buffer, and get a go/no-go against the maximum allowable out-of-service window, with a timeline. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --step: #3a7ca5; --buffer: #c9a227; --over: rgba(179,38,30,0.14); --windowline: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --step: #4f9dc9; --buffer: #c9a227; --over: rgba(228,105,98,0.18); --windowline: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], input[type="text"], input[type="datetime-local"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  input[type="checkbox"] { width: auto; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; min-width: 38rem; }
+  table.items th, table.items td { border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem; }
+  table.items th { background: var(--panel); }
+  table.items input[type="text"], table.items input[type="number"], table.items select { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; max-width: none; }
+  table.items input.nm { width: 11rem; }
+  table.items input.dur { width: 5rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--muted); }
+  table.items td.center { text-align: center; }
+  table.items button { padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  button.add { margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; cursor: pointer; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.3rem; font-weight: 700; margin: 0.25rem 0 0.75rem 0; }
+  figure.chart { margin: 1rem 0 0; }
+  .chart-scroll { overflow-x: auto; }
+  svg { height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .overzone { fill: var(--over); }
+  .gridline { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+  .windowline { stroke: var(--windowline); stroke-width: 2; stroke-dasharray: 4 3; }
+  .stepbar { fill: var(--step); }
+  .bufferbar { fill: var(--buffer); }
+  .holdbar { fill: var(--step); stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .bartext { fill: #fff; font-size: 11px; font-weight: 600; }
+  .barout { fill: var(--fg); font-size: 11px; }
+  .axislabel { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+  .windowlbl { fill: var(--windowline); font-size: 10px; font-weight: 700; text-anchor: middle; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Shutdown Window Planner</h1>
+<p class="subtitle">Sequence the steps of a planned shutdown or tie-in, track the running clock, add a contingency buffer, and see whether it fits inside the maximum allowable out-of-service window. Runs entirely offline; everything persists in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The window is a hard constraint set by whatever actually governs &mdash; customers' tolerable outage, hours of storage in the tanks, a boil-water threshold, a permitted lane-closure or night-work window, a contractual milestone. Name it, and be honest about the durations: the unknown condition of the existing valve or pipe is the classic overrun, which is what the buffer is for. This plans a <em>serial</em> sequence; you can't backfill before you test.
+</div>
+
+<fieldset>
+  <legend>Window</legend>
+  <div class="row">
+    <div>
+      <label for="start">Planned start (optional, for clock times)
+        <input type="datetime-local" id="start">
+      </label>
+    </div>
+    <div>
+      <label for="maxwin">Max allowable out-of-service (hr)
+        <input type="number" id="maxwin" min="0" step="any" placeholder="e.g. 8">
+      </label>
+    </div>
+    <div>
+      <label for="buffer">Contingency buffer (% of planned)
+        <input type="number" id="buffer" min="0" step="any" value="20">
+      </label>
+      <p class="small">The overrun reserve. 15&ndash;25% is common; more for an old valve of unknown condition.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Shutdown Steps (in sequence)</legend>
+  <div class="table-wrap">
+    <table class="items">
+      <thead><tr><th>Step</th><th>Duration</th><th>Unit</th><th>Hold point</th><th>Starts</th><th>Ends</th><th></th></tr></thead>
+      <tbody id="step-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="add" id="step-add">+ Add step</button>
+  <p class="small">Mark inspection, sample-result, or pressure-test steps as <em>hold points</em> &mdash; their clock can't be compressed by adding manpower.</p>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict">&mdash;</div>
+  <table>
+    <tr><td>Planned duration (steps)</td><td class="val" id="r-planned">&mdash;</td></tr>
+    <tr><td>Contingency buffer</td><td class="val" id="r-buffer">&mdash;</td></tr>
+    <tr><td>Committed (planned + buffer)</td><td class="val" id="r-committed">&mdash;</td></tr>
+    <tr><td>Max allowable window</td><td class="val" id="r-window">&mdash;</td></tr>
+    <tr><td>Slack against the window</td><td class="val" id="r-slack">&mdash;</td></tr>
+    <tr><td>Projected return to service</td><td class="val" id="r-return">&mdash;</td></tr>
+    <tr><td>Must be back in service by</td><td class="val" id="r-deadline">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <div class="chart-scroll"><svg id="timeline" role="img" aria-label="Shutdown step timeline against the allowable window"></svg></div>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all data</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The clock and the go/no-go</summary>
+  <p>Steps run in sequence, so the planned duration is just their sum, and each step's start and end clock times accumulate from the planned start. The committed duration is <code>planned &times; (1 + buffer%)</code>. Slack is <code>window &minus; committed</code>: positive is go, negative is the amount you'd blow the window by. The timeline draws the steps end to end with the buffer appended and the window line marked &mdash; if the bars cross into the shaded zone past the line, the plan doesn't fit.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>The buffer isn't optional padding &mdash; it's the plan for the valve that won't seat, the coupling that's the wrong size, the pipe that's a different material than the record says. Serial work has no slack of its own to absorb that.</li>
+    <li>Hold points have their own clocks that manpower can't shorten: a pressure test holds for its full duration, disinfection sample results come back when the lab runs them, an inspector arrives when they arrive. Sequence around them.</li>
+    <li>Set a go/no-go decision time &mdash; the point of no return where, if you're not at a given step, you abort and restore service on the old configuration rather than run past the window.</li>
+    <li>Have a real plan B for restoring service: temporary service connections, a bypass pump, or a valve that lets you re-pressurize the old alignment. &ldquo;We'll hurry&rdquo; is not a contingency.</li>
+    <li>The window is someone's promise to customers or a regulator. Beating it quietly is fine; blowing it is a notification, a boil-water advisory, or a claim &mdash; which is why the buffer lives inside the window, not outside it.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>The utility's / owner's shutdown and outage procedures, and the customer-notification or boil-water policy that sets the allowable duration (governing).</li>
+  <li>Companion field tools: <a href="/tools/pipe-flushing-scour-calculator.html">pipe flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing</a> for the return-to-service steps.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. All data is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "shutdownplan.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fnum(v) { if (v === "" || v == null) return null; var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmtDur(min) {
+    if (min == null || !isFinite(min)) return "—";
+    var h = Math.floor(min / 60), m = Math.round(min % 60);
+    return (h > 0 ? h + " hr " : "") + m + " min";
+  }
+  /* parse datetime-local "YYYY-MM-DDTHH:MM" as a LOCAL date */
+  function parseLocalDT(s) {
+    if (!s) return null;
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return null;
+    return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  }
+  function clockOf(base, addMin) {
+    if (!base) return "—";
+    var d = new Date(base.getTime() + addMin * 60000);
+    var hh = d.getHours(), mm = d.getMinutes();
+    var day = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(base.getFullYear(), base.getMonth(), base.getDate())) / 86400000);
+    return (hh < 10 ? "0" : "") + hh + ":" + (mm < 10 ? "0" : "") + mm + (day > 0 ? " +" + day + "d" : "");
+  }
+
+  var steps = []; // { name, dur, unit, hold }
+
+  function stepMin(s) { var d = fnum(s.dur); if (d == null) return null; return s.unit === "hr" ? d * 60 : d; }
+
+  function renderSteps() {
+    var body = $("step-body"); body.innerHTML = "";
+    steps.forEach(function (s, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='nm' type='text' maxlength='40' value='" + esc(s.name || "") + "'></td>" +
+        "<td><input class='dur' type='number' min='0' step='any' value='" + esc(s.dur == null ? "" : s.dur) + "'></td>" +
+        "<td><select class='unit'><option value='min'" + (s.unit !== "hr" ? " selected" : "") + ">min</option><option value='hr'" + (s.unit === "hr" ? " selected" : "") + ">hr</option></select></td>" +
+        "<td class='center'><input class='hold' type='checkbox'" + (s.hold ? " checked" : "") + "></td>" +
+        "<td class='calc c-start'>—</td><td class='calc c-end'>—</td>" +
+        "<td><button type='button' class='del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".nm").addEventListener("input", function () { steps[idx].name = this.value; recompute(); });
+      tr.querySelector(".dur").addEventListener("input", function () { steps[idx].dur = this.value; updateClockCells(); recompute(); });
+      tr.querySelector(".unit").addEventListener("change", function () { steps[idx].unit = this.value; updateClockCells(); recompute(); });
+      tr.querySelector(".hold").addEventListener("change", function () { steps[idx].hold = this.checked; recompute(); });
+      tr.querySelector(".del").addEventListener("click", function () { steps.splice(idx, 1); renderSteps(); recompute(); });
+      body.appendChild(tr);
+    });
+    updateClockCells();
+  }
+
+  /* patch the Starts/Ends clock cells in place so typing keeps focus */
+  function updateClockCells() {
+    var base = parseLocalDT($("start").value);
+    var rows = $("step-body").rows, cum = 0;
+    for (var i = 0; i < steps.length; i++) {
+      var d = stepMin(steps[i]);
+      var st = rows[i].querySelector(".c-start"), en = rows[i].querySelector(".c-end");
+      if (d == null) { st.textContent = "—"; en.textContent = "—"; continue; }
+      st.textContent = base ? clockOf(base, cum) : "+" + fmtDur(cum);
+      en.textContent = base ? clockOf(base, cum + d) : "+" + fmtDur(cum + d);
+      cum += d;
+    }
+  }
+
+  $("step-add").addEventListener("click", function () { steps.push({ name: "", dur: "", unit: "min", hold: false }); renderSteps(); recompute(); });
+
+  /* ---------- timeline ---------- */
+  function drawTimeline(planned, bufferMin, windowMin, base) {
+    var valid = steps.map(function (s) { return { name: s.name, min: stepMin(s), hold: s.hold }; }).filter(function (s) { return s.min != null && s.min > 0; });
+    var rowsN = valid.length + (bufferMin > 0 ? 1 : 0);
+    var colW = 52, padL = 8, padR = 8, headerH = 22, rowH = 26, gap = 6, labW = 0;
+    var xMax = Math.max(windowMin || 0, planned + bufferMin) * 1.06 || 1;
+    var W = 660, plotW = W - padL - padR;
+    var H = headerH + rowsN * (rowH + gap) + 26;
+    function X(min) { return padL + (min / xMax) * plotW; }
+    var svg = "";
+    /* over-window shaded zone */
+    if (windowMin && windowMin < xMax) {
+      svg += "<rect class='overzone' x='" + X(windowMin).toFixed(1) + "' y='" + headerH + "' width='" + (X(xMax) - X(windowMin)).toFixed(1) + "' height='" + (H - headerH - 20) + "'/>";
+    }
+    /* hour gridlines + labels */
+    var hrMax = xMax / 60, stepHr = hrMax > 12 ? 4 : hrMax > 6 ? 2 : 1;
+    for (var t = 0; t <= hrMax + 1e-6; t += stepHr) {
+      var gx = X(t * 60);
+      svg += "<line class='gridline' x1='" + gx.toFixed(1) + "' y1='" + headerH + "' x2='" + gx.toFixed(1) + "' y2='" + (H - 20) + "'/>";
+      svg += "<text class='axislabel' x='" + gx.toFixed(1) + "' y='" + (H - 6) + "'>" + t + " hr</text>";
+    }
+    /* window line */
+    if (windowMin) {
+      var wx = X(windowMin);
+      svg += "<line class='windowline' x1='" + wx.toFixed(1) + "' y1='" + (headerH - 4) + "' x2='" + wx.toFixed(1) + "' y2='" + (H - 20) + "'/>";
+      svg += "<text class='windowlbl' x='" + wx.toFixed(1) + "' y='" + (headerH - 8) + "'>window " + (windowMin / 60) + " hr</text>";
+    }
+    /* step bars */
+    var cum = 0;
+    valid.forEach(function (s, r) {
+      var y = headerH + r * (rowH + gap) + 2, bh = rowH - 6;
+      var bx = X(cum), bw = X(cum + s.min) - X(cum);
+      svg += "<rect class='" + (s.hold ? "holdbar" : "stepbar") + "' x='" + bx.toFixed(1) + "' y='" + y + "' width='" + Math.max(1, bw).toFixed(1) + "' height='" + bh + "' rx='2'/>";
+      var label = (s.name || "step") + " (" + fmtDur(s.min) + ")";
+      if (bw > label.length * 6.2 + 8) svg += "<text class='bartext' x='" + (bx + 6).toFixed(1) + "' y='" + (y + bh / 2 + 4) + "'>" + esc(label) + "</text>";
+      else svg += "<text class='barout' x='" + (bx + bw + 5).toFixed(1) + "' y='" + (y + bh / 2 + 4) + "'>" + esc(label) + "</text>";
+      cum += s.min;
+    });
+    /* buffer bar */
+    if (bufferMin > 0) {
+      var yb = headerH + valid.length * (rowH + gap) + 2, bh2 = rowH - 6;
+      var bbx = X(cum), bbw = X(cum + bufferMin) - X(cum);
+      svg += "<rect class='bufferbar' x='" + bbx.toFixed(1) + "' y='" + yb + "' width='" + Math.max(1, bbw).toFixed(1) + "' height='" + bh2 + "' rx='2'/>";
+      var bl = "buffer (" + fmtDur(bufferMin) + ")";
+      if (bbw > bl.length * 6.2 + 8) svg += "<text class='bartext' x='" + (bbx + 6).toFixed(1) + "' y='" + (yb + bh2 / 2 + 4) + "'>" + esc(bl) + "</text>";
+      else svg += "<text class='barout' x='" + (bbx + bbw + 5).toFixed(1) + "' y='" + (yb + bh2 / 2 + 4) + "'>" + esc(bl) + "</text>";
+    }
+    var g = $("timeline");
+    g.setAttribute("viewBox", "0 0 " + W + " " + H);
+    g.setAttribute("width", W); g.style.maxWidth = W + "px"; g.style.width = "100%";
+    g.innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var planned = 0, any = false;
+    steps.forEach(function (s) { var d = stepMin(s); if (d != null && d > 0) { planned += d; any = true; } });
+    updateClockCells();
+    if (!any) { out.hidden = true; saveState(); return; }
+
+    var bufPct = fnum($("buffer").value); if (bufPct == null || bufPct < 0) bufPct = 0;
+    var bufferMin = planned * bufPct / 100;
+    var committed = planned + bufferMin;
+    var maxWin = fnum($("maxwin").value);
+    var windowMin = (maxWin != null && maxWin > 0) ? maxWin * 60 : null;
+    var base = parseLocalDT($("start").value);
+
+    $("r-planned").textContent = fmtDur(planned);
+    $("r-buffer").textContent = fmtDur(bufferMin) + " (" + fnum($("buffer").value) + "%)";
+    $("r-committed").textContent = fmtDur(committed);
+    $("r-window").textContent = windowMin ? fmtDur(windowMin) : "— (enter window)";
+    $("r-return").textContent = base ? clockOf(base, committed) : "+" + fmtDur(committed) + " from start";
+    $("r-deadline").textContent = (base && windowMin) ? clockOf(base, windowMin) : (windowMin ? "+" + fmtDur(windowMin) + " from start" : "—");
+
+    var verdict = $("verdict");
+    if (windowMin) {
+      var slack = windowMin - committed;
+      $("r-slack").textContent = (slack >= 0 ? "+" : "−") + fmtDur(Math.abs(slack)) + (slack >= 0 ? " to spare" : " OVER");
+      var go = slack >= 0;
+      out.classList.toggle("fail", !go);
+      verdict.hidden = false;
+      verdict.textContent = go ? "GO — fits with " + fmtDur(slack) + " to spare" : "NO-GO — over the window by " + fmtDur(-slack);
+    } else {
+      $("r-slack").textContent = "—";
+      verdict.hidden = true;
+      out.classList.remove("fail");
+    }
+
+    drawTimeline(planned, bufferMin, windowMin, base);
+
+    var msgs = [];
+    if (windowMin && committed > windowMin) msgs.push("The committed time doesn't fit the window. Phase the work across two shorter shutdowns, add a bypass so service continues, or move the constraint — don't just shave the buffer.");
+    else if (windowMin && (windowMin - committed) < planned * 0.1) msgs.push("Very little slack beyond the buffer. One bad step eats it — confirm your plan B for restoring service on the old alignment.");
+    var hasHold = steps.some(function (s) { return s.hold && stepMin(s); });
+    if (!hasHold && any) msgs.push("No hold points marked — if this sequence has a pressure test, disinfection samples, or an inspection, flag them; their clocks don't compress.");
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+
+    out.hidden = false; saveState();
+  }
+
+  var FIELDS = ["start", "maxwin", "buffer"];
+  function saveState() {
+    try { var st = { steps: steps }; FIELDS.forEach(function (id) { st[id] = $(id).value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function loadState() {
+    try { var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return; if (Array.isArray(st.steps)) steps = st.steps; FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; }); } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("reset-btn").addEventListener("click", function () { if (steps.length && !window.confirm("Clear the window and every step?")) return; try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  if (steps.length === 0) steps = [{ name: "", dur: "", unit: "min", hold: false }];
+  renderSteps();
+  recompute();
+})();
+</script>
+</body>
+</html>
