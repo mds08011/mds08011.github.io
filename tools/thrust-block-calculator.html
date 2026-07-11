@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thrust Block Sizing Calculator</title>
+<meta name="description" content="Offline thrust block calculator: unbalanced thrust at a bend, tee, dead end, or reducer from test pressure and pipe area, and the concrete block bearing area required against the soil's safe bearing value. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --soil: #8a6d3b; --block: #6c7a89; --thrust: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --soil: #b99a5b; --block: #9aa7b4; --thrust: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.1rem; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; max-width: 24rem; margin: 0 auto; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .soil { fill: var(--soil); opacity: 0.28; }
+  .soilline { stroke: var(--soil); stroke-width: 1.5; }
+  .block { fill: var(--block); opacity: 0.85; }
+  .thrust { stroke: var(--thrust); stroke-width: 3; marker-end: url(#arrow); }
+  .dim { fill: var(--fg); font-size: 11px; text-anchor: middle; }
+  .dimt { fill: var(--thrust); font-size: 11px; font-weight: 700; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Thrust Block Sizing Calculator</h1>
+<p class="subtitle">The unbalanced thrust at a bend, tee, dead end, or reducer &mdash; and the concrete bearing area needed to hold it against the soil. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> A thrust block only works if it bears against <em>undisturbed</em> soil at a value a geotechnical engineer will stand behind. The safe-bearing presets here are textbook starting points; saturated, disturbed, or organic soil can carry almost nothing, and in that case the answer is restrained joints, not a bigger block. Size for the <em>test</em> pressure, which is higher than working pressure. This covers horizontal bearing thrust; vertical (uplift) bends need weight blocks or restraint.
+</div>
+
+<fieldset>
+  <legend>Fitting &amp; Pressure</legend>
+  <div class="row">
+    <div>
+      <label for="fitting">Fitting
+        <select id="fitting">
+          <option value="bend">Bend</option>
+          <option value="dead">Dead end / cap / tee (branch)</option>
+          <option value="reducer">Reducer</option>
+        </select>
+      </label>
+    </div>
+    <div id="angle-wrap">
+      <label for="angle">Bend deflection
+        <select id="angle">
+          <option value="90">90°</option>
+          <option value="45" selected>45°</option>
+          <option value="22.5">22½°</option>
+          <option value="11.25">11¼°</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <input type="number" id="anglecustom" min="0" max="180" step="any" placeholder="degrees" hidden>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="od">Pipe outside diameter (in)
+        <input type="number" id="od" min="0" step="any" placeholder="e.g. 13.20 (12&quot; DI)">
+      </label>
+      <p class="small">The diameter the pressure acts on &mdash; the pipe OD. (12&quot; DI ≈ 13.20&quot;, 8&quot; ≈ 9.05&quot;, 6&quot; ≈ 6.90&quot;.)</p>
+    </div>
+    <div id="od2-wrap" hidden>
+      <label for="od2">Smaller OD after reducer (in)
+        <input type="number" id="od2" min="0" step="any" placeholder="e.g. 9.05 (8&quot;)">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="press">Test pressure (psi)
+        <input type="number" id="press" min="0" step="any" placeholder="e.g. 150">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Soil &amp; Safety</legend>
+  <div class="row">
+    <div>
+      <label for="soilpreset">Safe bearing value
+        <select id="soilpreset">
+          <option value="0">Muck / peat / organic — 0 (use restraint)</option>
+          <option value="1000">Soft clay — 1,000 psf</option>
+          <option value="2000" selected>Sand — 2,000 psf</option>
+          <option value="3000">Sand &amp; gravel — 3,000 psf</option>
+          <option value="4000">Sand &amp; gravel w/ clay — 4,000 psf</option>
+          <option value="5000">Hardpan — 5,000 psf</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <input type="number" id="soilcustom" min="0" step="any" placeholder="psf" hidden>
+    </div>
+    <div>
+      <label for="sf">Safety factor
+        <input type="number" id="sf" min="1" step="any" value="1.5">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="height">Block height, if depth-limited (ft, optional)
+        <input type="number" id="height" min="0" step="any" placeholder="width solved from area">
+      </label>
+      <p class="small">Enter the vertical face you can build (limited by cover and pipe depth); the tool solves the width. Leave blank for a square face.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td>Pipe cross-sectional area</td><td class="val" id="r-area">&mdash;</td></tr>
+    <tr><td>Unbalanced thrust</td><td class="val" id="r-thrust">&mdash;</td></tr>
+    <tr><td>Safe bearing (design)</td><td class="val" id="r-bearing">&mdash;</td></tr>
+    <tr class="total"><td>Required bearing area</td><td class="val" id="r-ab">&mdash;</td></tr>
+    <tr><td>Suggested block face</td><td class="val" id="r-face">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <svg id="diagram" viewBox="0 0 320 240" role="img" aria-label="Thrust block bearing face against soil"></svg>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Thrust and bearing area</summary>
+  <p>Internal pressure pushes on the pipe's cross-sectional area, <code>A = π/4 &middot; OD&sup2;</code>. The <em>unbalanced</em> thrust depends on the fitting: a bend is <code>T = 2 &middot; P &middot; A &middot; sin(θ/2)</code>, a dead end, cap, or tee branch is <code>T = P &middot; A</code>, and a reducer is <code>T = P &middot; (A&#8321; &minus; A&#8322;)</code>. With <code>P</code> in psi and <code>A</code> in square inches, <code>T</code> comes out directly in pounds. The block's bearing area is <code>A<sub>b</sub> = T &middot; SF / S<sub>b</sub></code>, where <code>S<sub>b</sub></code> is the soil's safe bearing value in psf and <code>SF</code> the safety factor &mdash; giving <code>A<sub>b</sub></code> in square feet.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>The thrust acts along the bisector of the bend, outward. The block goes on the <em>outside</em> of the bend, poured against undisturbed trench wall &mdash; never against backfill, which hasn't the bearing to resist anything.</li>
+    <li>Size for test pressure, not working pressure. The joint sees its highest load during the hydrostatic test, and that's what has to be restrained.</li>
+    <li>Keep concrete off the joint and bolts. The fitting must stay accessible and repairable; wrap or form so the block bears on the fitting body, not the mechanical joint.</li>
+    <li>In poor soil &mdash; high water table, organics, disturbed fill &mdash; the safe bearing value approaches zero and blocks get absurdly large. That's the signal to switch to restrained joints, which carry the thrust in the pipe wall over a calculated length instead of into the soil face.</li>
+    <li>Vertical bends that thrust upward need a weight (gravity) block or restraint, not a bearing block &mdash; this tool sizes the horizontal bearing case.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>DIPRA &mdash; Thrust Restraint Design for Ductile Iron Pipe.</li>
+  <li>AWWA M41 (ductile iron) and Uni-Bell PVC design guidance &mdash; thrust blocking and restraint.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "thrustblock.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : null; }
+  function fmt(x, d) { if (x === null || !isFinite(x)) return "—"; if (d === undefined) d = 0; return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }); }
+  function area(od) { return Math.PI / 4 * od * od; }
+
+  function updateModes() {
+    var f = $("fitting").value;
+    $("angle-wrap").hidden = f !== "bend";
+    $("od2-wrap").hidden = f !== "reducer";
+    $("anglecustom").hidden = !($("fitting").value === "bend" && $("angle").value === "custom");
+    $("soilcustom").hidden = $("soilpreset").value !== "custom";
+    recompute();
+  }
+
+  function drawBlock(Wft, Hft, Tlb) {
+    var VB = 320, VH = 240, m = 30;
+    var maxDim = Math.max(Wft, Hft, 0.5);
+    var scale = Math.min((VB - 2 * m) / (maxDim * 1.6), (VH - 2 * m) / (maxDim * 1.25));
+    var bw = Wft * scale, bh = Hft * scale;
+    var bx = VB - m - bw, by = (VH - bh) / 2;
+    var svg = "<defs><marker id='arrow' markerWidth='9' markerHeight='9' refX='7' refY='3' orient='auto'><path d='M0,0 L7,3 L0,6 Z' fill='var(--thrust)'/></marker></defs>";
+    /* undisturbed soil behind the block (right side) */
+    svg += "<rect class='soil' x='" + (bx + bw) + "' y='8' width='" + (VB - (bx + bw) - 4) + "' height='" + (VH - 16) + "'/>";
+    svg += "<line class='soilline' x1='" + (bx + bw) + "' y1='8' x2='" + (bx + bw) + "' y2='" + (VH - 8) + "'/>";
+    svg += "<text class='dim' x='" + (bx + bw + (VB - (bx + bw)) / 2) + "' y='" + (VH - 14) + "'>undisturbed soil</text>";
+    /* block */
+    svg += "<rect class='block' x='" + bx.toFixed(1) + "' y='" + by.toFixed(1) + "' width='" + bw.toFixed(1) + "' height='" + bh.toFixed(1) + "' rx='2'/>";
+    /* thrust arrow into the block face */
+    var midY = by + bh / 2;
+    svg += "<line class='thrust' x1='" + (bx - 60) + "' y1='" + midY.toFixed(1) + "' x2='" + (bx - 4) + "' y2='" + midY.toFixed(1) + "'/>";
+    svg += "<text class='dimt' x='" + (bx - 58) + "' y='" + (midY - 8).toFixed(1) + "'>thrust " + fmt(Tlb, 0) + " lb</text>";
+    /* dimension labels */
+    svg += "<text class='dim' x='" + (bx + bw / 2).toFixed(1) + "' y='" + (by - 8).toFixed(1) + "'>W = " + fmt(Wft, 1) + " ft</text>";
+    svg += "<text class='dim' x='" + (bx + bw / 2).toFixed(1) + "' y='" + (by + bh + 16).toFixed(1) + "'>H = " + fmt(Hft, 1) + " ft</text>";
+    $("diagram").innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var f = $("fitting").value;
+    var od = num("od"), P = num("press");
+    if (!od || od <= 0 || P == null || P < 0) { out.hidden = true; saveState(); return; }
+    var A = area(od), T;
+    if (f === "bend") {
+      var ang = $("angle").value === "custom" ? num("anglecustom") : parseFloat($("angle").value);
+      if (ang == null || ang <= 0 || ang >= 180) { out.hidden = true; saveState(); return; }
+      T = 2 * P * A * Math.sin(ang * Math.PI / 180 / 2);
+    } else if (f === "reducer") {
+      var od2 = num("od2");
+      if (!od2 || od2 <= 0 || od2 >= od) { out.hidden = true; saveState(); return; }
+      T = P * (A - area(od2));
+    } else {
+      T = P * A;
+    }
+
+    var Sb = $("soilpreset").value === "custom" ? num("soilcustom") : parseFloat($("soilpreset").value);
+    var SF = num("sf"); if (SF == null || SF < 1) SF = 1.5;
+    if (Sb == null || Sb < 0) { out.hidden = true; saveState(); return; }
+
+    $("r-area").textContent = fmt(A, 1) + " in²";
+    $("r-thrust").textContent = fmt(T, 0) + " lb (" + fmt(T / 2000, 1) + " tons)";
+    $("r-bearing").textContent = Sb <= 0 ? "0 — no bearing" : fmt(Sb, 0) + " psf";
+
+    var msgs = [];
+    if (Sb <= 0) {
+      $("r-ab").textContent = "∞ — soil can't bear thrust";
+      $("r-face").textContent = "use restrained joints";
+      out.classList.add("fail");
+      msgs.push("This soil carries no bearing thrust — a block can't work here. Restrain the joints instead: the thrust is carried in the pipe over a calculated restrained length.");
+      $("warn").hidden = false; $("warn").textContent = msgs.join(" ");
+      $("diagram").innerHTML = "";
+      out.hidden = false; saveState(); return;
+    }
+    out.classList.remove("fail");
+    var Ab = T * SF / Sb;
+    $("r-ab").textContent = fmt(Ab, 1) + " ft²";
+
+    var Hin = num("height"), Wft, Hft;
+    if (Hin && Hin > 0) { Hft = Hin; Wft = Ab / Hin; }
+    else { Wft = Math.sqrt(Ab); Hft = Wft; }
+    $("r-face").textContent = fmt(Wft, 1) + " ft wide × " + fmt(Hft, 1) + " ft high" + (Hin && Hin > 0 ? "" : " (square)");
+
+    if (Ab > 40) msgs.push("Required bearing area is large (" + fmt(Ab, 0) + " ft²) — check the soil value with a geotech, and compare against restrained joints, which are often cheaper and more reliable at this size.");
+    if (Wft > 0 && Hft > 0 && (Wft / Hft > 4 || Hft / Wft > 4)) msgs.push("The face is very elongated — pick a more square block or a different height so it bears evenly.");
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+
+    drawBlock(Wft, Hft, T);
+    out.hidden = false; saveState();
+  }
+
+  var FIELDS = ["fitting", "angle", "anglecustom", "od", "od2", "press", "soilpreset", "soilcustom", "sf", "height"];
+  function saveState() { try { var st = {}; FIELDS.forEach(function (id) { st[id] = $(id).value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {} }
+  function loadState() { try { var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return; FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; }); } catch (e) {} }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("fitting").addEventListener("change", updateModes);
+  $("angle").addEventListener("change", updateModes);
+  $("soilpreset").addEventListener("change", updateModes);
+  $("reset-btn").addEventListener("click", function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  updateModes();
+})();
+</script>
+</body>
+</html>
