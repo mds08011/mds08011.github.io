@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump System-Curve Plotter</title>
+<meta name="description" content="Offline pump analysis: fit a manufacturer pump curve, build the system curve (static head + friction ∝ Q^n), and find the operating point at their intersection, with parallel-pump support. Plots all three in SVG. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --pump: #00557f; --system: #b3261e; --op: #2e6e4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --pump: #6db3d6; --system: #e46962; --op: #5c9d7c;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 48rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .table-wrap { overflow-x: auto; }
+  table.items { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+  table.items th, table.items td { border: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; font-size: 0.9rem; }
+  table.items th { background: var(--panel); }
+  table.items input { margin-top: 0; padding: 0.3rem; font-size: 0.9rem; width: 8rem; }
+  table.items td.calc { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  table.items button { padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); color: var(--fg); cursor: pointer; }
+  button.add { margin-top: 0.6rem; padding: 0.4rem 0.9rem; font-size: 0.95rem; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; cursor: pointer; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .axis { stroke: var(--border); stroke-width: 1; }
+  .gridline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.5; }
+  .axislabel { fill: var(--muted); font-size: 10px; }
+  .axistitle { fill: var(--fg); font-size: 11px; font-weight: 600; }
+  .pumpline { stroke: var(--pump); stroke-width: 2.5; fill: none; }
+  .systemline { stroke: var(--system); stroke-width: 2.5; fill: none; stroke-dasharray: 6 4; }
+  .datapt { fill: var(--pump); }
+  .opdot { fill: var(--op); stroke: var(--bg); stroke-width: 2; }
+  .opguide { stroke: var(--op); stroke-width: 1; stroke-dasharray: 3 3; }
+  .legtext { fill: var(--fg); font-size: 11px; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Pump System-Curve Plotter</h1>
+<p class="subtitle">Fit a manufacturer pump curve, build the system curve (static head plus friction), and find the operating point where they cross &mdash; with parallel-pump support. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The operating point is only as good as the two curves. The pump curve is the manufacturer's, at a stated speed and impeller trim; the system curve moves as valves throttle, tanks fill, and pipe roughens with age. This finds where <em>today's</em> curves intersect &mdash; run the aged/dirty case too. Verify suction conditions separately with the <a href="/tools/npsha-calculator.html">NPSH available calculator</a>.
+</div>
+
+<fieldset>
+  <legend>Pump Curve (points from the manufacturer curve)</legend>
+  <div class="table-wrap">
+    <table class="items">
+      <thead><tr><th>Flow (gpm)</th><th>Head (ft)</th><th></th></tr></thead>
+      <tbody id="pt-body"></tbody>
+    </table>
+  </div>
+  <button type="button" class="add" id="pt-add">+ Add point</button>
+  <div class="row" style="margin-top:0.6rem;">
+    <div>
+      <label for="npar">Pumps in parallel
+        <select id="npar"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+      </label>
+      <p class="small">Parallel pumps add flow at equal head. Enter one pump's curve; the tool combines them.</p>
+    </div>
+  </div>
+  <p class="small">Read 4&ndash;6 points off the head-capacity curve, including shutoff (flow 0) and a far-right point. A quadratic is fit through them.</p>
+</fieldset>
+
+<fieldset>
+  <legend>System Curve</legend>
+  <div class="row">
+    <div>
+      <label for="hstatic">Static head (ft)
+        <input type="number" id="hstatic" step="any" placeholder="e.g. 40">
+      </label>
+      <p class="small">Elevation the water must be lifted plus any pressure head at the discharge, independent of flow.</p>
+    </div>
+    <div>
+      <label for="nexp">Friction exponent
+        <select id="nexp">
+          <option value="2" selected>2.0 (Darcy-Weisbach)</option>
+          <option value="1.85">1.85 (Hazen-Williams)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="fmode">Friction defined by
+        <select id="fmode">
+          <option value="design">A design point (flow &amp; friction head)</option>
+          <option value="k">Coefficient K directly</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="row" id="design-inputs">
+    <div>
+      <label for="qd">Design flow (gpm)
+        <input type="number" id="qd" min="0" step="any" placeholder="e.g. 1500">
+      </label>
+    </div>
+    <div>
+      <label for="hfd">Friction head at that flow (ft)
+        <input type="number" id="hfd" min="0" step="any" placeholder="e.g. 30">
+      </label>
+      <p class="small">Total dynamic head minus static, at the design flow &mdash; e.g. from the <a href="/tools/bypass-tdh-calculator.html">TDH calculator</a>.</p>
+    </div>
+  </div>
+  <div class="row" id="k-inputs" hidden>
+    <div>
+      <label for="kval">K in H<sub>f</sub> = K&middot;Q<sup>n</sup>
+        <input type="number" id="kval" min="0" step="any" placeholder="e.g. 1.33e-5">
+      </label>
+      <p class="small">Q in gpm, H in ft.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Operating point</h3>
+  <table>
+    <tr><td>Operating flow</td><td class="val" id="r-q">&mdash;</td></tr>
+    <tr><td>Operating head</td><td class="val" id="r-h">&mdash;</td></tr>
+    <tr><td>Shutoff head (per pump, flow 0)</td><td class="val" id="r-shut">&mdash;</td></tr>
+    <tr><td>System static head</td><td class="val" id="r-stat">&mdash;</td></tr>
+    <tr><td>Flow per pump</td><td class="val" id="r-perpump">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <svg id="plot" viewBox="0 0 660 380" role="img" aria-label="Pump curve, system curve, and operating point"></svg>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Fitting the pump curve</summary>
+  <p>A centrifugal pump's head-capacity curve is well approximated by a quadratic, <code>H = a + bQ + cQ&sup2;</code>. The tool least-squares fits that through your entered points (at least three; shutoff and a far-right point pin it down). <code>a</code> is the shutoff head. For <code>N</code> pumps in parallel, the combined curve carries total flow <code>Q</code> at the head one pump makes at <code>Q/N</code> &mdash; parallel pumps add flow at equal head.</p>
+</details>
+
+<details>
+  <summary>The system curve and the operating point</summary>
+  <p>The system curve is <code>H<sub>sys</sub> = H<sub>static</sub> + K&middot;Q<sup>n</sup></code>: a fixed lift plus friction that grows with flow (<code>n = 2</code> for Darcy, ~1.85 for Hazen-Williams). <code>K</code> comes from one design point, <code>K = H<sub>f</sub> / Q<sub>design</sub><sup>n</sup></code>, or is entered directly. The operating point is the single flow where the pump curve and system curve cross &mdash; found here by bisection, since the pump head falls and the system head rises, giving exactly one intersection when the pump can overcome the static head.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>The manufacturer curve is at a specific speed and impeller diameter. A trimmed impeller or a VFD shifts it &mdash; scale it with the <a href="/tools/pump-affinity-calculator.html">affinity laws</a> first, then intersect.</li>
+    <li>Run two system curves: clean/new (low K) and aged/fouled (high K, valves throttled). The operating point walks left up the pump curve as the system stiffens &mdash; often into a worse-efficiency, higher-vibration zone.</li>
+    <li>Parallel pumps never double the flow. Because the system curve steepens with flow, two pumps might deliver only ~1.4&times; one pump's flow &mdash; the plot shows exactly how much you actually gain.</li>
+    <li>An operating point far right of best-efficiency (flat system, oversized pump) risks cavitation and motor overload; far left risks recirculation and low flow. Check it lands near BEP, and confirm NPSH margin separately.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Hydraulic Institute / pump handbooks &mdash; head-capacity and system-head curves, parallel operation.</li>
+  <li>Companion tools: <a href="/tools/pump-affinity-calculator.html">pump affinity laws</a>, <a href="/tools/npsha-calculator.html">NPSH available</a>, and <a href="/tools/bypass-tdh-calculator.html">total dynamic head</a>.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "pumpsystem.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fnum(v) { if (v === "" || v === null || v === undefined) return null; var x = parseFloat(v); return isFinite(x) ? x : null; }
+  function fmt(x, d) { if (x === null || !isFinite(x)) return "—"; if (d === undefined) d = 1; return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }); }
+  function niceMax(v) { if (v <= 0) return 1; var mag = Math.pow(10, Math.floor(Math.log10(v))); var n = v / mag; var step = n <= 1 ? 1 : n <= 1.5 ? 1.5 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 3 ? 3 : n <= 5 ? 5 : 10; return step * mag; }
+
+  var pts = []; // { q, h }
+
+  /* ---------- quadratic least-squares fit ---------- */
+  function fitQuad(data) {
+    var n = data.length; if (n < 3) return null;
+    var Sx = 0, Sx2 = 0, Sx3 = 0, Sx4 = 0, Sy = 0, Sxy = 0, Sx2y = 0;
+    data.forEach(function (p) {
+      var x = p.q, y = p.h, x2 = x * x;
+      Sx += x; Sx2 += x2; Sx3 += x2 * x; Sx4 += x2 * x2;
+      Sy += y; Sxy += x * y; Sx2y += x2 * y;
+    });
+    /* solve 3x3: [[n,Sx,Sx2],[Sx,Sx2,Sx3],[Sx2,Sx3,Sx4]] * [a,b,c] = [Sy,Sxy,Sx2y] */
+    var A = [[n, Sx, Sx2], [Sx, Sx2, Sx3], [Sx2, Sx3, Sx4]];
+    var B = [Sy, Sxy, Sx2y];
+    return solve3(A, B);
+  }
+  function solve3(A, b) {
+    var M = [A[0].concat(b[0]), A[1].concat(b[1]), A[2].concat(b[2])];
+    for (var i = 0; i < 3; i++) {
+      var piv = i;
+      for (var r = i + 1; r < 3; r++) if (Math.abs(M[r][i]) > Math.abs(M[piv][i])) piv = r;
+      if (Math.abs(M[piv][i]) < 1e-12) return null;
+      var tmp = M[i]; M[i] = M[piv]; M[piv] = tmp;
+      for (var r2 = 0; r2 < 3; r2++) {
+        if (r2 === i) continue;
+        var f = M[r2][i] / M[i][i];
+        for (var c = i; c < 4; c++) M[r2][c] -= f * M[i][c];
+      }
+    }
+    return [M[0][3] / M[0][0], M[1][3] / M[1][1], M[2][3] / M[2][2]]; // a,b,c
+  }
+
+  /* ---------- points table ---------- */
+  function renderPts() {
+    var body = $("pt-body"); body.innerHTML = "";
+    pts.forEach(function (p, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td><input class='p-q' type='number' min='0' step='any' value='" + esc(p.q === null ? "" : p.q) + "'></td>" +
+        "<td><input class='p-h' type='number' min='0' step='any' value='" + esc(p.h === null ? "" : p.h) + "'></td>" +
+        "<td><button type='button' class='p-del' aria-label='Remove'>&times;</button></td>";
+      tr.querySelector(".p-q").addEventListener("input", function () { pts[idx].q = fnum(this.value); recompute(); });
+      tr.querySelector(".p-h").addEventListener("input", function () { pts[idx].h = fnum(this.value); recompute(); });
+      tr.querySelector(".p-del").addEventListener("click", function () { pts.splice(idx, 1); renderPts(); recompute(); });
+      body.appendChild(tr);
+    });
+  }
+  $("pt-add").addEventListener("click", function () { pts.push({ q: null, h: null }); renderPts(); recompute(); });
+
+  $("fmode").addEventListener("change", function () {
+    $("design-inputs").hidden = this.value !== "design";
+    $("k-inputs").hidden = this.value !== "k";
+    recompute();
+  });
+
+  /* ---------- drawing ---------- */
+  function draw(coef, N, hstatic, K, n, op, qMaxData) {
+    var W = 660, H = 380, padL = 52, padR = 96, padT = 16, padB = 44;
+    var plotW = W - padL - padR, plotH = H - padT - padB, y0 = padT + plotH;
+    var pumpAt = function (Q) { return coef[0] + coef[1] * (Q / N) + coef[2] * (Q / N) * (Q / N); };
+    var sysAt = function (Q) { return hstatic + K * Math.pow(Q, n); };
+
+    var qMax = niceMax(Math.max(op ? op.q * 1.25 : 0, qMaxData * N * 1.1));
+    var hMax = niceMax(Math.max(coef[0], op ? op.h : 0, hstatic) * 1.15);
+    function X(q) { return padL + (q / qMax) * plotW; }
+    function Y(h) { return y0 - (h / hMax) * plotH; }
+    var svg = "";
+    for (var g = 0; g <= 5; g++) {
+      var hv = hMax * g / 5, gy = Y(hv);
+      svg += "<line class='gridline' x1='" + padL + "' y1='" + gy.toFixed(1) + "' x2='" + (padL + plotW) + "' y2='" + gy.toFixed(1) + "'/>";
+      svg += "<text class='axislabel' x='" + (padL - 6) + "' y='" + (gy + 4).toFixed(1) + "' text-anchor='end'>" + fmt(hv, 0) + "</text>";
+      var qv = qMax * g / 5, gx = X(qv);
+      svg += "<text class='axislabel' x='" + gx.toFixed(1) + "' y='" + (y0 + 16) + "' text-anchor='middle'>" + fmt(qv, 0) + "</text>";
+    }
+    svg += "<line class='axis' x1='" + padL + "' y1='" + y0 + "' x2='" + (padL + plotW) + "' y2='" + y0 + "'/>";
+    svg += "<line class='axis' x1='" + padL + "' y1='" + padT + "' x2='" + padL + "' y2='" + y0 + "'/>";
+    svg += "<text class='axistitle' x='" + (padL + plotW / 2) + "' y='" + (H - 6) + "' text-anchor='middle'>Flow (gpm)</text>";
+    svg += "<text class='axistitle' transform='translate(14," + (padT + plotH / 2) + ") rotate(-90)' text-anchor='middle'>Head (ft)</text>";
+
+    function poly(fn, cls) {
+      var p = [];
+      for (var i = 0; i <= 80; i++) {
+        var q = qMax * i / 80, h = fn(q);
+        if (h < 0) break; /* end the curve cleanly where head reaches zero */
+        if (h > hMax * 1.02) continue;
+        p.push(X(q).toFixed(1) + "," + Y(h).toFixed(1));
+      }
+      return "<polyline class='" + cls + "' points='" + p.join(" ") + "'/>";
+    }
+    svg += poly(pumpAt, "pumpline");
+    svg += poly(sysAt, "systemline");
+
+    if (N === 1) pts.forEach(function (p) {
+      if (p.q !== null && p.h !== null && p.q <= qMax && p.h <= hMax) svg += "<circle class='datapt' cx='" + X(p.q).toFixed(1) + "' cy='" + Y(p.h).toFixed(1) + "' r='3.5'/>";
+    });
+
+    if (op) {
+      var ox = X(op.q), oy = Y(op.h);
+      svg += "<line class='opguide' x1='" + padL + "' y1='" + oy.toFixed(1) + "' x2='" + ox.toFixed(1) + "' y2='" + oy.toFixed(1) + "'/>";
+      svg += "<line class='opguide' x1='" + ox.toFixed(1) + "' y1='" + oy.toFixed(1) + "' x2='" + ox.toFixed(1) + "' y2='" + y0 + "'/>";
+      svg += "<circle class='opdot' cx='" + ox.toFixed(1) + "' cy='" + oy.toFixed(1) + "' r='5'/>";
+      svg += "<text class='legtext' x='" + (ox + 8).toFixed(1) + "' y='" + (oy - 8).toFixed(1) + "'>" + fmt(op.q, 0) + " gpm @ " + fmt(op.h, 0) + " ft</text>";
+    }
+
+    var lx = padL + plotW + 12, ly = padT + 12;
+    svg += "<line class='pumpline' x1='" + lx + "' y1='" + ly + "' x2='" + (lx + 22) + "' y2='" + ly + "'/><text class='legtext' x='" + (lx + 28) + "' y='" + (ly + 4) + "'>Pump" + (N > 1 ? " ×" + N : "") + "</text>";
+    svg += "<line class='systemline' x1='" + lx + "' y1='" + (ly + 20) + "' x2='" + (lx + 22) + "' y2='" + (ly + 20) + "'/><text class='legtext' x='" + (lx + 28) + "' y='" + (ly + 24) + "'>System</text>";
+    $("plot").innerHTML = svg;
+  }
+
+  /* ---------- main ---------- */
+  function recompute() {
+    var out = $("results");
+    var valid = pts.filter(function (p) { return p.q !== null && p.h !== null && p.q >= 0 && p.h >= 0; });
+    var coef = fitQuad(valid);
+    var hstatic = fnum($("hstatic").value);
+    var n = parseFloat($("nexp").value) || 2;
+    var N = parseInt($("npar").value, 10) || 1;
+
+    var K = null;
+    if ($("fmode").value === "design") {
+      var qd = fnum($("qd").value), hfd = fnum($("hfd").value);
+      if (qd && qd > 0 && hfd !== null && hfd >= 0) K = hfd / Math.pow(qd, n);
+    } else {
+      K = fnum($("kval").value);
+    }
+
+    if (!coef || hstatic === null || K === null || K < 0) { out.hidden = true; saveState(); return; }
+
+    var pumpAt = function (Q) { return coef[0] + coef[1] * (Q / N) + coef[2] * (Q / N) * (Q / N); };
+    var sysAt = function (Q) { return hstatic + K * Math.pow(Q, n); };
+    var f = function (Q) { return pumpAt(Q) - sysAt(Q); };
+
+    var qMaxData = Math.max.apply(null, valid.map(function (p) { return p.q; }));
+    var msgs = [];
+    var op = null;
+    if (f(0) < 0) {
+      msgs.push("The pump's shutoff head (" + fmt(coef[0], 1) + " ft) is below the static head (" + fmt(hstatic, 1) + " ft) — this pump cannot lift the water at all. No operating point.");
+    } else {
+      /* bisect for root of f on [0, hi] */
+      var hi = qMaxData * N * 1.5, lo = 0;
+      if (f(hi) > 0) { msgs.push("The curves don't cross within 1.5× the pump's data range — the system is very flat; add a higher-flow point to the pump curve or check K."); }
+      else {
+        for (var i = 0; i < 80; i++) { var mid = (lo + hi) / 2; if (f(mid) > 0) lo = mid; else hi = mid; }
+        var qop = (lo + hi) / 2;
+        op = { q: qop, h: sysAt(qop) };
+        if (qop > qMaxData * N) msgs.push("The operating point is beyond your highest data point — the pump curve is extrapolated there. Add a far-right point to pin it down.");
+      }
+    }
+
+    $("r-q").textContent = op ? fmt(op.q, 0) + " gpm" : "— (no intersection)";
+    $("r-h").textContent = op ? fmt(op.h, 1) + " ft" : "—";
+    $("r-shut").textContent = fmt(coef[0], 1) + " ft";
+    $("r-stat").textContent = fmt(hstatic, 1) + " ft";
+    $("r-perpump").textContent = op ? fmt(op.q / N, 0) + " gpm" + (N > 1 ? " (×" + N + " = " + fmt(op.q, 0) + ")" : "") : "—";
+    out.classList.toggle("fail", !op);
+
+    draw(coef, N, hstatic, K, n, op, qMaxData);
+
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+    out.hidden = false; saveState();
+  }
+
+  /* ---------- persistence ---------- */
+  var FIELDS = ["npar", "hstatic", "nexp", "fmode", "qd", "hfd", "kval"];
+  function saveState() {
+    try { var st = { pts: pts }; FIELDS.forEach(function (id) { st[id] = $(id).value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function loadState() {
+    try {
+      var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return;
+      if (Array.isArray(st.pts)) pts = st.pts;
+      FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; });
+    } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("reset-btn").addEventListener("click", function () { if (pts.length && !window.confirm("Clear the pump curve and system inputs?")) return; try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  $("design-inputs").hidden = $("fmode").value !== "design";
+  $("k-inputs").hidden = $("fmode").value !== "k";
+  if (pts.length === 0) pts = [{ q: 0, h: null }, { q: null, h: null }, { q: null, h: null }];
+  renderPts();
+  recompute();
+})();
+</script>
+</body>
+</html>
