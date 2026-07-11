@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measuring Pump Capacity by Drawdown, and the Inflow Correction | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Measuring Pump Capacity by Drawdown, and the Inflow Correction</h1>
+                <time datetime="2026-08-01">August 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Most lift stations don't have a flowmeter on the discharge, so during startup &mdash; or years later, when a pump seems tired &mdash; the question &ldquo;how much is this pump actually moving?&rdquo; has no gauge to answer it. The wet well itself is the meter. If you know its plan area and time how fast the level drops with the pump running, area times drop over time is a flow. The <a href="/tools/pump-system-curve-plotter.html">system-curve plotter</a> tells you where a pump <em>should</em> run; this measures where it <em>does</em>.</p>
+
+            <h2>The Approach</h2>
+            <p>The arithmetic is just <code>Q (gpm) = 7.48 &middot; A (ft&sup2;) &middot; d (ft) / t (min)</code> &mdash; area times level change is a volume, over the time it took, with 7.48 converting cubic feet to gallons. You give the tool the wet-well area (directly, or from length&times;width or a diameter), the inflow, and the drawdown, in whatever units you read in the field (inches and seconds, or feet and minutes). It plots the level trace &mdash; the level rising while the pump is off, then falling once it kicks on &mdash; and reports the capacity.</p>
+
+            <figure>
+                <img src="/blog/2026-08-01/pump-drawdown-test-calculator.png" alt="The drawdown calculator showing 598 gpm inflow, 1795 gpm net drawdown, a 2394 gpm pump capacity at 96% of rated, and a two-slope level trace" loading="lazy">
+                <figcaption>Figure 1: A 6-inch pump-off rise and a 24-inch drawdown in an 80&nbsp;ft&sup2; well &mdash; 598 gpm of inflow, corrected into a 2,394 gpm pump.</figcaption>
+            </figure>
+
+            <h3>The inflow correction is the whole trick</h3>
+            <p>The mistake that quietly understates every drawdown test is forgetting that the sewage keeps coming. While the pump draws the well down, inflow is still arriving, so the level falls <em>slower</em> than the pump is really moving water &mdash; and the naive &ldquo;area times drop over time&rdquo; gives you the <em>net</em>, not the pump. In the worked example the pump is actually a 2,394 gpm machine, but the well only dropped at a rate of 1,795 gpm because ~600 gpm of inflow was refilling it the whole time. Measure that inflow first (pumps off, time the rise), and the pump capacity is the net drawdown <em>plus</em> the inflow. Isolate the influent instead and the inflow term is zero &mdash; but on a live station you usually can't, so you measure it.</p>
+
+            <details>
+                <summary>Getting a trustworthy number</summary>
+                <ul>
+                    <li>Constant plan area is the load-bearing assumption. Benched wells, the influent invert, and fillets change the area with depth &mdash; test between two elevations where the walls are vertical and uniform.</li>
+                    <li>Keep the test band clear of the pump-off and pump-on setpoints so the controls don't cycle the pump mid-measurement.</li>
+                    <li>Run three or more drawdowns and average; a single stopwatch read on a fast pump &mdash; and the smaller inflow read especially &mdash; is noisy.</li>
+                    <li>If the measured capacity looks low, check the actual operating head before you blame the pump: a higher-than-rated head lowers flow legitimately, exactly as the <a href="/tools/pump-system-curve-plotter.html">pump curve</a> predicts.</li>
+                </ul>
+            </details>
+
+            <p>It's a single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser. Pairs with the <a href="/tools/wet-well-cycle-calculator.html">wet-well cycle-time calculator</a> for the other half of a lift-station commissioning.</p>
+
+            <p>The tool: <a href="/tools/pump-drawdown-test-calculator.html">Pump Station Drawdown Test Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Recommended Standards for Wastewater Facilities (&ldquo;Ten-State Standards&rdquo;) &mdash; pump station testing.</li>
+                <li>[2] Companion tools: <a href="/tools/wet-well-cycle-calculator.html">wet well cycle time</a> and the <a href="/tools/pump-system-curve-plotter.html">pump system-curve plotter</a>.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
