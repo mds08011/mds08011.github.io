@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encoding SVG as a Data URI, and Why URL-Encoding Usually Wins | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Encoding SVG as a Data URI, and Why URL-Encoding Usually Wins</h1>
+                <time datetime="2026-07-30">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>I already had a little <a href="/tools/svg-sandbox.html">SVG base64 embedding sandbox</a> &mdash; but it's a static demo: three example SVGs baked in as data URIs to show that the technique works and that scripts inside an <code>&lt;img&gt;</code>-embedded SVG are ignored. What it doesn't do is let you paste <em>your</em> SVG and get the string back. So this is the interactive counterpart: markup in, data URI out.</p>
+
+            <h2>The Approach</h2>
+            <p>You paste an <code>&lt;svg&gt;</code> and get a live preview (rendered through an actual <code>&lt;img&gt;</code> data URI, so what you see is exactly what you'd embed), both encodings side by side with their byte sizes, and ready-to-paste <code>&lt;img&gt;</code> and CSS <code>background-image</code> snippets. It fixes the two things that quietly break inline SVG: it adds the <code>xmlns</code> namespace if you left it off (without it the browser won't render the data URI at all), and it can strip comments and collapse whitespace first.</p>
+
+            <figure>
+                <img src="/blog/2026-07-30/svg-data-uri.png" alt="The SVG Data URI Encoder: markup input, a rendered sun preview on a checkerboard, a size table showing URL-encoded is smaller, and the two data URIs plus img and CSS snippets" loading="lazy">
+                <figcaption>Figure 1: A 541-byte sun becomes a 750-byte base64 URI or a 564-byte URL-encoded one &mdash; URL-encoding wins by 25%.</figcaption>
+            </figure>
+
+            <h3>Base64 is the reflex; URL-encoding is usually smaller</h3>
+            <p>Everyone reaches for base64 because it's the encoding you already know, but it's the wrong default for SVG. Base64 turns three bytes into four characters &mdash; a flat ~33% inflation &mdash; regardless of what's inside. SVG, though, is mostly plain ASCII (<code>&lt;path d="M0 0..."&gt;</code>), and the alternative encoding just leaves that text alone and percent-escapes the handful of characters a URL can't carry. So <code>data:image/svg+xml,&hellip;</code> is almost always smaller than <code>data:image/svg+xml;base64,&hellip;</code>, and it has the bonus of staying human-readable and diffable in your CSS. The tool shows both sizes and flags the winner; for the example sun it's a 25% saving, and it grows with the proportion of markup to binary-ish content.</p>
+
+            <details>
+                <summary>The encoding details worth knowing</summary>
+                <ul>
+                    <li>The base64 path is UTF-8 safe: the markup is UTF-8-encoded before <code>btoa</code>, so an SVG with non-ASCII text doesn't throw or corrupt.</li>
+                    <li>The URL-encoding uses the well-known minimal scheme: swap double quotes for single quotes (so the URI can live inside double quotes), collapse whitespace between tags, and percent-escape only <code>%#()&lt;&gt;?[\]^`{|}</code> and newlines. Everything else stays legible.</li>
+                    <li>Scripts and event handlers inside the SVG are inert once it's loaded via <code>&lt;img&gt;</code> or CSS <code>url()</code> &mdash; the same safety property the <a href="/tools/svg-sandbox.html">sandbox</a> demonstrates. Inline <code>&lt;svg&gt;</code> in the document itself is not sandboxed and can run script.</li>
+                    <li>Inline the small stuff &mdash; icons, logos, one-off illustrations. A large SVG as a data URI bloats the file it lives in and doesn't cache separately; past a few KB, link it as a file instead.</li>
+                </ul>
+            </details>
+
+            <p>It's the usual shape for these: one static file, vanilla JS, your markup persisted in <code>localStorage</code> and nothing leaving the browser. If you want a raster PNG or JPEG out of an SVG instead of a data URI, that's the <a href="/tools/svg-render.html">SVG to JPEG/PNG renderer</a>.</p>
+
+            <p>The tool: <a href="/tools/svg-data-uri.html">SVG Data URI Encoder</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] MDN &mdash; Data URLs (the <code>data:</code> URI scheme and base64). <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Schemes/data">developer.mozilla.org</a></li>
+                <li>[2] The minimal SVG URL-encoding scheme popularized by Yoksel's &ldquo;URL-encoder for SVG.&rdquo;</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
