@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipe Flushing &amp; Scour Velocity Calculator</title>
+<meta name="description" content="Offline water main flushing calculator: flow needed for a target scour velocity, velocity from an available flow, pipe volume, flush duration for N volumes, and total water used. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --zone-low: #b3261e; --zone-ok: #2e6e4e; --zone-scour: #00557f; --marker: #1a1a1a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --zone-low: #e46962; --zone-ok: #5c9d7c; --zone-scour: #6db3d6; --marker: #e4e4e4;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .results tr.total td { border-top: 2px solid var(--result-border); padding-top: 0.5rem; font-size: 1.1rem; }
+  figure.chart { margin: 1rem 0 0.25rem; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .zonelow { fill: var(--zone-low); } .zoneok { fill: var(--zone-ok); } .zonescour { fill: var(--zone-scour); }
+  .zonelbl { fill: var(--fg); font-size: 10px; text-anchor: middle; }
+  .tick { stroke: var(--border); stroke-width: 1; }
+  .ticklbl { fill: var(--muted); font-size: 10px; text-anchor: middle; }
+  .marker { fill: var(--marker); }
+  .markerlbl { fill: var(--marker); font-size: 12px; font-weight: 700; text-anchor: middle; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Pipe Flushing &amp; Scour Velocity Calculator</h1>
+<p class="subtitle">The flow needed to reach a target scour velocity in a water main &mdash; or the velocity a given flow achieves &mdash; plus pipe volume, flush duration, and total water used. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> Velocity is what scours a main, not flow &mdash; and it takes real velocity: roughly <strong>2.5 ft/s</strong> to move loose sediment and air, and <strong>~5 ft/s</strong> for the unidirectional scour that lifts tuberculation and biofilm. A single 2½-inch hydrant outlet passes only so much (often ~1,000&ndash;1,200 gpm at usable residual pressure), so a large main may not reach scour velocity from one hydrant &mdash; that's why unidirectional flushing isolates valves to force the flow down one pipe.
+</div>
+
+<fieldset>
+  <legend>Pipe</legend>
+  <div class="row">
+    <div><label for="dia">Inside diameter (in)<input type="number" id="dia" min="0" step="any" placeholder="e.g. 8"></label></div>
+    <div><label for="len">Length flushed (ft)<input type="number" id="len" min="0" step="any" placeholder="e.g. 500"></label></div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Flow / Velocity</legend>
+  <label for="mode">Solve for
+    <select id="mode">
+      <option value="target">Flow needed for a target velocity</option>
+      <option value="avail">Velocity from an available flow</option>
+    </select>
+  </label>
+  <div class="row" id="target-in">
+    <div>
+      <label for="vtarget">Target velocity
+        <select id="vtarget">
+          <option value="2.5">2.5 ft/s — conventional flushing (move sediment/air)</option>
+          <option value="5" selected>5.0 ft/s — unidirectional scour</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <input type="number" id="vcustom" min="0" step="any" placeholder="ft/s" hidden>
+    </div>
+  </div>
+  <div class="row" id="avail-in" hidden>
+    <div><label for="qavail">Available flow (gpm)<input type="number" id="qavail" min="0" step="any" placeholder="e.g. 1000"></label></div>
+  </div>
+  <div class="row">
+    <div><label for="nvol">Pipe volumes to exchange<input type="number" id="nvol" min="0" step="any" value="3"></label>
+      <p class="small">Flush until clear &mdash; often 2&ndash;3 pipe volumes, or per the spec / until turbidity and chlorine residual stabilize.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Results</h3>
+  <table>
+    <tr><td id="lbl-flow">Flow</td><td class="val" id="r-flow">&mdash;</td></tr>
+    <tr><td id="lbl-vel">Velocity</td><td class="val" id="r-vel">&mdash;</td></tr>
+    <tr><td>Pipe volume</td><td class="val" id="r-vol">&mdash;</td></tr>
+    <tr><td>Flush duration</td><td class="val" id="r-time">&mdash;</td></tr>
+    <tr class="total"><td>Total water used</td><td class="val" id="r-total">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <svg id="gauge" viewBox="0 0 640 130" role="img" aria-label="Scour velocity gauge"></svg>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>The formulas</summary>
+  <p>Velocity and flow in a full pipe: <code>V (ft/s) = 0.4085 &middot; Q (gpm) / D (in)&sup2;</code>, and inverted, <code>Q = 2.448 &middot; V &middot; D&sup2;</code>. Pipe volume is <code>0.0408 &middot; D&sup2;</code> gallons per foot of length (e.g. 2.6 gal/ft for 8-inch, 5.9 gal/ft for 12-inch). The flush duration to pass <code>N</code> pipe volumes at flow <code>Q</code> is <code>t = N &middot; (volume) / Q</code>, and the total water used is <code>N &middot; volume</code>.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>It's velocity that scours, and velocity scales with flow over diameter squared &mdash; doubling the pipe size quarters the velocity at the same flow. Big mains are hard to scour; that's the whole reason for unidirectional flushing.</li>
+    <li>New-main disinfection (AWWA C651) calls for flushing at a velocity that removes air and debris &mdash; 2.5 ft/s is the usual floor &mdash; both before chlorination and to remove the heavily chlorinated water afterward. Pair this with the <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing calculator</a>.</li>
+    <li>Heavily chlorinated flush water must be dechlorinated before it reaches a storm drain or stream &mdash; the total-water figure is what you'll be neutralizing and disposing of.</li>
+    <li>Open and close valves and hydrants slowly. Slamming a hydrant on a distribution system spikes velocity, dislodges too much at once, and turns into discolored-water complaints across the neighborhood.</li>
+    <li>Scour velocity from one hydrant is limited by available flow and residual pressure &mdash; verify with a hydrant flow test if you're near the edge, or isolate valves to concentrate the flow.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>AWWA C651 &mdash; Disinfecting Water Mains (flushing velocity and procedure).</li>
+  <li>AWWA M17 / unidirectional flushing program guidance. Companion tool: <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing &amp; disinfection calculator</a>.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "pipeflush.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : null; }
+  function fmt(x, d) { if (x === null || !isFinite(x)) return "—"; if (d === undefined) d = 0; return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }); }
+
+  function updateModes() {
+    $("target-in").hidden = $("mode").value !== "target";
+    $("avail-in").hidden = $("mode").value !== "avail";
+    $("vcustom").hidden = !($("mode").value === "target" && $("vtarget").value === "custom");
+    recompute();
+  }
+
+  function drawGauge(V) {
+    var W = 640, H = 130, padL = 16, padR = 16, barY = 44, barH = 26;
+    var barW = W - padL - padR;
+    var vMax = Math.max(6, Math.ceil((V * 1.15) / 2) * 2);
+    function X(v) { return padL + (v / vMax) * barW; }
+    var svg = "";
+    /* zones: 0–2.5 insufficient, 2.5–5 flushing, 5+ scour */
+    svg += "<rect class='zonelow' x='" + X(0) + "' y='" + barY + "' width='" + (X(2.5) - X(0)) + "' height='" + barH + "' opacity='0.55'/>";
+    svg += "<rect class='zoneok' x='" + X(2.5) + "' y='" + barY + "' width='" + (X(5) - X(2.5)) + "' height='" + barH + "' opacity='0.55'/>";
+    svg += "<rect class='zonescour' x='" + X(5) + "' y='" + barY + "' width='" + (X(vMax) - X(5)) + "' height='" + barH + "' opacity='0.55'/>";
+    svg += "<text class='zonelbl' x='" + ((X(0) + X(2.5)) / 2) + "' y='" + (barY + barH + 16) + "'>insufficient</text>";
+    svg += "<text class='zonelbl' x='" + ((X(2.5) + X(5)) / 2) + "' y='" + (barY + barH + 16) + "'>flushing</text>";
+    svg += "<text class='zonelbl' x='" + ((X(5) + X(vMax)) / 2) + "' y='" + (barY + barH + 16) + "'>scour</text>";
+    /* ticks */
+    for (var t = 0; t <= vMax; t += (vMax > 8 ? 2 : 1)) {
+      svg += "<line class='tick' x1='" + X(t) + "' y1='" + (barY - 4) + "' x2='" + X(t) + "' y2='" + (barY + barH + 4) + "'/>";
+      svg += "<text class='ticklbl' x='" + X(t) + "' y='" + (barY + barH + 30) + "'>" + t + "</text>";
+    }
+    svg += "<text class='ticklbl' style='text-anchor:start' x='" + (padL) + "' y='" + (barY - 10) + "'>Velocity (ft/s)</text>";
+    /* marker */
+    var mx = X(Math.min(V, vMax));
+    svg += "<polygon class='marker' points='" + mx + "," + (barY - 2) + " " + (mx - 7) + "," + (barY - 14) + " " + (mx + 7) + "," + (barY - 14) + "'/>";
+    svg += "<text class='markerlbl' x='" + mx + "' y='" + (barY - 18) + "'>" + fmt(V, 1) + "</text>";
+    $("gauge").innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var D = num("dia"), L = num("len"), nvol = num("nvol");
+    if (!D || D <= 0) { out.hidden = true; saveState(); return; }
+
+    var galPerFt = 0.0408 * D * D;
+    var vol = (L && L > 0) ? galPerFt * L : null;
+
+    var V, Q;
+    if ($("mode").value === "target") {
+      V = $("vtarget").value === "custom" ? num("vcustom") : parseFloat($("vtarget").value);
+      if (!V || V <= 0) { out.hidden = true; saveState(); return; }
+      Q = 2.448 * V * D * D;
+    } else {
+      Q = num("qavail");
+      if (!Q || Q <= 0) { out.hidden = true; saveState(); return; }
+      V = 0.4085 * Q / (D * D);
+    }
+
+    var tMin = (vol && nvol) ? (nvol * vol) / Q : null;
+    var total = (vol && nvol) ? nvol * vol : null;
+
+    $("lbl-flow").textContent = $("mode").value === "target" ? "Flow required" : "Flow (given)";
+    $("lbl-vel").textContent = $("mode").value === "target" ? "Target velocity" : "Velocity achieved";
+    $("r-flow").textContent = fmt(Q, 0) + " gpm (" + fmt(Q / 448.831, 2) + " cfs)";
+    $("r-vel").textContent = fmt(V, 2) + " ft/s";
+    $("r-vol").textContent = vol === null ? "— (enter length)" : fmt(vol, 0) + " gal (" + fmt(galPerFt, 2) + " gal/ft)";
+    $("r-time").textContent = tMin === null ? "—" : (tMin >= 60 ? fmt(tMin / 60, 1) + " hr" : fmt(tMin, 1) + " min");
+    $("r-total").textContent = total === null ? "—" : fmt(total, 0) + " gal";
+
+    out.classList.toggle("fail", V < 2.5);
+    drawGauge(V);
+
+    var msgs = [];
+    if (V < 2.5) msgs.push("Below 2.5 ft/s — this won't reliably move sediment or clear air. Increase the flow, isolate valves to concentrate it, or accept that it's a rinse, not a flush.");
+    else if (V < 5) msgs.push("In the conventional-flushing band (2.5–5 ft/s) — good for routine flushing and C651 disinfection, but short of the ~5 ft/s that scours tuberculation and biofilm.");
+    if ($("mode").value === "target" && Q > 1200) msgs.push("Required flow exceeds ~1,200 gpm — more than a single 2½-inch hydrant outlet typically delivers. Use a larger outlet, multiple hydrants, or unidirectional flushing with valve isolation.");
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+
+    out.hidden = false; saveState();
+  }
+
+  var FIELDS = ["dia", "len", "mode", "vtarget", "vcustom", "qavail", "nvol"];
+  function saveState() {
+    try { var st = {}; FIELDS.forEach(function (id) { st[id] = $(id).value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  function loadState() {
+    try { var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return; FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; }); } catch (e) {}
+  }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("mode").addEventListener("change", updateModes);
+  $("vtarget").addEventListener("change", updateModes);
+  $("reset-btn").addEventListener("click", function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  updateModes();
+})();
+</script>
+</body>
+</html>
