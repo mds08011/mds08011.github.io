@@ -53,6 +53,8 @@
 optimized-image.jpg: JPEG image data, JFIF standard 1.01</code></pre>
             </details>
 
+            <p>The utility has since been extended beyond the referenced baseline. Ingestion now accepts an arbitrary batch of images &mdash; via file selection, drag-and-drop, or clipboard paste &mdash; each transcoded independently with per-item and aggregate byte accounting. A configurable maximum-width constraint was introduced, defaulting to <em>unconstrained</em> so the default operation is a full-resolution re-encode; the prior implementation silently downsampled all inputs to an 800-pixel raster, a behavior now opt-in rather than mandatory. As an incidental consequence of the canvas redraw, EXIF and GPS metadata are discarded in transcoding, which is desirable for transmission hygiene.</p>
+
             <section>
                 <h3>References</h3>
                 <ol>
