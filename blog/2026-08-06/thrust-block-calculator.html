@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sizing a Thrust Block, and When to Stop and Use Restraint | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Sizing a Thrust Block, and When to Stop and Use Restraint</h1>
+                <time datetime="2026-08-06">August 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Pressurize a pipe and every change of direction tries to fly apart. A bend, a tee, a dead end, a reducer &mdash; each has an unbalanced force where the pressure isn't cancelled by pipe on the far side, and something has to hold it: a block of concrete bearing against the trench wall, or restrained joints carrying it in the pipe. Getting the block size wrong is how mains blow apart during the hydrostatic test. I wanted the force and the bearing area on one screen, with the honest reminder of when a block is the wrong answer.</p>
+
+            <h2>The Approach</h2>
+            <p>Internal pressure acts on the pipe's full bore, <code>A = π/4 &middot; OD&sup2;</code>, and the unbalanced thrust depends on the fitting: a bend is <code>2 &middot; P &middot; A &middot; sin(θ/2)</code>, a dead end or tee branch is <code>P &middot; A</code>, a reducer is <code>P &middot; (A&#8321; &minus; A&#8322;)</code>. Because pounds per square inch times square inches is pounds, the thrust comes straight out in pounds. The block's face area is then <code>A<sub>b</sub> = T &middot; SF / S<sub>b</sub></code> against the soil's safe bearing value. The tool draws the required face to scale, bearing against undisturbed soil, with the thrust pushing into it.</p>
+
+            <figure>
+                <img src="/blog/2026-08-06/thrust-block-calculator.png" alt="The thrust block calculator: a 90-degree 12-inch bend at 150 psi produces 29,030 lb of thrust, needing a 21.8 square-foot block face, drawn bearing against undisturbed soil" loading="lazy">
+                <figcaption>Figure 1: A 90° 12-inch bend at 150 psi throws 29,030 lb (14½ tons) &mdash; a 5.4&nbsp;ft × 4&nbsp;ft block face against 2,000 psf sand.</figcaption>
+            </figure>
+
+            <h3>The block is only as good as the soil &mdash; know when to switch</h3>
+            <p>The whole calculation hangs on one number the calculator can't give you: the soil's safe bearing value. The presets are textbook starting points, but a thrust block bears against <em>undisturbed</em> soil poured against the trench wall &mdash; never backfill &mdash; and in saturated, organic, or disturbed ground that value collapses toward zero. Watch what that does: as the safe bearing shrinks, the required face grows without bound, and you end up drawing a block the size of a car. That's not a sizing problem, it's a signal. When the soil won't carry the thrust, the answer isn't a bigger block; it's <em>restrained joints</em>, which carry the force in the pipe wall over a calculated restrained length and don't care what the soil face can bear. The tool makes the collapse explicit: pick the muck/peat preset and it stops giving you an area and tells you to restrain instead.</p>
+
+            <details>
+                <summary>Blocking field notes</summary>
+                <ul>
+                    <li>Size for <em>test</em> pressure, not working pressure &mdash; the joint sees its highest load during the hydrostatic test, and that's the case that has to hold.</li>
+                    <li>The thrust acts along the bisector of the bend, outward; the block goes on the outside of the bend, poured against the undisturbed wall.</li>
+                    <li>Keep concrete off the joint and bolts. The fitting has to stay accessible and repairable &mdash; bear on the body, wrap the joint.</li>
+                    <li>Vertical bends that lift need a weight block or restraint, not a bearing block &mdash; this sizes the horizontal bearing case.</li>
+                    <li>At larger sizes, price the block against restrained joints anyway; restraint is often cheaper, more reliable, and doesn't need a geotech to bless a bearing value.</li>
+                </ul>
+            </details>
+
+            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/thrust-block-calculator.html">Thrust Block Sizing Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] DIPRA &mdash; Thrust Restraint Design for Ductile Iron Pipe.</li>
+                <li>[2] AWWA M41 (ductile iron) and Uni-Bell PVC design guidance &mdash; thrust blocking and restraint.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
