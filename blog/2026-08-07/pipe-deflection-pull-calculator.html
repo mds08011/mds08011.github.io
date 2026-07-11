@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curving a Pipeline with Joint Deflection Instead of Fittings | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Curving a Pipeline with Joint Deflection Instead of Fittings</h1>
+                <time datetime="2026-08-07">August 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>Alignments curve; pipe comes straight. To follow a road bend or dodge an unexpected utility, you can drop in bends &mdash; each of which then needs thrust restraint &mdash; or you can let each joint deflect a degree or two and walk the straight pipe around the curve. Every push-on joint has an allowable deflection, and a run of them approximates an arc. The field question is simple: how sharp a curve can I make, and how many joints does the turn cost me?</p>
+
+            <h2>The Approach</h2>
+            <p>Each pipe is a chord of the curve, kinked at the joint by the deflection angle <code>θ</code>. A chord of length <code>L</code> on a circle of radius <code>R</code> is <code>L = 2R &middot; sin(θ/2)</code>, so the minimum radius from an allowable deflection is <code>R = L / (2 sin(θ/2))</code>, and the deflection a target radius needs is <code>θ = 2 &middot; asin(L / 2R)</code>. From there the tool gives the lateral offset each pipe gains (<code>L &middot; sin θ</code>), the joints to turn a total angle, the pipe length that takes, and &mdash; since gasketed joints also pull axially &mdash; the total pull available across those joints. It draws the deflected run so you can see the straight pipes bending into the arc.</p>
+
+            <figure>
+                <img src="/blog/2026-08-07/pipe-deflection-pull-calculator.png" alt="The calculator: 18-ft pipe at 5 degrees per joint makes a 206-ft radius, 18.8-inch offset per joint, 18 joints and 324 ft to turn 90 degrees, with a drawn deflected pipeline" loading="lazy">
+                <figcaption>Figure 1: 18-ft pipe at 5° per joint curves to a 206-ft radius &mdash; and turning a full 90° costs 18 joints and 324 ft of pipe.</figcaption>
+            </figure>
+
+            <h3>Deflect the joint, not the barrel &mdash; and mind what it costs</h3>
+            <p>The number the calculator can't invent is the allowable deflection: it belongs to the manufacturer, for that exact joint, size, and pressure class, and it shrinks fast as pipe gets bigger or more restrained. A 5° push-on 8-inch is generous; a restrained 24-inch might give you a degree. The deflection has to happen <em>at the joint</em> &mdash; pulling the spigot to one side of the bell &mdash; not by bowing the barrel, which over-stresses the pipe and isn't what the allowable covers. And on a pressure line it isn't free: every degree of deflection and every bit of axial pull eats into the joint's margin against separation, so the thrust and restraint still have to be designed for the deflected run &mdash; which is where the <a href="/tools/thrust-block-calculator.html">thrust block</a> and restraint calcs come back in. Used within the manufacturer's limits, though, deflecting joints is the clean way to follow a curve without a single fitting to restrain.</p>
+
+            <details>
+                <summary>Layout field notes</summary>
+                <ul>
+                    <li>Spread the deflection evenly &mdash; equal small angles at many joints, not the full allowable at a few. It rides better and keeps every joint inside its margin.</li>
+                    <li>Vertical curves use the same math; just remember a gravity sewer still has to hold its grade tolerance while it deflects.</li>
+                    <li>Pulling joints to gain a little length to hit a structure is legitimate, but distribute it &mdash; one joint pulled to its limit is a leak risk.</li>
+                    <li>If the required radius needs more than the allowable, the honest options are shorter pipe (more joints), a larger radius, or fittings &mdash; not forcing the joint past its rating.</li>
+                </ul>
+            </details>
+
+            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/pipe-deflection-pull-calculator.html">Pipe Joint Deflection &amp; Pull Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Pipe manufacturer's installation guide &mdash; allowable joint deflection and pull-out by size, joint, and pressure class (governing).</li>
+                <li>[2] AWWA C600 / C605 (ductile iron and PVC installation) and DIPRA installation guidance.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
