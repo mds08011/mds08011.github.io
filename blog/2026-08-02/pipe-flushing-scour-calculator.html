@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flushing a Water Main: Velocity Scours, Not Flow | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Flushing a Water Main: Velocity Scours, Not Flow</h1>
+                <time datetime="2026-08-02">August 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>&ldquo;We flushed it&rdquo; and &ldquo;we scoured it&rdquo; are not the same claim, and the difference is velocity. Opening a hydrant and moving a lot of water feels productive, but if the water is crawling through a big main it isn't lifting anything off the wall. What clears sediment, air, and biofilm is <em>velocity</em> &mdash; and reaching it on a large main is harder than it looks. I wanted a calculator that turns a target velocity into the flow it demands, and tells me whether that flow is even realistic from a hydrant.</p>
+
+            <h2>The Approach</h2>
+            <p>The full-pipe relationship is <code>V (ft/s) = 0.4085 &middot; Q (gpm) / D (in)&sup2;</code>, and inverted, <code>Q = 2.448 &middot; V &middot; D&sup2;</code>. Give the tool a diameter and a target velocity and it returns the required flow; give it an available flow instead and it returns the velocity you'll actually get. It also works out the pipe volume (<code>0.0408 &middot; D&sup2;</code> gallons per foot), the flush duration to exchange a chosen number of pipe volumes, and the total water used &mdash; the number you'll be dechlorinating and disposing of. A gauge places the velocity in one of three bands: below 2.5 ft/s is a rinse, 2.5&ndash;5 is conventional flushing, and 5+ is real scour.</p>
+
+            <figure>
+                <img src="/blog/2026-08-02/pipe-flushing-scour-calculator.png" alt="The flushing calculator: 8-inch main at 5 ft/s needs 783 gpm, 1306-gallon pipe volume, 5-minute flush, 3917 gallons total, with a velocity gauge marker in the scour band" loading="lazy">
+                <figcaption>Figure 1: To scour an 8-inch main at 5 ft/s you need 783 gpm &mdash; and the gauge shows where that lands.</figcaption>
+            </figure>
+
+            <h3>Why big mains need unidirectional flushing</h3>
+            <p>The <code>D&sup2;</code> in the denominator is the whole story. Velocity falls with the square of diameter, so doubling the pipe size <em>quarters</em> the velocity at the same flow. An 8-inch main hits scour velocity at a manageable ~780 gpm; a 16-inch main at the same flow is barely moving, and to scour it you'd need over 3,000 gpm &mdash; far more than any single 2½-inch hydrant outlet will pass at usable residual pressure. That's the entire reason unidirectional flushing exists: instead of opening one hydrant and hoping, you close valves to force the system's available flow down a single pipe, concentrating it until the velocity is actually there. The tool flags when the required flow outruns what a hydrant can give, which is the moment to stop wishing and start isolating.</p>
+
+            <details>
+                <summary>Flushing field notes</summary>
+                <ul>
+                    <li>New-main disinfection (AWWA C651) flushes both before chlorination and to remove the heavily chlorinated water after &mdash; 2.5 ft/s is the usual floor. Pair this with the <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing calculator</a>.</li>
+                    <li>Heavily chlorinated flush water must be dechlorinated before it hits a storm drain or stream; the total-water figure is what you're neutralizing.</li>
+                    <li>Open and close hydrants and valves slowly. A slammed hydrant spikes velocity, tears loose too much at once, and becomes discolored-water complaints across the neighborhood.</li>
+                    <li>Near the edge of what a hydrant can deliver? Confirm with a hydrant flow test, or isolate valves to concentrate the flow, before you commit to a velocity you can't actually reach.</li>
+                </ul>
+            </details>
+
+            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/pipe-flushing-scour-calculator.html">Pipe Flushing &amp; Scour Velocity Calculator</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] AWWA C651 &mdash; Disinfecting Water Mains (flushing velocity and procedure).</li>
+                <li>[2] AWWA M17 / unidirectional flushing program guidance. Companion tool: <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing &amp; disinfection calculator</a>.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
