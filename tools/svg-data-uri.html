@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG Data URI Encoder</title>
+<meta name="description" content="Offline SVG to data URI encoder: paste SVG markup and get a live preview plus base64 and URL-encoded data URIs, with ready-to-paste &lt;img&gt; and CSS background snippets and byte sizes. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --checker: #e9e9e9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --checker: #2a2a2a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  textarea {
+    width: 100%; min-height: 9rem; padding: 0.5rem; margin-top: 0.3rem;
+    font-family: ui-monospace, "Courier New", monospace; font-size: 0.85rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+    resize: vertical;
+  }
+  select { padding: 0.4rem; font-size: 0.95rem; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
+  input[type="checkbox"] { margin-right: 0.4rem; }
+  label.inline { display: flex; align-items: center; margin-top: 0.5rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .results {
+    background: var(--result-bg); border: 1px solid var(--result-border);
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem;
+  }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .preview {
+    background-color: var(--checker);
+    background-image:
+      linear-gradient(45deg, rgba(128,128,128,0.15) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.15) 75%),
+      linear-gradient(45deg, rgba(128,128,128,0.15) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.15) 75%);
+    background-size: 20px 20px; background-position: 0 0, 10px 10px;
+    border: 1px solid var(--border); border-radius: 4px; padding: 12px;
+    display: flex; align-items: center; justify-content: center; min-height: 120px; margin-bottom: 0.75rem;
+  }
+  .preview img { max-width: 100%; max-height: 240px; }
+  .out-block { margin-top: 0.75rem; }
+  .out-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+  .out-head strong { font-size: 0.95rem; }
+  .out-head .len { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .out-block textarea { min-height: 4.5rem; font-size: 0.8rem; }
+  .badge { display: inline-block; font-size: 0.75rem; padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--accent); color: #fff; }
+  button.copy {
+    padding: 0.2rem 0.6rem; font-size: 0.82rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--panel); color: var(--fg); cursor: pointer;
+  }
+  .sizes { border-collapse: collapse; width: 100%; margin-top: 0.5rem; font-size: 0.9rem; }
+  .sizes td { padding: 0.25rem 0.5rem 0.25rem 0; }
+  .sizes td.val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset {
+    margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>SVG Data URI Encoder</h1>
+<p class="subtitle">Paste SVG markup and get a live preview plus base64 and URL-encoded data URIs, with ready-to-paste <code>&lt;img&gt;</code> and CSS background snippets. Runs entirely offline; your markup never leaves the browser and persists here via localStorage.</p>
+
+<fieldset>
+  <legend>SVG Markup</legend>
+  <textarea id="svg-in" spellcheck="false" placeholder="Paste an <svg>…</svg> here"></textarea>
+  <div class="row" style="margin-top:0.6rem;">
+    <label class="inline" for="opt-min"><input type="checkbox" id="opt-min"> Minify (strip comments &amp; collapse whitespace)</label>
+    <label class="inline" for="opt-xmlns"><input type="checkbox" id="opt-xmlns" checked> Add <code>xmlns</code> if missing</label>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <h3>Preview</h3>
+  <div class="preview"><img id="preview-img" alt="SVG preview"></div>
+
+  <table class="sizes">
+    <tr><td>Raw SVG</td><td class="val" id="s-raw">&mdash;</td></tr>
+    <tr><td>Base64 data URI</td><td class="val" id="s-b64">&mdash;</td></tr>
+    <tr><td>URL-encoded data URI</td><td class="val" id="s-url">&mdash;</td></tr>
+    <tr><td>Smaller</td><td class="val" id="s-smaller">&mdash;</td></tr>
+  </table>
+
+  <div class="out-block">
+    <div class="out-head"><strong>URL-encoded data URI <span class="badge" id="url-badge" hidden>smaller</span></strong><span class="len" id="url-len"></span><button type="button" class="copy" data-src="url-uri">Copy</button></div>
+    <textarea id="url-uri" readonly spellcheck="false"></textarea>
+  </div>
+
+  <div class="out-block">
+    <div class="out-head"><strong>Base64 data URI <span class="badge" id="b64-badge" hidden>smaller</span></strong><span class="len" id="b64-len"></span><button type="button" class="copy" data-src="b64-uri">Copy</button></div>
+    <textarea id="b64-uri" readonly spellcheck="false"></textarea>
+  </div>
+
+  <h3 style="margin-top:1rem;">Embed snippets</h3>
+  <div class="row">
+    <label for="enc-mode" style="margin-top:0;">Encoding
+      <select id="enc-mode">
+        <option value="url">URL-encoded</option>
+        <option value="b64">Base64</option>
+      </select>
+    </label>
+  </div>
+  <div class="out-block">
+    <div class="out-head"><strong>&lt;img&gt; tag</strong><button type="button" class="copy" data-src="snip-img">Copy</button></div>
+    <textarea id="snip-img" readonly spellcheck="false"></textarea>
+  </div>
+  <div class="out-block">
+    <div class="out-head"><strong>CSS background</strong><button type="button" class="copy" data-src="snip-css">Copy</button></div>
+    <textarea id="snip-css" readonly spellcheck="false"></textarea>
+  </div>
+
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear</button>
+
+<h2>How It Works</h2>
+
+<details>
+  <summary>Base64 vs. URL-encoding</summary>
+  <p>An SVG can be embedded directly in an <code>&lt;img src&gt;</code> or a CSS <code>url()</code> as a data URI, saving an HTTP request. There are two encodings. <strong>Base64</strong> (<code>data:image/svg+xml;base64,&hellip;</code>) is universally safe but inflates the payload by about 33%. <strong>URL-encoding</strong> (<code>data:image/svg+xml,&hellip;</code>) keeps the markup as text with only the reserved characters escaped, so for SVG &mdash; which is mostly ASCII &mdash; it is almost always <em>smaller</em> and stays human-readable. This tool shows both sizes so you can pick; URL-encoding usually wins for inline SVG.</p>
+</details>
+
+<details>
+  <summary>The encoding details</summary>
+  <p>Base64 is UTF-8 safe here (the markup is UTF-8 encoded before <code>btoa</code>, so non-ASCII characters survive). The URL-encoding follows the widely used minimal scheme: double quotes become single quotes (so the URI itself can sit in double quotes), whitespace between tags is collapsed, and only <code>%#()&lt;&gt;?[\]^`{|}</code> and newlines are percent-escaped &mdash; everything else stays readable. If your root <code>&lt;svg&gt;</code> is missing the <code>xmlns="http://www.w3.org/2000/svg"</code> namespace, the tool adds it (toggle above), because without it the browser won't render the data URI as an image.</p>
+</details>
+
+<details>
+  <summary>Notes</summary>
+  <ul>
+    <li>Script and interactive handlers inside an SVG are <em>ignored</em> when the SVG is loaded through an <code>&lt;img&gt;</code> or CSS <code>url()</code> &mdash; the same safety property demonstrated in the <a href="/tools/svg-sandbox.html">SVG base64 embedding sandbox</a>. Inline <code>&lt;svg&gt;</code> in the document is a different story and can run script.</li>
+    <li>Data URIs don't get gzipped as separately as a linked file would, and a giant inline SVG bloats the HTML/CSS it lives in. Inline the small stuff (icons, logos); link the big stuff.</li>
+    <li>To convert an SVG to a raster PNG or JPEG instead, use the <a href="/tools/svg-render.html">SVG to JPEG/PNG renderer</a>.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>MDN &mdash; Data URLs (the <code>data:</code> URI scheme and base64). <span class="small">https://developer.mozilla.org/en-US/docs/Web/URI/Schemes/data</span></li>
+  <li>The minimal SVG URL-encoding scheme popularized by Yoksel's &ldquo;URL-encoder for SVG.&rdquo;</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Your markup is stored only in this browser's localStorage. Clear it with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "svgdatauri.v1";
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+  function byteLen(s) { return new Blob([s]).size; }
+  function fmt(n) { return n.toLocaleString() + " B" + (n >= 1024 ? " (" + (n / 1024).toFixed(1) + " KB)" : ""); }
+
+  function ensureXmlns(svg) {
+    if (/<svg[^>]*\sxmlns\s*=/.test(svg)) return svg;
+    return svg.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  function minify(svg) {
+    return svg.replace(/<!--[\s\S]*?-->/g, "").replace(/>\s+</g, "><").replace(/\s{2,}/g, " ").trim();
+  }
+  function toBase64(str) {
+    try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return null; }
+  }
+  /* minimal, readable SVG URL-encoding */
+  function toUrlEncoded(svg) {
+    var s = svg.replace(/"/g, "'").replace(/>\s+</g, "><").replace(/\s{2,}/g, " ").trim();
+    return s.replace(/[\r\n%#()<>?\[\\\]^`{|}]/g, encodeURIComponent);
+  }
+
+  var last = { b64uri: "", urluri: "" };
+
+  function recompute() {
+    var raw = $("svg-in").value.trim();
+    var out = $("results");
+    if (!raw || raw.indexOf("<svg") === -1) { out.hidden = true; save(); return; }
+
+    var svg = raw;
+    if ($("opt-min").checked) svg = minify(svg);
+    if ($("opt-xmlns").checked) svg = ensureXmlns(svg);
+
+    var b64 = toBase64(svg);
+    var b64uri = b64 ? ("data:image/svg+xml;base64," + b64) : "";
+    var urluri = "data:image/svg+xml," + toUrlEncoded(svg);
+    last.b64uri = b64uri; last.urluri = urluri;
+
+    /* preview via the actual embedded result */
+    var img = $("preview-img");
+    img.onerror = function () { warn("The markup didn't render as an image — check that it's valid SVG and has an xmlns."); };
+    img.onload = function () { warn(""); };
+    img.src = b64uri || urluri;
+
+    /* sizes */
+    var rawB = byteLen(svg), b64B = byteLen(b64uri), urlB = byteLen(urluri);
+    $("s-raw").textContent = fmt(rawB);
+    $("s-b64").textContent = fmt(b64B);
+    $("s-url").textContent = fmt(urlB);
+    var urlSmaller = urlB <= b64B;
+    var diff = Math.abs(b64B - urlB), pct = Math.round(diff / Math.max(b64B, urlB) * 100);
+    $("s-smaller").textContent = (urlSmaller ? "URL-encoded" : "Base64") + " by " + fmt(diff).replace(/ \(.*/, "") + " (" + pct + "%)";
+    $("url-badge").hidden = !urlSmaller;
+    $("b64-badge").hidden = urlSmaller;
+
+    $("url-uri").value = urluri;
+    $("b64-uri").value = b64uri;
+    $("url-len").textContent = urlB.toLocaleString() + " chars";
+    $("b64-len").textContent = b64B.toLocaleString() + " chars";
+
+    buildSnippets();
+    out.hidden = false;
+    save();
+  }
+
+  function buildSnippets() {
+    var uri = $("enc-mode").value === "b64" ? last.b64uri : last.urluri;
+    $("snip-img").value = '<img src="' + uri + '" alt="">';
+    $("snip-css").value = "background-image: url(\"" + uri + "\");";
+  }
+
+  function warn(msg) {
+    var w = $("warn");
+    w.hidden = !msg; w.textContent = msg || "";
+  }
+
+  /* copy buttons */
+  document.querySelectorAll("button.copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = $(btn.getAttribute("data-src"));
+      if (!el || !el.value) return;
+      var done = function () { var t = btn.textContent; btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = t; }, 1200); };
+      if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, function () { el.select(); done(); });
+      else { el.select(); try { document.execCommand("copy"); } catch (e) {} done(); }
+    });
+  });
+
+  /* persistence */
+  function save() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ svg: $("svg-in").value, min: $("opt-min").checked, xmlns: $("opt-xmlns").checked, enc: $("enc-mode").value }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var st = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+      if (!st) return false;
+      if (typeof st.svg === "string") $("svg-in").value = st.svg;
+      if (typeof st.min === "boolean") $("opt-min").checked = st.min;
+      if (typeof st.xmlns === "boolean") $("opt-xmlns").checked = st.xmlns;
+      if (st.enc) $("enc-mode").value = st.enc;
+      return !!st.svg;
+    } catch (e) { return false; }
+  }
+
+  ["svg-in", "opt-min", "opt-xmlns"].forEach(function (id) {
+    $(id).addEventListener("input", recompute);
+    $(id).addEventListener("change", recompute);
+  });
+  $("enc-mode").addEventListener("change", function () { buildSnippets(); save(); });
+  $("reset-btn").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  var EXAMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n' +
+    '  <circle cx="50" cy="50" r="28" fill="#f4b400"/>\n' +
+    '  <g stroke="#f4b400" stroke-width="5" stroke-linecap="round">\n' +
+    '    <line x1="50" y1="6"  x2="50" y2="18"/>\n' +
+    '    <line x1="50" y1="82" x2="50" y2="94"/>\n' +
+    '    <line x1="6"  y1="50" x2="18" y2="50"/>\n' +
+    '    <line x1="82" y1="50" x2="94" y2="50"/>\n' +
+    '    <line x1="21" y1="21" x2="30" y2="30"/>\n' +
+    '    <line x1="70" y1="70" x2="79" y2="79"/>\n' +
+    '    <line x1="79" y1="21" x2="70" y2="30"/>\n' +
+    '    <line x1="30" y1="70" x2="21" y2="79"/>\n' +
+    '  </g>\n' +
+    '</svg>';
+
+  if (!load()) $("svg-in").value = EXAMPLE;
+  recompute();
+})();
+</script>
+</body>
+</html>
