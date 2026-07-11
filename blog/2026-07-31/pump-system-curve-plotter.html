@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finding the Pump Operating Point, and Why Parallel Pumps Don't Double Flow | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Finding the Pump Operating Point, and Why Parallel Pumps Don't Double Flow</h1>
+                <time datetime="2026-07-31">July 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A pump doesn't run where the catalog says it does; it runs where its curve crosses the system's. The manufacturer gives you head versus flow, the piping gives you a static lift plus friction that climbs with flow, and the pump settles at the one flow where those two are equal. It's the most fundamental picture in pumping and the one most often left as two separate PDFs. I wanted to draw both curves on the same axes and mark the intersection.</p>
+
+            <h2>The Approach</h2>
+            <p>You read four to six points off the manufacturer's head-capacity curve &mdash; including shutoff (zero flow) and a far-right point &mdash; and the tool least-squares fits a quadratic, <code>H = a + bQ + cQ&sup2;</code>, through them. The system curve is <code>H<sub>static</sub> + K&middot;Q<sup>n</sup></code>, with <code>K</code> backed out from one design point (a flow and its friction head) and <code>n</code> either 2 (Darcy) or 1.85 (Hazen-Williams). Since the pump head falls and the system head rises, there's exactly one intersection when the pump can beat the static lift, and the tool bisects to it.</p>
+
+            <figure>
+                <img src="/blog/2026-07-31/pump-system-curve-plotter.png" alt="A drooping pump curve and a rising system parabola crossing at a marked operating point of 1650 gpm at 76 ft, with the data points on the pump curve" loading="lazy">
+                <figcaption>Figure 1: Pump curve, system curve, and the operating point where they cross &mdash; 1,650 gpm at 76 ft.</figcaption>
+            </figure>
+
+            <h3>Parallel pumps never double the flow</h3>
+            <p>The feature I find most worth seeing is what happens with pumps in parallel. Parallel pumps add flow at equal head, so two identical pumps make a combined curve that carries twice the flow <em>at any given head</em>. The intuition is &ldquo;two pumps, twice the water&rdquo; &mdash; and it's wrong, because the system curve climbs steeply with flow. Push more flow and friction rises as its square, so the operating point slides up a stiffening system curve. In the worked example, the second pump takes flow from about 1,650 to 2,100 gpm &mdash; a 27% gain, not 100%. The plot shows you the actual number for your system, which is the difference between a lead-lag pair that helps and one that mostly just burns power and beats itself up.</p>
+
+            <details>
+                <summary>Reading the operating point like a pump curve</summary>
+                <ul>
+                    <li>The manufacturer curve is for one speed and impeller diameter. Trim the impeller or add a VFD and it shifts &mdash; scale it with the <a href="/tools/pump-affinity-calculator.html">affinity laws</a> first, then intersect.</li>
+                    <li>Run the system curve twice: clean and new (low K), then aged and throttled (high K). The operating point walks left up the pump curve as the system stiffens, often into a worse-efficiency, higher-vibration zone.</li>
+                    <li>An operating point far right of best-efficiency (flat system, oversized pump) risks cavitation and motor overload; far left risks recirculation. Confirm it lands near BEP, and check the suction side separately with the <a href="/tools/npsha-calculator.html">NPSH available</a> tool.</li>
+                    <li>The friction head for the design point comes from a real head-loss calc &mdash; the <a href="/tools/bypass-tdh-calculator.html">total dynamic head calculator</a> gives it directly.</li>
+                </ul>
+            </details>
+
+            <p>It's the usual shape: one static file, vanilla JS, the quadratic fit and the intersection solved in a few microseconds, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+
+            <p>The tool: <a href="/tools/pump-system-curve-plotter.html">Pump System-Curve Plotter</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] Hydraulic Institute / pump handbooks &mdash; head-capacity and system-head curves, and parallel operation.</li>
+                <li>[2] Companion tools: <a href="/tools/pump-affinity-calculator.html">pump affinity laws</a>, <a href="/tools/npsha-calculator.html">NPSH available</a>, and <a href="/tools/bypass-tdh-calculator.html">total dynamic head</a>.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
