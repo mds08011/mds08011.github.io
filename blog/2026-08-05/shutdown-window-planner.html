@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning a Shutdown Against a Hard Window, Buffer and All | Blog | MDS</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css">
+    <link rel="stylesheet" href="/style.css" type="text/css">
+
+    <script data-goatcounter="https://mds08011.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" crossorigin="anonymous" integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"></script>
+    <script type="module">
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul style="display: flex; list-style: none; padding: 0; gap: 1rem; margin: 0;">
+                <li><a href="/">Home</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/tools/">Tools</a></li>
+                <li><a href="/projects/">Projects</a></li>
+                <li><a href="/contact/">Contact</a></li>
+                <li><a href="https://github.com/mds08011/mds08011.github.io">GitHub</a></li>
+            </ul>
+            <hr>
+        </nav>
+    </header>
+
+    <main>
+        <article>
+            <header>
+                <h1>Planning a Shutdown Against a Hard Window, Buffer and All</h1>
+                <time datetime="2026-08-05">August 2026</time>
+            </header>
+
+            <h2>The Problem</h2>
+            <p>A planned shutdown &mdash; a valve tie-in, a process isolation, a main cut-over &mdash; is a race against a clock somebody else set. Customers can be out of water for so long, the tanks hold so many hours, the lane closure ends at dawn. The work is a serial chain of steps that mostly can't overlap, and the honest question the night before is not &ldquo;can we do it?&rdquo; but &ldquo;does it fit, <em>with</em> room for the thing that goes wrong?&rdquo; I wanted to lay the steps on the clock and get a straight go or no-go.</p>
+
+            <h2>The Approach</h2>
+            <p>You list the steps in order with a duration each, set the maximum allowable out-of-service window, and add a contingency buffer as a percentage of the planned time. The tool sums the serial durations, stamps each step with its start and end clock time (rolling past midnight with a <code>+1d</code>), and compares the committed time &mdash; planned plus buffer &mdash; against the window. The verdict is a go/no-go with the slack, and a timeline draws the steps end to end with the buffer appended and the window marked, so an overrun is a bar crossing the line, not a number you have to interpret.</p>
+
+            <figure>
+                <img src="/blog/2026-08-05/shutdown-window-planner.png" alt="The planner: eight sequenced steps with clock times, a GO verdict with 1 hour to spare, and a timeline where the step bars and gold buffer bar land just inside the 8-hour window line" loading="lazy">
+                <figcaption>Figure 1: An eight-step valve replacement &mdash; 5:50 of work plus a 20% buffer commits 7:00 of an 8-hour window. GO, with an hour to spare.</figcaption>
+            </figure>
+
+            <h3>The buffer lives inside the window</h3>
+            <p>The one discipline the tool is built to enforce is that the contingency buffer belongs <em>inside</em> the window, not outside it. Serial work has no float of its own &mdash; every step waits for the one before &mdash; so the reserve for the valve that won't seat, the coupling that's the wrong size, or the pipe that turns out to be a different material than the record drawing claims has to be planned time, sitting between the last real step and the deadline. Squeeze it to make a too-long job &ldquo;fit&rdquo; and you've simply deleted your only response to the overrun you should expect. And some steps can't be compressed at all no matter the manpower: a pressure test holds for its full duration, sample results come back when the lab runs them, the inspector arrives when they arrive &mdash; so the tool lets you flag those as hold points.</p>
+
+            <details>
+                <summary>Planning notes</summary>
+                <ul>
+                    <li>Set a go/no-go decision time &mdash; the point of no return where, if you're not at a given step, you abort and restore service on the old configuration rather than run past the window.</li>
+                    <li>Have a real plan B for restoring service: temporary connections, a bypass pump, a valve that lets you re-pressurize the old alignment. &ldquo;We'll hurry&rdquo; is not a contingency.</li>
+                    <li>If the committed time doesn't fit, the answer is to phase the work across two shorter shutdowns, bypass so service continues, or move the constraint &mdash; not to shave the buffer.</li>
+                    <li>The return-to-service steps have their own tools: <a href="/tools/pipe-flushing-scour-calculator.html">flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">disinfection</a> take real, plannable time. Put them in the sequence.</li>
+                </ul>
+            </details>
+
+            <p>It's a single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser &mdash; and it slots in with the other <a href="/tools/">project-controls tools</a> like the <a href="/tools/two-week-lookahead-gantt.html">look-ahead Gantt</a>, just at the scale of one long night instead of two weeks.</p>
+
+            <p>The tool: <a href="/tools/shutdown-window-planner.html">Shutdown Window Planner</a>.</p>
+
+            <h3>References</h3>
+            <ol>
+                <li>[1] The utility's / owner's shutdown and outage procedures, and the customer-notification or boil-water policy that sets the allowable duration (governing).</li>
+                <li>[2] Companion field tools: <a href="/tools/pipe-flushing-scour-calculator.html">pipe flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing</a> for the return-to-service steps.</li>
+            </ol>
+        </article>
+    </main>
+
+    <footer>
+        <hr>
+        <p><sub>Minimalist, privacy-conscious analytics are implemented for this site and <a href="https://mds08011.goatcounter.com">publicly viewable</a>.<br>
+        This website's source code is open and available on <a href="https://github.com/mds08011/mds08011.github.io">GitHub</a>.</sub></p>
+    </footer>
+</body>
+</html>
