@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipe Joint Deflection &amp; Pull Calculator</title>
+<meta name="description" content="Offline calculator for curving a pipeline with allowable joint deflection: minimum radius, lateral offset per joint, joints to turn a total angle, and axial joint pull-out. Vanilla HTML/CSS/JS, no dependencies.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --border: #ccc;
+    --accent: #00557f; --panel: #f4f4f4;
+    --warn-bg: #fff6e0; --warn-border: #d09a00;
+    --result-bg: #eef4f0; --result-border: #2e6e4e;
+    --fail-bg: #fdecec; --fail-border: #b3261e;
+    --pipe: #00557f; --arc: #2e6e4e; --radius: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --fg: #e4e4e4; --muted: #a0a0a0; --border: #444;
+      --accent: #6db3d6; --panel: #222;
+      --warn-bg: #332a10; --warn-border: #c9a227;
+      --result-bg: #1c2b22; --result-border: #5c9d7c;
+      --fail-bg: #33191a; --fail-border: #e46962;
+      --pipe: #6db3d6; --arc: #5c9d7c; --radius: #e46962;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 46rem; margin: 0 auto; padding: 1rem; line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-top: 2rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; font-size: 0.95rem; }
+  fieldset { border: 1px solid var(--border); border-radius: 4px; margin: 1rem 0; padding: 0.75rem 1rem; }
+  legend { font-weight: 600; padding: 0 0.4rem; }
+  label { display: block; margin-top: 0.6rem; font-size: 0.95rem; }
+  input[type="number"], select {
+    width: 100%; max-width: 20rem; padding: 0.45rem; margin-top: 0.2rem; font-size: 1rem;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row > div { flex: 1 1 12rem; }
+  .results { background: var(--result-bg); border: 1px solid var(--result-border); border-radius: 4px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  .results.fail { background: var(--fail-bg); border-color: var(--fail-border); }
+  .results h3 { margin-top: 0; font-size: 1rem; }
+  .results table { border-collapse: collapse; width: 100%; }
+  .results td { padding: 0.3rem 0.5rem 0.3rem 0; vertical-align: top; }
+  .results td.val { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .verdict { font-size: 1.15rem; font-weight: 700; margin: 0.25rem 0 0.6rem 0; }
+  figure.chart { margin: 1rem 0 0; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: system-ui, -apple-system, sans-serif; }
+  .pipeline { stroke: var(--pipe); stroke-width: 3; fill: none; }
+  .joint { fill: var(--pipe); }
+  .arc { stroke: var(--arc); stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+  .radline { stroke: var(--radius); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  .lbl { fill: var(--fg); font-size: 11px; }
+  .radlbl { fill: var(--radius); font-size: 11px; font-weight: 700; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); padding: 0.5rem 0.75rem; margin-top: 0.75rem; font-size: 0.9rem; }
+  details { margin: 1rem 0; border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.92rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+  .small { font-size: 0.85rem; color: var(--muted); }
+  button.reset { margin-top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.9rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Pipe Joint Deflection &amp; Pull Calculator</h1>
+<p class="subtitle">Curve a pipeline around an obstacle using allowable joint deflection &mdash; minimum radius, offset per joint, joints to turn an angle &mdash; plus how much axial pull a joint gives you. Runs entirely offline; inputs persist in this browser via localStorage.</p>
+
+<div class="warn">
+  <strong>Use limits:</strong> The allowable deflection and pull-out are the pipe manufacturer's numbers for that joint, size, and pressure class &mdash; use theirs, not a rule of thumb, and never exceed them. Deflect at the joint, not by springing the barrel. On a pressure line, joint deflection reduces the pipe's resistance to pull-out, so restraint and thrust still have to be checked separately.
+</div>
+
+<fieldset>
+  <legend>Pipe &amp; Joint</legend>
+  <div class="row">
+    <div>
+      <label for="len">Laying length (ft)
+        <input type="number" id="len" min="0" step="any" placeholder="e.g. 18">
+      </label>
+      <p class="small">Nominal pipe length &mdash; 18 or 20 ft for most DI/PVC.</p>
+    </div>
+    <div>
+      <label for="defl">Allowable deflection per joint (°)
+        <input type="number" id="defl" min="0" step="any" placeholder="e.g. 5">
+      </label>
+      <p class="small">Push-on DI ≈ 5° (≤12&quot;), 4° (14&ndash;20&quot;), 3° (24&ndash;36&quot;); MJ and restrained are less. Manufacturer governs.</p>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="pull">Allowable pull-out per joint (in, optional)
+        <input type="number" id="pull" min="0" step="any" placeholder="e.g. 0.75">
+      </label>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Curve</legend>
+  <label for="mode">Solve for
+    <select id="mode">
+      <option value="minrad">Minimum radius from the allowable deflection</option>
+      <option value="fromrad">Deflection needed for a target radius</option>
+    </select>
+  </label>
+  <div class="row" id="rad-in" hidden>
+    <div>
+      <label for="radius">Target curve radius (ft)
+        <input type="number" id="radius" min="0" step="any" placeholder="e.g. 300">
+      </label>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="total">Total direction change (°, optional)
+        <input type="number" id="total" min="0" step="any" placeholder="e.g. 90">
+      </label>
+      <p class="small">How far the alignment must turn &mdash; the tool returns the joints and pipe length to do it.</p>
+    </div>
+  </div>
+</fieldset>
+
+<div class="results" id="results" hidden>
+  <div class="verdict" id="verdict" hidden>&mdash;</div>
+  <table>
+    <tr><td>Deflection per joint used</td><td class="val" id="r-defl">&mdash;</td></tr>
+    <tr><td>Radius of curvature</td><td class="val" id="r-radius">&mdash;</td></tr>
+    <tr><td>Lateral offset per joint</td><td class="val" id="r-offset">&mdash;</td></tr>
+    <tr><td>Joints to turn the total angle</td><td class="val" id="r-joints">&mdash;</td></tr>
+    <tr><td>Pipe length for that turn</td><td class="val" id="r-runlen">&mdash;</td></tr>
+    <tr><td>Axial pull available over those joints</td><td class="val" id="r-pull">&mdash;</td></tr>
+  </table>
+  <figure class="chart">
+    <svg id="plot" viewBox="0 0 640 300" role="img" aria-label="Deflected pipeline approximating a curve"></svg>
+  </figure>
+  <div class="warn" id="warn" hidden></div>
+</div>
+
+<button class="reset" id="reset-btn" type="button">Clear all inputs</button>
+
+<h2>How the Numbers Are Derived</h2>
+
+<details>
+  <summary>Deflection, radius, and offset</summary>
+  <p>Each straight pipe is a chord of the curve, kinked at the joint by the deflection angle <code>θ</code>. A chord of length <code>L</code> on a circle of radius <code>R</code> spans <code>L = 2R &middot; sin(θ/2)</code>, so the minimum radius from an allowable <code>θ</code> is <code>R = L / (2 sin(θ/2))</code>, and the deflection needed for a target radius is <code>θ = 2 &middot; asin(L / 2R)</code>. The lateral offset each pipe gains over the last is <code>L &middot; sin(θ)</code>. To turn a total angle, the joints needed are <code>total / θ</code> (round up), and the pipe length is joints &times; <code>L</code>.</p>
+</details>
+
+<details>
+  <summary>Field notes</summary>
+  <ul>
+    <li>Deflect at the joint by pulling the spigot to one side of the bell &mdash; not by bowing the pipe barrel, which over-stresses it and isn't what the allowable covers.</li>
+    <li>Allowables shrink as pipe gets bigger and as the joint gets more restrained; a 5° push-on 8-inch is generous, a restrained 24-inch is a degree or two. Always pull the manufacturer's table for the exact joint and class.</li>
+    <li>On a pressure line, deflection and pull-out eat into the joint's safety margin against separation &mdash; thrust restraint still has to be designed for the bends and the deflected run.</li>
+    <li>Vertical curves (over a crossing, following a grade) use the same math; just remember gravity-sewer slope tolerances are tight, so a deflected sewer still has to hold its grade.</li>
+    <li>Gaining a little length by pulling joints is legitimate for hitting a fitting or a structure, but spread it &mdash; one joint pulled to its limit is a leak risk; a fraction of the pull on several is not.</li>
+  </ul>
+</details>
+
+<h3>References</h3>
+<ol>
+  <li>Pipe manufacturer's installation guide &mdash; allowable joint deflection and pull-out by size, joint, and pressure class (governing).</li>
+  <li>AWWA C600 / C605 (DI and PVC installation) and DIPRA installation guidance.</li>
+</ol>
+
+<footer>
+  Single-file, no dependencies, no tracking. Inputs are stored only in this browser's localStorage. Clear them with the button above.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var LS_KEY = "pipedefl.v1";
+  var D2R = Math.PI / 180, R2D = 180 / Math.PI;
+
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isFinite(v) ? v : null; }
+  function fmt(x, d) { if (x === null || !isFinite(x)) return "—"; if (d === undefined) d = 1; return x.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: 0 }); }
+
+  function updateModes() { $("rad-in").hidden = $("mode").value !== "fromrad"; recompute(); }
+
+  function draw(thetaDeg, R, jointsShown) {
+    var W = 640, H = 300, cx0 = 40, cy0 = H / 2;
+    var N = Math.max(2, Math.min(jointsShown || 8, 14));
+    var th = thetaDeg * D2R;
+    /* build deflected polyline of N segments; scale to fit */
+    var pts = [{ x: 0, y: 0 }], ang = 0, x = 0, y = 0;
+    for (var i = 0; i < N; i++) { x += Math.cos(ang); y += Math.sin(ang); pts.push({ x: x, y: y }); ang += th; }
+    var minX = 0, maxX = 0, minY = 0, maxY = 0;
+    pts.forEach(function (p) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
+    var spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1;
+    var pad = 46, sc = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
+    function X(p) { return pad + (p.x - minX) * sc; }
+    function Y(p) { return H - pad - (p.y - minY) * sc; }
+    var svg = "";
+    /* pipeline */
+    var poly = pts.map(function (p) { return X(p).toFixed(1) + "," + Y(p).toFixed(1); }).join(" ");
+    svg += "<polyline class='pipeline' points='" + poly + "'/>";
+    pts.forEach(function (p) { svg += "<circle class='joint' cx='" + X(p).toFixed(1) + "' cy='" + Y(p).toFixed(1) + "' r='3'/>"; });
+    /* labels */
+    svg += "<text class='lbl' x='" + ((X(pts[0]) + X(pts[1])) / 2).toFixed(1) + "' y='" + (Y(pts[0]) + 16).toFixed(1) + "'>one pipe</text>";
+    svg += "<text class='lbl' x='" + (W / 2) + "' y='18' text-anchor='middle'>" + fmt(thetaDeg, 2) + "° per joint  →  R = " + fmt(R, 0) + " ft</text>";
+    $("plot").innerHTML = svg;
+  }
+
+  function recompute() {
+    var out = $("results");
+    var L = num("len"), allow = num("defl");
+    if (!L || L <= 0) { out.hidden = true; saveState(); return; }
+
+    var theta, R, verdict = $("verdict"), msgs = [];
+    verdict.hidden = true; out.classList.remove("fail");
+
+    if ($("mode").value === "fromrad") {
+      R = num("radius");
+      if (!R || R <= 0) { out.hidden = true; saveState(); return; }
+      var s = L / (2 * R);
+      if (s > 1) { out.hidden = true; saveState(); return; }
+      theta = 2 * Math.asin(s) * R2D;
+      if (allow && allow > 0) {
+        verdict.hidden = false;
+        if (theta <= allow + 1e-9) { verdict.textContent = "OK — needs " + fmt(theta, 2) + "° ≤ " + fmt(allow, 2) + "° allowable"; }
+        else { verdict.textContent = "TOO TIGHT — needs " + fmt(theta, 2) + "° > " + fmt(allow, 2) + "° allowable"; out.classList.add("fail");
+          msgs.push("This radius needs more deflection than the joint allows. Use a larger radius, shorter pipe (more joints), or fittings/bends for the turn."); }
+      }
+    } else {
+      if (!allow || allow <= 0) { out.hidden = true; saveState(); return; }
+      theta = allow;
+      R = L / (2 * Math.sin(theta * D2R / 2));
+    }
+
+    var offsetFt = L * Math.sin(theta * D2R);
+    $("r-defl").textContent = fmt(theta, 2) + "°" + (allow ? " (allow " + fmt(allow, 2) + "°)" : "");
+    $("r-radius").textContent = fmt(R, 0) + " ft";
+    $("r-offset").textContent = fmt(offsetFt * 12, 1) + " in (" + fmt(offsetFt, 2) + " ft)";
+
+    var total = num("total"), joints = null;
+    if (total && total > 0 && theta > 0) {
+      joints = Math.ceil(total / theta);
+      $("r-joints").textContent = joints + " joints (for " + fmt(total, 0) + "°)";
+      $("r-runlen").textContent = fmt(joints * L, 0) + " ft";
+    } else {
+      $("r-joints").textContent = "— (enter total angle)";
+      $("r-runlen").textContent = "—";
+    }
+
+    var pull = num("pull");
+    if (pull && pull > 0 && joints) $("r-pull").textContent = fmt(pull * joints, 1) + " in (" + fmt(pull * joints / 12, 2) + " ft) over " + joints + " joints";
+    else if (pull && pull > 0) $("r-pull").textContent = fmt(pull, 2) + " in/joint";
+    else $("r-pull").textContent = "—";
+
+    var warn = $("warn"); warn.hidden = msgs.length === 0; warn.textContent = msgs.join(" ");
+    draw(theta, R, joints || 8);
+    out.hidden = false; saveState();
+  }
+
+  var FIELDS = ["len", "defl", "pull", "mode", "radius", "total"];
+  function saveState() { try { var st = {}; FIELDS.forEach(function (id) { st[id] = $(id).value; }); localStorage.setItem(LS_KEY, JSON.stringify(st)); } catch (e) {} }
+  function loadState() { try { var st = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (!st) return; FIELDS.forEach(function (id) { if (st[id] !== undefined) $(id).value = st[id]; }); } catch (e) {} }
+
+  FIELDS.forEach(function (id) { $(id).addEventListener("input", recompute); $(id).addEventListener("change", recompute); });
+  $("mode").addEventListener("change", updateModes);
+  $("reset-btn").addEventListener("click", function () { try { localStorage.removeItem(LS_KEY); } catch (e) {} location.reload(); });
+
+  loadState();
+  updateModes();
+})();
+</script>
+</body>
+</html>
