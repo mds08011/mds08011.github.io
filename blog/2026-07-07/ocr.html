@@ -39,11 +39,6 @@
             
             <p>The implementation relies on PDF.js to convert PDF documents into individual rasterized canvases, followed by Tesseract.js processing the visual data to yield a string extraction. This approach is highly efficient for zero-bloat workflows, as no network egress of sensitive documents is required. A live demonstration of this functionality has been adapted and deployed to the local tools repository [1].</p>
             
-            <figure>
-                <img src="/path/to/ocr-screenshot.png" alt="A browser window displaying the OCR extraction interface processing a sample PDF document" loading="lazy">
-                <figcaption>Figure 1: The client-side OCR extraction tool processing an uploaded PDF document.</figcaption>
-            </figure>
-
             <p>During local testing, users can employ the <kbd>Ctrl</kbd> + <kbd>V</kbd> shortcut to directly paste image data into the application context, triggering the extraction pipeline immediately. The core technical methodology and architectural decisions regarding the WebWorker implementation are documented comprehensively in the source reference material [2].</p>
             
             <details>

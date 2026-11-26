@@ -47,11 +47,6 @@
             <p><code>t_min = 4V/Q_p</code> &nbsp;&rarr;&nbsp; max starts/hr = <code>15&middot;Q_p/V</code></p>
             <p>Rearranged for design, the minimum effective volume to stay under an allowable <code>N</code> starts per hour, crediting alternation across <code>n</code> pumps, is <code>V_min = 15&middot;Q_p/(N&middot;n)</code>. Duplex alternation splits the station's starts between two pumps, which is why alternating effectively doubles the cycling a station can tolerate [1].</p>
 
-            <figure>
-                <img src="/path/to/wet-well-float-setup.jpg" alt="Wet well with float switches hung at staggered elevations for pump-off, lead-on, lag-on, and high-level alarm" loading="lazy">
-                <figcaption>Figure 1: Float setup in a duplex wet well. The vertical spread between pump-off and lead-on is the effective volume that drives cycle time.</figcaption>
-            </figure>
-
             <p>The tool reports cycle time, starts per hour at the entered inflow, and the worst-case starts, and flags when you are near that half-capacity danger zone. It also solves the minimum-volume form for design checks.</p>
 
             <p>One honest caveat it surfaces: if the field float or transducer setpoints differ from the design levels &mdash; and they often do after the electrician trims them &mdash; the effective volume changes and the whole calculation moves. Verify setpoints against the approved control narrative before you draw conclusions. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
