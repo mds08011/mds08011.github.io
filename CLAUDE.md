@@ -54,6 +54,11 @@ index is for Malcolm's own writing and for posts about other people's open-sourc
 **Before generating a large batch,** report what you found (file/index patterns, date spread)
 and get confirmation, so you don't write many posts against a misread pattern.
 
+**Run `site-check` from the repo root before committing.** It reports broken links,
+placeholder images, double-encoded text, heavy pages and AI tells in post prose. Fix the
+errors. A tell is a place to look, not a rule. Malcolm's own posts are long and digressive on
+purpose.
+
 **Commits.** Split logically (e.g. tools + index / posts / index updates), author as the user
 only (no `Co-Authored-By` trailer), and don't push unless asked.
 
