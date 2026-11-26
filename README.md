@@ -31,6 +31,7 @@ To maintain uniformity and technical rigor, all future blog posts and tools must
 
 - Kimberly for keeping me motivated by rolling her eyes as I work on this site.
 - [oxalorg](https://github.com/oxalorg) for creating [sakura](https://github.com/oxalorg/sakura), the CSS used for this site. A copy of v1.5.1 is kept at `/sakura.css` so pages do not depend on a CDN.
+- [Simon Willison](https://github.com/simonw) for [simonw/tools](https://github.com/simonw/tools). Fifteen of the web utilities in `/tools` are adapted from his, under the Apache License 2.0 (copy at `tools/LICENSE-simonw-tools.txt`). Each one names its original in its footer.
 - [octokatherine](https://www.github.com/octokatherine) for creating [https://readme.so](https://readme.so) which was used to structure this Readme.
 
 ## License
