@@ -45,6 +45,12 @@ add it to `/tools/index.html` under the right category `<h4><strong>…</strong>
 &amp; Testing, Safety/Compliance/Tracking, Controls &amp; Networking, Hydrology &amp;
 Drainage, GIS &amp; Mapping, Web Utilities).
 
+**Engineering calculator posts stay off the blog index** (decided by Malcolm 2026-11-26). The
+calculators in the engineering categories of `/tools/index.html` (Startup &amp; Commissioning
+through GIS &amp; Mapping) are listed on the tools page only. Their old posts stay at their
+URLs but are not linked from `/blog/index.html`, and new ones are not added there. The blog
+index is for Malcolm's own writing and for posts about other people's open-source tools.
+
 **Before generating a large batch,** report what you found (file/index patterns, date spread)
 and get confirmation, so you don't write many posts against a misread pattern.
 
@@ -62,8 +68,11 @@ photo, an external app, a diagram) — and when you do, tell the user which ones
 ### How to capture (the pipeline that works on this machine)
 
 Headless Chrome renders these self-contained tools cleanly (it honors
-`prefers-color-scheme: dark`). Neither Node nor Python is installed here; drive it
-from Git Bash.
+`prefers-color-scheme: dark`). On the lemur, `google-chrome`, `python3` (with PIL) and
+`node` are on PATH. Pages that load the shared `/sakura.css` (the web-utility tools and every
+post) need the repo served over HTTP so the root-relative path resolves: run
+`python3 -m http.server 8765 --bind 127.0.0.1` from the repo root and point Chrome at
+`http://127.0.0.1:8765/...`. The self-contained engineering calculators also work from `file://`.
 
 1. **Populate the tool first.** An empty form doesn't match the caption. Inject a
    small `<script>` right after `<body>` that either seeds `localStorage` (for

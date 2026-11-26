@@ -8,7 +8,7 @@
 *   Focus on cross-browser compatibility, especially for the latest versions of Chrome, Firefox, and Safari.
 
 ## Webpage Structure & Style
-*   The CSS file is Sakura.  Loaded from https://unpkg.com/sakura.css/css/sakura.css
+*   The CSS file is Sakura.  A local copy (v1.5.1) at /sakura.css, vendored from https://unpkg.com/sakura.css/css/sakura.css
 
 ## Analytics
 *   Analytics are via Goat Counter: by embedding https://mds08011.goatcounter.com/count
