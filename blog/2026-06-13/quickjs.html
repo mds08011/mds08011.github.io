@@ -35,19 +35,11 @@
                 <time datetime="2026-06-13">June 2026</time>
             </header>
             
-            <p>Executing untrusted JavaScript paradigms generally requires a rigid server-side container orchestration system to prevent host compromise. A more secure, minimal-latency approach leverages a client-side WebAssembly (WASM) build of the QuickJS engine. This compiles an entirely independent JavaScript runtime directly within the user's browser thread, guaranteeing complete isolation from the native DOM context.</p>
+            <p>QuickJS is a small, standalone JavaScript engine. Compiled to WebAssembly (WASM, a format for running compiled code inside a web browser), it lets you run untrusted JavaScript snippets in an isolated sandbox that cannot touch the host webpage or its DOM. I put a local copy of Simon Willison's <a href="/tools/quickjs.html">QuickJS in WebAssembly</a> page [1][2] on my site.</p>
             
-            <p>This implementation utilizes the <code>quickjs-emscripten</code> library [3] to instantiate the isolated execution context. Native functions, such as <code>console.log()</code> and a synchronous <code>fetch</code> equivalent, are explicitly bound into the WASM instance prior to evaluation. Code inputted into the user interface is executed using <code>vm.evalCodeAsync()</code> [1][2].</p>
-            
-            <p>To improve usability, state retention is achieved by pushing the raw, URI-encoded script directly to the URL hash fragment. Pressing <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (<kbd>Cmd</kbd> + <kbd>Enter</kbd> on macOS) runs the code in the editor [2].</p>
+            <p>Type or paste JavaScript into the editor and press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (<kbd>Cmd</kbd> + <kbd>Enter</kbd> on macOS) or click the run button. It runs the code inside <code>quickjs-emscripten</code> [3] using <code>vm.evalCodeAsync()</code>, wires up <code>console.log()</code> and a synchronous <code>fetch</code> helper, and stores your current script in the URL hash so you can bookmark or share a snippet [2].</p>
 
             <p>The tool: <a href="/tools/quickjs.html">QuickJS in WebAssembly</a>.</p>
-            
-            <details>
-                <summary>Analyzing the required WASM bundle</summary>
-                <p>To peek at the first five lines of the bundled script from a Linux or macOS terminal (do not type the <code>$</code>; <code>curl -s</code> downloads quietly and <code>| head -n 5</code> prints only the first five lines):</p>
-                <pre><code>$ curl -s https://cdn.jsdelivr.net/npm/quickjs-emscripten@0.31.0/dist/index.global.js | head -n 5</code></pre>
-            </details>
 
             <section>
                 <h3>References</h3>

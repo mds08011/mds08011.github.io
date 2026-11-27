@@ -35,19 +35,11 @@
                 <time datetime="2026-03-01">March 2026</time>
             </header>
             
-            <p>Implementing client-side optical character recognition (OCR) mitigates the privacy and bandwidth constraints typically associated with server-based text extraction. By utilizing a JavaScript compilation of the Tesseract OCR engine, it is possible to parse textual data from rasterized images and Portable Document Format (PDF) files entirely within the local execution environment.</p>
+            <p>OCR (Optical Character Recognition) pulls selectable text out of scanned PDFs and screenshots. Most free OCR websites ask you to upload your document to someone else's server. I adapted a local copy of Simon Willison's <a href="/tools/ocr.html">Browser OCR</a> tool [1][2] so the whole thing runs inside your browser.</p>
             
-            <p>The implementation relies on PDF.js to convert PDF documents into individual rasterized canvases, followed by Tesseract.js processing the visual data to yield a string extraction. This approach avoids uploading sensitive documents to a remote server. A local copy adapted from Simon Willison's tool [1][2] is available at <a href="/tools/ocr.html">Browser OCR</a>.</p>
-            
-            <p>Users can select a file or press <kbd>Ctrl</kbd> + <kbd>V</kbd> (<kbd>Cmd</kbd> + <kbd>V</kbd> on macOS) to paste an image directly into the page. Simon Willison's original TIL post shows a shorter browser-console Tesseract.js example for page images [3].</p>
-            
-            <details>
-                <summary>Local dependency verification</summary>
-                <p>To check from a terminal that the Tesseract.js CDN script is reachable (do not type the <code>$</code>; <code>curl -I</code> fetches headers only and <code>200</code> means OK):</p>
-                <pre><code>$ curl -I https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js
-HTTP/2 200 
-content-type: application/javascript; charset=utf-8</code></pre>
-            </details>
+            <p>Open the page and pick a PDF or image file, or paste an image straight from your clipboard (<kbd>Ctrl</kbd> + <kbd>V</kbd>, or <kbd>Cmd</kbd> + <kbd>V</kbd> on macOS). For PDFs, it uses PDF.js to turn each page into an image first, then runs Tesseract.js (a JavaScript port of the Tesseract OCR engine) locally in your browser to read the text out of it [2]. Simon Willison also wrote a short TIL showing a browser-console Tesseract.js snippet for OCRing images on a webpage [3].</p>
+
+            <p>The tool: <a href="/tools/ocr.html">Browser OCR</a>.</p>
 
             <section>
                 <h3>References</h3>

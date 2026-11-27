@@ -35,23 +35,16 @@
                 <time datetime="2025-04-27">April 2025</time>
             </header>
             
-            <p>Quick Response (QR) matrices are essential for expediting the optical transfer of alphanumeric payloads, particularly Uniform Resource Locators (URLs) and WiFi provisioning parameters. Relying on remote Application Programming Interfaces (APIs) for payload encoding introduces unnecessary latency and constitutes a severe breach of operational security when transmitting unencrypted wireless credentials.</p>
+            <p>I wanted a simple QR code generator that does not send links or WiFi passwords to a third-party server, so I adapted a local copy of Simon Willison's single-file <a href="/tools/qr-code-generator.html">QR Code Generator</a> [1][2].</p>
             
-            <p>To mitigate this vulnerability, a client-side generator has been implemented using the <code>qrcode-generator</code> JavaScript library (loaded from cdnjs [3]) responsible for the Reed-Solomon error correction and matrix masking. The generated array is subsequently rendered directly to an HTML5 canvas element. This utility is now deployed on this site as the <a href="/tools/qr-code-generator.html">QR Code Generator</a>, adapted from Simon Willison's version [1].</p>
+            <p>Open the page, pick a tab (URL/text or WiFi), fill in the fields, and it draws the QR code locally in your browser using the <code>qrcode-generator</code> JavaScript library (loaded from cdnjs [3]). From there you can copy or download the image. Your WiFi network name (SSID) and password stay in your browser and are never posted to a backend server.</p>
             
             <figure>
-                <img src="/blog/2025-04-27/qr-code-generator.png" alt="A matrix barcode displayed on an HTML5 canvas alongside configuration parameters" loading="lazy">
-                <figcaption>Figure 1: The resulting matrix barcode rendered dynamically via client-side execution.</figcaption>
+                <img src="/blog/2025-04-27/qr-code-generator.png" alt="A QR code displayed in the browser alongside text and styling controls" loading="lazy">
+                <figcaption>Figure 1: The QR code generator interface.</figcaption>
             </figure>
 
-            <p>The logic dictates that all parameters, including SSID broadcast settings and WPA2 preshared keys, remain strictly confined to the local browser environment. Advanced stylistic modifications, such as structural bordering and liquid rendering algorithms, were integrated by referencing the source repository parameters [2].</p>
-            
-            <details>
-                <summary>Decoding the WiFi provisioning string</summary>
-                <p>To verify a downloaded QR code image on Linux, open a terminal, install <code>zbar-tools</code> (<code>sudo apt install zbar-tools</code> on Debian/Ubuntu/Pop!_OS), and run <code>zbarimg</code> against your saved file (replace <code>qrcode.png</code> with your filename; do not type the <code>$</code>):</p>
-                <pre><code>$ zbarimg qrcode.png
-QR-Code:WIFI:T:WPA;S:MyNetwork;P:SuperSecret123;;</code></pre>
-            </details>
+            <p>The tool: <a href="/tools/qr-code-generator.html">QR Code Generator</a>.</p>
 
             <section>
                 <h3>References</h3>

@@ -35,15 +35,9 @@
                 <time datetime="2026-05-23">May 2026</time>
             </header>
             
-            <p>During the course of standard digital infrastructure maintenance, one frequently encounters the necessity of transforming rasterized visual data into scalable vector graphics (SVG). Reliance on external web services for such conversions introduces unwarranted network dependencies and potential privacy compromises regarding source materials.</p>
+            <p>If you want to trace a regular pixel image (like a PNG or JPEG) into a scalable SVG vector graphic without uploading it to an online converter, I put a local copy of Simon Willison's <a href="/tools/image-to-svg.html">Image to SVG</a> tool [1][2] on my site.</p>
             
-            <p>To mitigate these structural vulnerabilities, I have deployed <a href="/tools/image-to-svg.html">Image to SVG</a>, adapted from Simon Willison's toolset [1][2]. The utility uses the <code>imagetracerjs</code> library [3] to trace raster images directly inside the browser without uploading files to a server.</p>
-            
-            <p>The mechanism of operation is straightforward. A user deposits a target JPEG or PNG file into the designated drop zone. The script instantiates a virtual canvas, processes the image data arrays, and outputs the equivalent SVG mathematical paths.</p>
-            
-            <p>Implementation of the embedded dependency required manual extraction and concatenation into a singular deployment artifact. To fetch a local copy of <code>imagetracer.js</code> from a terminal (<code>-sL</code> downloads quietly and follows redirects; <code>-o</code> sets the output filename):</p>
-            
-            <pre><code>curl -sL https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.js -o imagetracer.js</code></pre>
+            <p>Open the page and drop a JPEG or PNG onto the box (or pick a file). It uses the open-source <code>imagetracerjs</code> JavaScript library [3] to trace the image onto shapes and output an SVG right inside your browser, which you can copy or download.</p>
             
             <p>The tool: <a href="/tools/image-to-svg.html">Image to SVG</a>.</p>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculating Date Deltas via Client-Side Execution | Blog | MDS</title>
+    <title>Date Calculator | Blog | MDS</title>
     
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,21 +31,15 @@
     <main>
         <article>
             <header>
-                <h1>Calculating Date Deltas via Client-Side Execution</h1>
+                <h1>Date Calculator</h1>
                 <time datetime="2025-02-09">February 2025</time>
             </header>
             
-            <p>Precise temporal calculations form the bedrock of accurate project scheduling and logistical planning. Manual derivation of date deltas, particularly when accounting for non-working days such as weekends, is subject to a high coefficient of human error.</p>
+            <p>Counting the number of days between two calendar dates by hand is easy to mess up, especially when you only want weekdays or weekend days. I adapted a local copy of Simon Willison's Date Calculator [1][2] so I have a plain, ad-free version hosted on my own site.</p>
             
-            <p>To stabilize these calculations, I have imported and refined a localized <a href="/tools/date-calculator.html">Date Calculator</a> utility originally conceptualized by Simon Willison [1][2]. The utility computes the numerical discrepancy between any two defined Gregorian dates utilizing pure vanilla JavaScript. It requires no server-side telemetry or remote dependencies, functioning as an entirely enclosed temporal analysis module.</p>
-            
-            <p>The logic evaluates inputs based on the UNIX epoch scale, executing differential arithmetic while isolating standard business days from weekends. This allows for rigorous estimation parameters during the pre-construction or planning phases of any significant engagement.</p>
-            
-            <pre><code>// Core day-count math used inside the page script
-const diffMs = Math.abs(date2 - date1);
-const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));</code></pre>
+            <p>To use the <a href="/tools/date-calculator.html">Date Calculator</a>, pick a start date and an end date, then choose whether to count all days, business days (Monday through Friday), or weekend days. Everything runs in plain JavaScript in your browser without sending anything to a server.</p>
 
-            <p>To use the <a href="/tools/date-calculator.html">Date Calculator</a>, pick a start date and an end date, then choose All Days, Business Days, or Weekends.</p>
+            <p>Note: business days only skip Saturdays and Sundays; the tool does not know about holidays.</p>
 
             <hr>
             <h3>References</h3>

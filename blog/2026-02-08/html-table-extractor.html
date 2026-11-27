@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extracting Tabular Data from Hypertext Markup Language Documents | Blog | MDS</title>
+    <title>HTML Table Extractor | Blog | MDS</title>
     
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,20 +31,15 @@
     <main>
         <article>
             <header>
-                <h1>Extracting Tabular Data from Hypertext Markup Language Documents</h1>
+                <h1>HTML Table Extractor</h1>
                 <time datetime="2026-02-08">February 2026</time>
             </header>
             
-            <p>Data migration tasks frequently involve the extraction of tabular arrays locked within unformatted Hypertext Markup Language (HTML) documents. Copy-and-paste procedures from rendered web pages into spreadsheet applications often result in structural failure, necessitating an intermediary processing step.</p>
+            <p>Copying a table from a webpage and pasting it straight into a spreadsheet often mangles the columns and formatting. I put a local copy of Simon Willison's <a href="/tools/html-table-extractor.html">HTML Table Extractor</a> [1][2] on my site as a quick way to pull clean data out of web tables.</p>
             
-            <p>I have adapted Simon Willison's HTML Table Extractor [1][2] as the <a href="/tools/html-table-extractor.html">HTML Table Extractor</a> tool on this site. The user pastes copied table content with standard clipboard commands (<kbd>Ctrl+V</kbd>, or <kbd>Cmd+V</kbd> on macOS) into the editable input area.</p>
-            
-            <p>The client-side scripts parse the Document Object Model (DOM), traversing <code>table</code>, <code>tr</code>, and <code>td</code> nodes. The logic handles nested cells and outputs the table in HTML, Markdown, CSV, TSV, or JSON formats.</p>
-            
-            <p>The tool runs locally in your browser at <a href="/tools/html-table-extractor.html">HTML Table Extractor</a> without uploading pasted tables to a server.</p>
+            <p>Copy a table from a webpage, open <a href="/tools/html-table-extractor.html">HTML Table Extractor</a>, and paste it (<kbd>Ctrl</kbd> + <kbd>V</kbd>, or <kbd>Cmd</kbd> + <kbd>V</kbd> on macOS) into the input box. The page parses the HTML <code>table</code>, <code>tr</code>, and <code>td</code> elements in your browser and lets you switch tabs to copy clean HTML, Markdown, CSV, TSV, or JSON without sending the pasted data to a server.</p>
 
-            <p>If you save the JSON output to a file (for example <code>extracted-data.json</code>), you can filter fields from a terminal using <code>jq</code> (install via <code>sudo apt install jq</code> on Debian/Ubuntu/Pop!_OS; replace <code>.value</code> with an actual column name):</p>
-            <pre><code>jq '.[] | .value' extracted-data.json</code></pre>
+            <p>The tool: <a href="/tools/html-table-extractor.html">HTML Table Extractor</a>.</p>
             
             <hr>
             <h3>References</h3>

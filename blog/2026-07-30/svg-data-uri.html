@@ -36,30 +36,30 @@
             </header>
 
             <h2>The Problem</h2>
-            <p>I already had a little <a href="/tools/svg-sandbox.html">SVG base64 embedding sandbox</a> &mdash; but it's a static demo: three example SVGs baked in as data URIs to show that the technique works and that scripts inside an <code>&lt;img&gt;</code>-embedded SVG are ignored. What it doesn't do is let you paste <em>your</em> SVG and get the string back. So this is the interactive counterpart: markup in, data URI out.</p>
+            <p>The <a href="/tools/svg-sandbox.html">SVG base64 embedding sandbox</a> on this site is a static demo with three hardcoded examples. It shows how embedding an SVG (Scalable Vector Graphics file) inside an <code>&lt;img&gt;</code> data URI works and that scripts inside the SVG do not run, but it does not let you convert your own SVG. This companion page, <a href="/tools/svg-data-uri.html">SVG Data URI Encoder</a>, takes an SVG you paste in and gives back ready-to-use data URI strings.</p>
 
-            <h2>The Approach</h2>
-            <p>You paste an <code>&lt;svg&gt;</code> and get a live preview (rendered through an actual <code>&lt;img&gt;</code> data URI, so what you see is exactly what you'd embed), both encodings side by side with their byte sizes, and ready-to-paste <code>&lt;img&gt;</code> and CSS <code>background-image</code> snippets. It fixes the two things that quietly break SVG data URIs: it adds the <code>xmlns</code> namespace if you left it off (without it the browser won't render the data URI at all), and it can strip comments and collapse whitespace first.</p>
+            <h2>How it works</h2>
+            <p>Open any <code>.svg</code> file in a plain text editor, copy the <code>&lt;svg&gt;...&lt;/svg&gt;</code> markup, and paste it into the page. It renders a live preview through an actual <code>&lt;img&gt;</code> data URI, shows both Base64 and URL-encoded outputs side by side with their byte sizes, and gives you copyable HTML <code>&lt;img&gt;</code> and CSS <code>background-image</code> snippets. It also adds the required <code>xmlns</code> attribute if your SVG is missing it (browsers will not render an SVG data URI without it) and can strip comments and extra whitespace first.</p>
 
             <figure>
-                <img src="/blog/2026-07-30/svg-data-uri.png" alt="The SVG Data URI Encoder: markup input, a rendered sun preview on a checkerboard, a size table showing URL-encoded is smaller, and the two data URIs plus img and CSS snippets" loading="lazy">
-                <figcaption>Figure 1: A 541-byte sun becomes a 750-byte base64 URI or a 564-byte URL-encoded one &mdash; URL-encoding wins by 25%.</figcaption>
+                <img src="/blog/2026-07-30/svg-data-uri.png" alt="The SVG Data URI Encoder showing a sun SVG preview, byte sizes, and encoded outputs" loading="lazy">
+                <figcaption>Figure 1: Example sun SVG encoded both as Base64 and as a shorter URL-encoded data URI.</figcaption>
             </figure>
 
-            <h3>Base64 is the reflex; URL-encoding is usually smaller</h3>
-            <p>Everyone reaches for base64 because it's the encoding you already know, but it's the wrong default for SVG. Base64 turns three bytes into four characters &mdash; a flat ~33% inflation &mdash; regardless of what's inside [1]. SVG, though, is mostly plain ASCII (<code>&lt;path d="M0 0..."&gt;</code>), and the alternative encoding just leaves that text alone and percent-escapes the handful of characters a URL can't carry [2]. So <code>data:image/svg+xml,&hellip;</code> is almost always smaller than <code>data:image/svg+xml;base64,&hellip;</code>, and it has the bonus of staying human-readable and diffable in your CSS. The tool shows both sizes and flags the winner; for the example sun it's a 25% saving, and it grows with the proportion of markup to binary-ish content.</p>
+            <h3>Why URL-encoding is usually smaller than Base64</h3>
+            <p>Base64 is the default encoding most people think of for data URIs, and it turns every 3 bytes into 4 characters (roughly a 33% size increase) [1]. Because SVG files are mostly plain text, leaving the normal characters alone and percent-escaping only the characters a URL cannot contain (the minimal scheme popularized by Yoksel [2]) usually produces a smaller string that is still readable in HTML or CSS. The page shows both sizes so you can see which one is smaller for your file.</p>
 
             <details>
-                <summary>The encoding details worth knowing</summary>
+                <summary>A few encoding notes</summary>
                 <ul>
-                    <li>The base64 path is UTF-8 safe: the markup is UTF-8-encoded before <code>btoa</code>, so an SVG with non-ASCII text doesn't throw or corrupt.</li>
-                    <li>The URL-encoding uses the minimal scheme popularized by Yoksel [2]: swap double quotes for single quotes (so the URI can live inside double quotes), collapse whitespace between tags, and percent-escape only <code>%#()&lt;&gt;?[\]^`{|}</code> and newlines. Everything else stays legible.</li>
-                    <li>Scripts and event handlers inside the SVG are inert once it's loaded via <code>&lt;img&gt;</code> or CSS <code>url()</code> &mdash; the same safety property the <a href="/tools/svg-sandbox.html">sandbox</a> demonstrates. Inline <code>&lt;svg&gt;</code> in the document itself is not sandboxed and can run script.</li>
-                    <li>Inline the small stuff &mdash; icons, logos, one-off illustrations. A large SVG as a data URI bloats the file it lives in and doesn't cache separately; past a few KB, link it as a file instead.</li>
+                    <li>The Base64 option encodes text as UTF-8 first so SVGs with non-ASCII characters work without breaking <code>btoa</code>.</li>
+                    <li>The URL-encoded option swaps double quotes for single quotes (so the URI fits inside double-quoted HTML/CSS attributes), collapses whitespace between tags, and escapes only <code>%#()&lt;&gt;?[\]^`{|}</code> and newlines [2].</li>
+                    <li>Scripts inside an SVG do not run when loaded via <code>&lt;img&gt;</code> or CSS <code>url()</code> (the same behavior shown in the <a href="/tools/svg-sandbox.html">sandbox</a>). Pasting raw <code>&lt;svg&gt;</code> directly into an HTML document is not sandboxed and can run scripts.</li>
+                    <li>Data URIs make the most sense for small icons and simple graphics. Larger SVGs bloat the HTML/CSS file and cannot be cached separately by the browser, so linking them as normal files is better.</li>
                 </ul>
             </details>
 
-            <p>It's the usual shape for these: one static file, vanilla JS, your markup persisted in <code>localStorage</code> and nothing leaving the browser. If you want a raster PNG or JPEG out of an SVG instead of a data URI, that's the <a href="/tools/svg-render.html">SVG to JPEG/PNG renderer</a>.</p>
+            <p>Everything runs locally in your browser (saving your last input in <code>localStorage</code>). If you want a PNG or JPEG image out of an SVG instead of a data URI, use the <a href="/tools/svg-render.html">SVG to JPEG/PNG</a> page.</p>
 
             <p>The tool: <a href="/tools/svg-data-uri.html">SVG Data URI Encoder</a>.</p>
 

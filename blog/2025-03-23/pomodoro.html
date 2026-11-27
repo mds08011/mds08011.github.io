@@ -35,22 +35,20 @@
                 <time datetime="2025-03-23">March 2025</time>
             </header>
             
-            <p>Task duration monitoring utilizing the Pomodoro technique is a proven methodology for maintaining sustained workflow output. However, utilizing subscription-based or network-dependent applications introduces unnecessary telemetry tracking and dependency risk. Constructing a completely isolated interval tracker using the native browser execution stack satisfies operational requirements while eliminating extraneous overhead.</p>
+            <p>A Pomodoro timer is a simple work timer (usually 25 minutes on, followed by a short break). Most web timers require an account or are covered in ads, so I put a local copy of Simon Willison's single-file Pomodoro Timer [1][2] on my site.</p>
             
-            <p>This implementation utilizes the <code>requestAnimationFrame</code> method coupled with standard temporal measurements (via <code>Date.now()</code>) to guarantee execution accuracy across variable hardware clock cycles. The application state, encompassing historical sessions and pause delineations, is retained persistently utilizing the <code>localStorage</code> API, ensuring session resilience between page cycles [2].</p>
+            <p>To use the <a href="/tools/pomodoro.html">Pomodoro Timer</a>, type a short goal into the text box and click Start (or press <kbd>Space</kbd> when your cursor is outside the text box). It tracks the countdown using the browser's clock (<code>Date.now()</code>) and saves your finished sessions in your browser's <code>localStorage</code> so the log is still there if you refresh the page [2].</p>
             
             <figure>
                 <img src="/blog/2025-03-23/pomodoro.png" alt="A minimalist timer counting down from 25 minutes, with a log of previous sessions below" loading="lazy">
-                <figcaption>Figure 1: The execution view of the timer highlighting the local session logging mechanism.</figcaption>
+                <figcaption>Figure 1: The Pomodoro timer with the session log below it.</figcaption>
             </figure>
-
-            <p>Interaction constraints have been localized to specific input combinations. Enter a goal in the text box first, then click Start or press the <kbd>Space</kbd> key when the goal input field is decoupled from active focus. The full source code structure and methodology have been closely replicated from the referenced implementation [1][2].</p>
 
             <p>The tool: <a href="/tools/pomodoro.html">Pomodoro Timer</a>.</p>
             
             <details>
-                <summary>Retrieving session logs from local storage</summary>
-                <p>Past sessions already appear on the page below the timer. To inspect the raw stored JSON in your browser, open Developer Tools (<kbd>F12</kbd>, or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> / <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS), switch to the <strong>Console</strong> tab on the timer page, and run:</p>
+                <summary>Viewing the raw saved session data</summary>
+                <p>Past sessions already appear on the page below the timer. If you want to see the raw stored data, open your browser's Developer Tools (<kbd>F12</kbd>, or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> / <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS), switch to the <strong>Console</strong> tab on the timer page, and run:</p>
                 <pre><code>window.localStorage.getItem('pomodoroSessions')</code></pre>
             </details>
 

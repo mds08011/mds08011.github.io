@@ -35,25 +35,16 @@
                 <time datetime="2026-04-04">April 2026</time>
             </header>
             
-            <p>Translating arbitrary Extensible Markup Language (XML) vector strings into rasterized static image formats historically required dependencies like ImageMagick or Inkscape. However, the HTML5 Canvas API natively supports painting serialized SVG blobs onto a local rendering context, negating the requirement for server-side processing architectures entirely.</p>
+            <p>Sometimes you have an SVG (a vector graphic written in XML text) and need a plain PNG or JPEG image to drop into a slide, email, or app that does not accept SVGs. Instead of opening Inkscape or installing ImageMagick, you can convert it in a browser. I put a local copy of Simon Willison's <a href="/tools/svg-render.html">SVG to JPEG/PNG</a> tool [1][2] on my site.</p>
             
-            <p>This localized implementation utilizes a <code>DOMParser</code> to extract coordinate parameters directly from the <code>viewBox</code> vector constraint. The underlying XML is subsequently converted into a transient <code>Blob</code> and allocated an Object URL. This URL is assigned to a virtual <code>Image</code> object, which is directly painted onto an offscreen <code>canvas</code> utilizing the <code>drawImage()</code> subroutine [1][2].</p>
+            <p>Paste your SVG markup into the text box (or drop an <code>.svg</code> file), set the width, padding, and background color, and download the PNG or JPEG. Under the hood, the page reads the SVG's <code>viewBox</code> dimensions, draws the SVG onto an HTML5 <code>&lt;canvas&gt;</code>, and exports the result locally via <code>toDataURL()</code> [2].</p>
             
             <figure>
-                <img src="/blog/2026-04-04/svg-render.png" alt="A web application generating a downloadable PNG artifact directly from raw SVG markup" loading="lazy">
-                <figcaption>Figure 1: The rasterization pipeline exporting a base64 encoded PNG from XML syntax.</figcaption>
+                <img src="/blog/2026-04-04/svg-render.png" alt="SVG to JPEG/PNG converter turning SVG markup into a downloadable PNG" loading="lazy">
+                <figcaption>Figure 1: Rendering SVG markup to a downloadable PNG in the browser.</figcaption>
             </figure>
 
-            <p>Once written to the canvas buffer, the resulting image is exported locally via the <code>toDataURL()</code> method. Updates from the width, padding, and background-color controls are debounced (300&nbsp;ms) before re-rendering [2].</p>
-
             <p>The tool: <a href="/tools/svg-render.html">SVG to JPEG/PNG</a>.</p>
-            
-            <details>
-                <summary>Parsing SVG Dimensions</summary>
-                <p>To check a <code>viewBox</code> attribute quickly from a Linux or macOS terminal, run the command below without the leading <code>$</code>:</p>
-                <pre><code>$ echo '&lt;svg viewBox="0 0 400 300"&gt;&lt;/svg&gt;' | grep -o 'viewBox="[^"]*"'
-viewBox="0 0 400 300"</code></pre>
-            </details>
 
             <section>
                 <h3>References</h3>

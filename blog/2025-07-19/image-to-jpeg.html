@@ -35,25 +35,18 @@
                 <time datetime="2025-07-19">July 2025</time>
             </header>
             
-            <p>Standardizing image formats before archival or transmission is a fundamental requirement in data normalization workflows. Offloading the computational burden of converting modern image encodings into baseline Joint Photographic Experts Group (JPEG) format to the client reduces server-side processing overhead and eliminates intermediary data storage risks.</p>
+            <p>This is a local copy of Simon Willison's <a href="/tools/image-to-jpeg.html">Image to JPEG Converter</a> [1][2], hosted here so you can convert PNG or WebP images to JPEG right in your browser without uploading files to a web service or installing ImageMagick.</p>
             
-            <p>This implementation leverages the native HTML5 Canvas API to read uncompressed image blobs and redraw them utilizing the browser's integrated lossy compression subroutines. It is available here as the <a href="/tools/image-to-jpeg.html">Image to JPEG Converter</a>, adapted from Simon Willison's tool [1].</p>
+            <p>Drop one or more images onto the page (or pick files, or paste from your clipboard), adjust the JPEG quality slider and optional maximum width, and download the converted files. The page uses the browser's built-in HTML5 Canvas (<code>canvas.toDataURL('image/jpeg', quality)</code>) to redraw and compress each image locally, showing the file size before and after. Because it redraws the pixels onto a fresh canvas, any EXIF camera or GPS metadata on the original image is stripped out along the way.</p>
             
             <figure>
-                <img src="/blog/2025-07-19/image-to-jpeg.png" alt="An interface showing an image before and after JPEG compression, detailing structural savings" loading="lazy">
-                <figcaption>Figure 1: The interface demonstrating byte-size reduction metrics post-compression.</figcaption>
+                <img src="/blog/2025-07-19/image-to-jpeg.png" alt="An interface showing an image before and after JPEG compression with file sizes" loading="lazy">
+                <figcaption>Figure 1: Image to JPEG converter showing before and after file sizes.</figcaption>
             </figure>
 
-            <p>The core rendering function relies entirely on vanilla JavaScript invoking the <code>canvas.toDataURL('image/jpeg', quality)</code> method. This negates the requirement for any external runtime dependencies or server-side ImageMagick processes. The implementation was adapted directly from the referenced source code [2].</p>
-            
-            <details>
-                <summary>Verifying output mimetype</summary>
-                <p>On Linux or macOS, open a terminal and run <code>file</code> on your downloaded image (do not type the <code>$</code>; replace <code>optimized-image.jpg</code> with your file path):</p>
-                <pre><code>$ file optimized-image.jpg
-optimized-image.jpg: JPEG image data, JFIF standard 1.01</code></pre>
-            </details>
+            <p>Unlike the original single-image version that resized everything down to 800 pixels wide, this copy handles batches of images and leaves the resolution full-size unless you set a max width.</p>
 
-            <p>The utility has since been extended beyond the referenced baseline. Ingestion now accepts an arbitrary batch of images &mdash; via file selection, drag-and-drop, or clipboard paste &mdash; each transcoded independently with per-item and aggregate byte accounting. A configurable maximum-width constraint was introduced, defaulting to <em>unconstrained</em> so the default operation is a full-resolution re-encode; the prior implementation silently downsampled all inputs to an 800-pixel raster, a behavior now opt-in rather than mandatory. As an incidental consequence of the canvas redraw, EXIF and GPS metadata are discarded in transcoding, which is desirable for transmission hygiene.</p>
+            <p>The tool: <a href="/tools/image-to-jpeg.html">Image to JPEG Converter</a>.</p>
 
             <section>
                 <h3>References</h3>

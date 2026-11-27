@@ -35,25 +35,18 @@
                 <time datetime="2025-11-08">November 2025</time>
             </header>
             
-            <p>Scalable Vector Graphics (SVG) encapsulated within Base64-encoded data URIs present a unique security advantage when rendered natively via HTML <code>&lt;img&gt;</code> elements. Under these specific deployment conditions, the underlying browser execution engine strictly prohibits the instantiation of embedded JavaScript routines, actively mitigating cross-site scripting (XSS) vectors that may otherwise be present in raw markup.</p>
+            <p>SVG (Scalable Vector Graphics) files are XML text under the hood and can contain JavaScript. When you load an SVG inside an HTML <code>&lt;img&gt;</code> tag using a Base64 data URI (embedding the image data directly inside the tag's <code>src</code> attribute), browsers block any scripts or <code>onclick</code> handlers inside the SVG from running.</p>
             
-            <p>To analyze the exact structural markup of these vectors without invoking unsafe execution, a client-side sandbox has been deployed at <a href="/tools/svg-sandbox.html">SVG Base64 Embedding Sandbox</a> (adapted from Simon Willison's demo [1]). It scans the active DOM for images utilizing SVG data URIs, strips the URI prefix, and invokes the <code>atob()</code> function to dump the raw ASCII output [2].</p>
+            <p>I put a local copy of Simon Willison's <a href="/tools/svg-sandbox.html">SVG Base64 Embedding Sandbox</a> [1][2] on my site as a quick read-only demo. It shows a few example SVGs embedded in <code>&lt;img&gt;</code> tags and uses JavaScript's <code>atob()</code> function to decode and print the raw SVG markup next to each one so you can inspect the source and see that embedded scripts do not fire [2].</p>
             
             <figure>
-                <img src="/blog/2025-11-08/svg-sandbox.png" alt="A grid interface showing rendered vector graphics adjacent to their decoded XML syntax" loading="lazy">
-                <figcaption>Figure 1: The sandbox extracting and rendering the raw XML of Base64 encoded SVGs.</figcaption>
+                <img src="/blog/2025-11-08/svg-sandbox.png" alt="Rendered SVG examples next to their decoded XML source code" loading="lazy">
+                <figcaption>Figure 1: Example Base64-encoded SVGs alongside their decoded markup.</figcaption>
             </figure>
 
-            <p>The resulting markup is safely printed into preformatted code blocks. When loaded inside an <code>&lt;img&gt;</code> tag, embedded event handlers (such as <code>onclick</code>) do not run [1][2].</p>
-            
-            <details>
-                <summary>Manually decoding a data URI payload</summary>
-                <p>On Linux or macOS, open a terminal and run the command below without the leading <code>$</code> (the <code>|</code> sends the Base64 string into <code>base64 --decode</code>):</p>
-                <pre><code>$ echo "PHN2Zz48Y2lyY2xlIHI9IjMwIi8+PC9zdmc+" | base64 --decode
-&lt;svg&gt;&lt;circle r="30"/&gt;&lt;/svg&gt;</code></pre>
-            </details>
+            <p>If you want to convert your own SVG markup into a data URI (either Base64 or URL-encoded), see the companion <a href="/tools/svg-data-uri.html">SVG Data URI Encoder</a>.</p>
 
-            <p>Where this sandbox is a read-only demonstration, a companion utility performs the inverse operation interactively: the <a href="/tools/svg-data-uri.html">SVG Data URI Encoder</a> accepts arbitrary markup and emits both the Base64 and the URL-encoded data URI &mdash; the latter typically yielding a smaller payload for predominantly-ASCII vector markup &mdash; alongside ready-to-deploy <code>&lt;img&gt;</code> and CSS declarations.</p>
+            <p>The tool: <a href="/tools/svg-sandbox.html">SVG Base64 Embedding Sandbox</a>.</p>
 
             <section>
                 <h3>References</h3>

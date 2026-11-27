@@ -35,26 +35,16 @@
                 <time datetime="2025-06-22">June 2025</time>
             </header>
             
-            <p>Rapid prototyping of Hypertext Markup Language (HTML) typically requires a localized development server or iterative file saves coupled with browser refreshes. Implementing a synchronized editing context utilizing blob URLs and inline frames (iframes) mitigates these latency issues, creating a real-time, isolated rendering environment entirely within the host browser process.</p>
+            <p>When you just want to test a small snippet of HTML without saving a file and refreshing a browser tab over and over, a side-by-side preview page is handy. I adapted a local copy of Simon Willison's <a href="/tools/html-preview.html">HTML Live Preview</a> [1][2] onto my site.</p>
             
-            <p>This approach captures user input from a standard <code>textarea</code> node, converts the resultant string into a transient Blob object, and assigns the instantiated Object URL as the source reference for a sandboxed iframe. This architecture provides live visual updates without server round-trips [1][2].</p>
+            <p>Type or paste HTML into the text box on the left and it renders on the right inside a sandboxed <code>iframe</code> (an isolated mini-page inside the browser). Under the hood, it wraps your HTML in a temporary in-memory <code>Blob</code> URL, waits about 300 ms after you pause typing before updating, and clears old temporary URLs when it refreshes [2]. Nothing is sent to a server.</p>
             
             <figure>
                 <img src="/blog/2025-06-22/html-preview.png" alt="A split interface showing raw HTML on the left and its rendered output on the right" loading="lazy">
-                <figcaption>Figure 1: The dual-pane synchronized HTML editor rendering standard markup dynamically.</figcaption>
+                <figcaption>Figure 1: Side-by-side HTML editor and live preview.</figcaption>
             </figure>
 
-            <p>The implementation uses debouncing logic (a 300&nbsp;ms timeout wrapper on the input event listener) to avoid re-rendering on every keypress during rapid typing. Furthermore, previously allocated Blob URLs are explicitly revoked from browser memory to prevent compounding memory leaks during extended sessions [2].</p>
-
             <p>The tool: <a href="/tools/html-preview.html">HTML Live Preview</a>.</p>
-            
-            <details>
-                <summary>Generating static Blob strings</summary>
-                <p>To test this in your browser, open Developer Tools (<kbd>F12</kbd>, or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> / <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS), open the <strong>Console</strong> tab, and paste:</p>
-                <pre><code>let blob = new Blob(["&lt;h1&gt;Hello World&lt;/h1&gt;"], { type: 'text/html' });
-let url = URL.createObjectURL(blob);
-console.log(url);</code></pre>
-            </details>
 
             <section>
                 <h3>References</h3>

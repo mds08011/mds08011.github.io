@@ -35,20 +35,20 @@
                 <h5>2026.06</h5>
             </header>
             
-            <p>GoldFynch PST Viewer<sup><a href="#fn1" id="ref1">1</a></sup> is a tool for reading legacy <code>.pst</code> Outlook archives without a full Microsoft Office installation.</p>
+            <p>I've used <a href="https://goldfynch.com/goldfynch-pst-viewer.html">GoldFynch PST Viewer</a><sup><a href="#fn1" id="ref1">1</a></sup> to open old Microsoft Outlook email archive files (<code>.pst</code> files) without having Microsoft Outlook installed. In my experience it works well even on archives up to a few gigabytes in size.</p>
 
-            <p>It runs directly in the web browser, processing files locally without uploading them to a remote server. This respects the privacy of sensitive communications.</p>
+            <p>Everything runs locally inside your web browser rather than uploading your emails to a remote server, which is important if you are opening old personal or work archives.</p>
 
             <h2>How to Use It</h2>
-            <p>Using the tool involves visiting the site and loading the file locally.</p>
+            <p>Open the GoldFynch PST Viewer page and drag your <code>.pst</code> file onto the window (or click to pick it from your computer).</p>
 
             <!-- TODO: add screenshot of GoldFynch PST Viewer -->
 
-            <p>The interface allows browsing through the folder structure and reading individual emails. Browser find (<kbd>Ctrl</kbd> + <kbd>F</kbd>, or <kbd>Cmd</kbd> + <kbd>F</kbd> on macOS) searches the text currently visible on screen.</p>
+            <p>Once loaded, you can click through the folder tree and read individual messages. Your browser's find shortcut (<kbd>Ctrl</kbd> + <kbd>F</kbd>, or <kbd>Cmd</kbd> + <kbd>F</kbd> on macOS) searches whatever text is currently visible on screen.</p>
 
             <details>
-                <summary>Looking for command-line alternatives?</summary>
-                <p>For command-line extraction from a PST file on Debian/Ubuntu/Pop!_OS, open a terminal, install <code>pst-utils</code> (<code>sudo</code> asks for your password), create an output folder, and run <code>readpst</code> (replace <code>my_archive.pst</code> with your file; see <code>man readpst</code> for format and attachment options):</p>
+                <summary>Command-line alternative (readpst)</summary>
+                <p>If you want to extract a <code>.pst</code> file from the terminal on Linux instead of using a browser, <code>readpst</code> (in the <code>pst-utils</code> package) is an open-source option. I haven't used <code>readpst</code> myself, so check <code>man readpst</code> for the exact flags you need. On Debian, Ubuntu, or Pop!_OS, open a terminal and run (<code>sudo</code> will ask for your login password; replace <code>my_archive.pst</code> with your file):</p>
                 <pre><code>sudo apt-get install pst-utils
 mkdir -p output_directory
 readpst -D -M -o output_directory/ my_archive.pst</code></pre>

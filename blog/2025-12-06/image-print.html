@@ -35,28 +35,16 @@
                 <time datetime="2025-12-06">December 2025</time>
             </header>
             
-            <p>Constructing high-fidelity physical prints from digital raster aggregates frequently involves third-party processing utilities or server-side rendering pipelines. By exploiting the native Cascading Style Sheets (CSS) <code>@media print</code> directive in conjunction with dynamic DOM manipulation, multiple images can be collated onto a unified A4-dimensioned layout purely within the client's execution environment.</p>
+            <p>When you want to print several photos onto one sheet of paper without firing up a layout program, you can do it right in a browser with CSS print rules. I put a local copy of Simon Willison's <a href="/tools/image-print.html">Image Print Layout</a> [1][2] on my site.</p>
             
-            <p>The implemented architecture enables a user to import an arbitrary dataset of images via the FileReader API. These blobs are sequentially mapped into an adjustable CSS Grid structural pattern that forces dimensional constraint adherence, yielding a layout configured for printing [1][2].</p>
+            <p>Pick or drop one or more images onto the page, choose the grid rows, columns, and fit mode, and click the Print button (or use <kbd>Ctrl</kbd> + <kbd>P</kbd>, or <kbd>Cmd</kbd> + <kbd>P</kbd> on macOS). Behind the scenes, the page updates a CSS <code>&lt;style&gt;</code> block with <code>@media print</code> rules so your browser lays the photos out cleanly on the printed page [2]. All images stay in your browser and are never uploaded.</p>
             
             <figure>
-                <img src="/blog/2025-12-06/image-print.png" alt="A browser window demonstrating a 2x2 structural photo layout optimized for printing" loading="lazy">
-                <figcaption>Figure 1: The grid allocation interface configuring image constraints for an A4 print job.</figcaption>
+                <img src="/blog/2025-12-06/image-print.png" alt="A browser window showing a 2x2 photo grid layout ready for printing" loading="lazy">
+                <figcaption>Figure 1: Photo grid layout prepared for printing.</figcaption>
             </figure>
 
-            <p>Significant operational integrity is maintained by injecting a transient <code>&lt;style&gt;</code> element during grid updates. This guarantees that parameters such as column count and orientation actively override standard browser print semantics [2]. Clicking the page's Print button calls <code>window.print()</code>, or you can use your browser's print shortcut (<kbd>Ctrl</kbd> + <kbd>P</kbd>, or <kbd>Cmd</kbd> + <kbd>P</kbd> on macOS).</p>
-
             <p>The tool: <a href="/tools/image-print.html">Image Print Layout</a>.</p>
-            
-            <details>
-                <summary>Verifying the injected print stylesheet</summary>
-                <p>To inspect the generated print CSS on the tool page, open your browser's Developer Tools (<kbd>F12</kbd>, or <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> / <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>I</kbd> on macOS), switch to the <strong>Console</strong> tab, and run:</p>
-                <pre><code>document.getElementById('dynamic-print-style').textContent
-// @media print {
-//     @page { size: A4 portrait; margin: 0; }
-//     ...
-// }</code></pre>
-            </details>
 
             <section>
                 <h3>References</h3>
