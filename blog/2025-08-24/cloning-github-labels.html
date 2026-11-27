@@ -35,21 +35,20 @@
                 <time datetime="2025-08-24">August 2025</time>
             </header>
             
-            <p>Managing issue taxonomies across discrete version control repositories often involves redundant manual data entry. While GitHub provides an interface for standard label management, migrating an established schema of issue labels—complete with their designated hexadecimal color codes and descriptions—requires external tooling.</p>
+            <p>If you have a set of GitHub issue labels you like (with their colors and descriptions) and want the same ones in a new repository, retyping them one by one in the GitHub web interface is tedious.</p>
             
-            <p>The official GitHub Command Line Interface (CLI) provides a direct vector for this operation via the <code>gh label clone</code> subroutine. This command extracts the complete label schema from a specified source repository and provisions it against the target destination in a single authenticated transaction [1].</p>
-            
-            <details>
-                <summary>Cloning syntax</summary>
-                <pre><code>$ gh label clone simonw/datasette --repo my-org/my-new-repo</code></pre>
-            </details>
+            <p>The official GitHub CLI (<code>gh</code>, GitHub's command-line tool) has a built-in command for this: <code>gh label clone</code> [1]. It copies all the labels from one repository into another in one shot.</p>
 
-            <p>Execution of this command strictly requires the <code>gh</code> binary to be authenticated with appropriate write scopes for the destination repository.</p>
+            <h2>How to run it</h2>
+            <p>Open a terminal. If you don't already have the GitHub CLI installed, install <code>gh</code> and sign in first with <code>gh auth login</code> (you need write access to the destination repository). Then run:</p>
+            <pre><code>gh label clone simonw/datasette --repo my-org/my-new-repo</code></pre>
+
+            <p>Replace <code>simonw/datasette</code> with the repository you want to copy labels <em>from</em>, and <code>my-org/my-new-repo</code> with your destination repository. By default, labels that already exist in the destination repo are skipped; add <code>--force</code> at the end if you want to overwrite them.</p>
 
             <section>
                 <h3>References</h3>
                 <ol>
-                    <li>Willison, S. "Creating GitHub Labels". Available: <a href="https://til.simonwillison.net/github-actions/creating-github-labels">https://til.simonwillison.net/github-actions/creating-github-labels</a>.</li>
+                    <li>GitHub CLI Manual. "gh label clone". Available: <a href="https://cli.github.com/manual/gh_label_clone">https://cli.github.com/manual/gh_label_clone</a>.</li>
                 </ol>
             </section>
         </article>

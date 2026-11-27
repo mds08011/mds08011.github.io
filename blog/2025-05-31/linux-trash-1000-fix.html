@@ -35,18 +35,18 @@
                 <h5>2025.05</h5>
             </header>
             
-            <p>When files are deleted on a Linux external drive, they are moved to a hidden <code>.Trash-1000</code> folder. External volume permissions can lock this folder to the root user.</p>
+            <p>When you delete files on an external drive in Linux, they don't disappear right away. Instead, they get moved into a hidden folder at the root of the drive called <code>.Trash-1000</code> (the leading dot makes it hidden, and <code>1000</code> is usually your Linux user ID). Sometimes the permissions on an external drive lock that folder to <code>root</code> (the administrator account).</p>
             
             <h2>The Problem</h2>
-            <p>Standard user accounts cannot empty this folder via the desktop file manager. This results in occupied disk space and false positives in duplicate file scanners.</p>
+            <p>Once <code>.Trash-1000</code> is owned by root, I couldn't empty it from the regular desktop file manager. Those deleted files kept taking up space on the drive and also showed up as false positives when I ran a duplicate file scanner.</p>
             
             <h2>The Solution</h2>
-            <p>A terminal command is required to bypass GUI restrictions and remove the hidden folder:</p>
+            <p>You have to delete the folder from a terminal instead. Open one (<kbd>Super</kbd> + <kbd>T</kbd> in Pop!_OS or <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd> on Ubuntu) and run <code>df -h</code> or <code>lsblk</code> first to check the exact path where your external drive is mounted. Then run the command below, replacing <code>mds08011</code> and <code>Elements</code> with your own Linux username and drive name:</p>
             <pre><code>sudo rm -rf /media/mds08011/Elements/.Trash-1000</code></pre>
             
-            <p>The exact mount path must be verified before execution. For example, running it on <code>/media/Elements/</code> will return a 'No such file or directory' error.</p>
+            <p><strong>Careful:</strong> <code>sudo</code> runs the command as administrator (it will ask for your login password) and <code>rm -rf</code> permanently deletes that folder and everything inside it with no confirmation and no undo. Double-check the full path before hitting Enter. I ran into a <code>No such file or directory</code> error at first because I tried <code>/media/Elements/</code> and forgot my username in the path.</p>
             
-            <p>Additional details are available on AskUbuntu.<sup><a href="#fn1" id="ref1">1</a></sup></p>
+            <p>I originally found this fix on AskUbuntu.<sup><a href="#fn1" id="ref1">1</a></sup></p>
         </article>
     </main>
 

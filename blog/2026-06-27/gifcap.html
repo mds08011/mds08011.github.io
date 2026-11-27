@@ -35,30 +35,28 @@
                 <h5>2026.06</h5>
             </header>
             
-            <p>Gifcap<sup><a href="#fn1" id="ref1">1</a></sup> is a tool for creating simple screen recordings in GIF format. It processes everything locally in the web browser, meaning screen recording data is not uploaded to a remote server. It is DRM-free and open-source.<sup><a href="#fn2" id="ref2">2</a></sup></p>
+            <p>I've used <a href="https://gifcap.dev/">gifcap</a><sup><a href="#fn1" id="ref1">1</a></sup> when I want a quick screen recording saved as a GIF. Everything runs locally in your browser (using WebAssembly to encode the video on your machine rather than uploading your screen capture to a server), and the project is open-source.<sup><a href="#fn2" id="ref2">2</a></sup></p>
 
             <h2>How to Use It</h2>
-            <p>Using gifcap involves visiting the site and starting a recording.</p>
+            <p>Open <code>gifcap.dev</code>, click <strong>Start Recording</strong>, and pick the window or screen when your browser prompts for permission.</p>
 
-            <figure>
-                <img src="/path/to/gifcap-screenshot.png" alt="A screenshot of the gifcap.dev interface showing a record button">
-                <figcaption>The minimalist gifcap interface. Just hit record and pick a window or screen.</figcaption>
-            </figure>
+            <!-- TODO: add screenshot of gifcap.dev -->
 
-            <p>Once you're done recording, you can trim the GIF and export it immediately. If you need to stop recording quickly, you can just use standard browser shortcuts like <kbd>Ctrl</kbd> + <kbd>W</kbd> to close the tab, or click your browser's native stop-sharing button.</p>
+            <p>When you're done, click <strong>Stop</strong> in gifcap (or use your browser's stop-sharing bar). From there you can trim the start and end of the clip and save the GIF.</p>
 
             <h2>Running it Locally</h2>
-            <p>Because it's an open-source project, you can easily clone the repository and run it locally if you want a truly durable setup that doesn't rely on the live website being up forever.</p>
+            <p>I have only used the hosted website myself, not a local copy. Because the code is open-source on GitHub, you can also download ("clone") the repository and run it locally if you don't want to depend on the live site staying up.</p>
 
             <details>
                 <summary>Terminal commands to run gifcap locally</summary>
+                <p>Open a terminal (requires <code>git</code> and Node.js/<code>npm</code>; check the repository README if the WebAssembly encoder needs a build step):</p>
                 <pre><code>git clone https://github.com/joaomoreno/gifcap.git
 cd gifcap
 npm install
 npm run dev</code></pre>
             </details>
 
-            <p>Technical background on the client-side video encoder using WebAssembly is available on Hacker News.<sup><a href="#fn3" id="ref3">3</a></sup></p>
+            <p>There is also a Hacker News thread with background on how the browser-side encoder works.<sup><a href="#fn3" id="ref3">3</a></sup></p>
         </article>
     </main>
 

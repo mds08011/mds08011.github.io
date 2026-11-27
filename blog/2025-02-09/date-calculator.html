@@ -37,25 +37,21 @@
             
             <p>Precise temporal calculations form the bedrock of accurate project scheduling and logistical planning. Manual derivation of date deltas, particularly when accounting for non-working days such as weekends, is subject to a high coefficient of human error.</p>
             
-            <p>To stabilize these calculations, I have imported and refined a localized Date Calculator utility originally conceptualized by Simon Willison [1]. The utility computes the numerical discrepancy between any two defined Gregorian dates utilizing pure vanilla JavaScript. It requires no server-side telemetry or remote dependencies, functioning as an entirely enclosed temporal analysis module.</p>
-            
-            <figure>
-                <img src="/apple-touch-icon.png" alt="Temporal visualization placeholder" loading="lazy">
-                <figcaption>Figure 1: A conceptual node representing chronological alignment points.</figcaption>
-            </figure>
+            <p>To stabilize these calculations, I have imported and refined a localized <a href="/tools/date-calculator.html">Date Calculator</a> utility originally conceptualized by Simon Willison [1][2]. The utility computes the numerical discrepancy between any two defined Gregorian dates utilizing pure vanilla JavaScript. It requires no server-side telemetry or remote dependencies, functioning as an entirely enclosed temporal analysis module.</p>
             
             <p>The logic evaluates inputs based on the UNIX epoch scale, executing differential arithmetic while isolating standard business days from weekends. This allows for rigorous estimation parameters during the pre-construction or planning phases of any significant engagement.</p>
             
-            <pre><code>// Fundamental temporal difference logic
+            <pre><code>// Core day-count math used inside the page script
 const diffMs = Math.abs(date2 - date1);
 const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));</code></pre>
 
-            <p>Users may initiate calculations by pressing <kbd>Tab</kbd> to navigate through the input fields on the tool interface.</p>
+            <p>To use the <a href="/tools/date-calculator.html">Date Calculator</a>, pick a start date and an end date, then choose All Days, Business Days, or Weekends.</p>
 
             <hr>
             <h3>References</h3>
             <ol>
-                <li>[1] Simon Willison. "Date Calculator". Accessed February 9, 2025. <a href="https://github.com/simonw/tools/blob/main/date-calculator.html">https://github.com/simonw/tools/blob/main/date-calculator.html</a></li>
+                <li>Simon Willison. "Date Calculator". <a href="https://tools.simonwillison.net/date-calculator">https://tools.simonwillison.net/date-calculator</a></li>
+                <li>Simon Willison. "date-calculator.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). <a href="https://github.com/simonw/tools/blob/main/date-calculator.html">https://github.com/simonw/tools/blob/main/date-calculator.html</a></li>
             </ol>
         </article>
     </main>

@@ -37,24 +37,20 @@
             
             <p>Data migration tasks frequently involve the extraction of tabular arrays locked within unformatted Hypertext Markup Language (HTML) documents. Copy-and-paste procedures from rendered web pages into spreadsheet applications often result in structural failure, necessitating an intermediary processing step.</p>
             
-            <p>I have engineered a local adaptation of Simon Willison's HTML Table Extractor [1] to systematically resolve this structural friction. The user interfaces via standard clipboard commands (e.g., <kbd>Ctrl+V</kbd>), depositing the rich text payload into a designated editable region.</p>
+            <p>I have adapted Simon Willison's HTML Table Extractor [1][2] as the <a href="/tools/html-table-extractor.html">HTML Table Extractor</a> tool on this site. The user pastes copied table content with standard clipboard commands (<kbd>Ctrl+V</kbd>, or <kbd>Cmd+V</kbd> on macOS) into the editable input area.</p>
             
-            <figure>
-                <img src="/android-chrome-512x512.png" alt="Conceptual mapping of tabular data" loading="lazy">
-                <figcaption>Figure 1: Conceptual abstraction of data point mapping.</figcaption>
-            </figure>
+            <p>The client-side scripts parse the Document Object Model (DOM), traversing <code>table</code>, <code>tr</code>, and <code>td</code> nodes. The logic handles nested cells and outputs the table in HTML, Markdown, CSV, TSV, or JSON formats.</p>
             
-            <p>The client-side scripts parse the Document Object Model (DOM), traversing `table`, `tr`, and `td` nodes. The logic effectively neutralizes errant nesting and outputs the sanitized data block into CSV, TSV, or JSON formats suitable for programmatic ingestion.</p>
-            
-            <p>For execution, simply interact with the utility available in the tools registry. Notice that all external network calls originally designed to interface with the Wikipedia API have been severed. The utility functions with zero latency, entirely on-premises.</p>
+            <p>The tool runs locally in your browser at <a href="/tools/html-table-extractor.html">HTML Table Extractor</a> without uploading pasted tables to a server.</p>
 
-            <pre><code># The output payload is easily manipulatable
-jq '.[] | .value' extracted-data.json</code></pre>
+            <p>If you save the JSON output to a file (for example <code>extracted-data.json</code>), you can filter fields from a terminal using <code>jq</code> (install via <code>sudo apt install jq</code> on Debian/Ubuntu/Pop!_OS; replace <code>.value</code> with an actual column name):</p>
+            <pre><code>jq '.[] | .value' extracted-data.json</code></pre>
             
             <hr>
             <h3>References</h3>
             <ol>
-                <li>[1] Simon Willison. "HTML Table Extractor". Accessed February 8, 2026. <a href="https://github.com/simonw/tools/blob/main/html-table-extractor.html">https://github.com/simonw/tools/blob/main/html-table-extractor.html</a></li>
+                <li>Simon Willison. "HTML Table Extractor". <a href="https://tools.simonwillison.net/html-table-extractor">https://tools.simonwillison.net/html-table-extractor</a></li>
+                <li>Simon Willison. "html-table-extractor.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). <a href="https://github.com/simonw/tools/blob/main/html-table-extractor.html">https://github.com/simonw/tools/blob/main/html-table-extractor.html</a></li>
             </ol>
         </article>
     </main>

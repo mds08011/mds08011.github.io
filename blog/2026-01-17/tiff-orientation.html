@@ -37,17 +37,20 @@
             
             <p>Exchangeable Image File Format (EXIF) headers appended to JPEG binaries routinely encode a Tag Image File Format (TIFF) orientation property (Tag ID <code>0x0112</code>). This parameter determines the intended visual rotation of the matrix data. Parsing this matrix prior to network transmission reduces necessary bandwidth and guarantees strict operational security over telemetry vectors.</p>
             
-            <p>This localized implementation utilizes a <code>FileReader</code> instantiation to parse incoming file blobs as an <code>ArrayBuffer</code>. By instantiating a <code>DataView</code> wrapper, the script navigates the byte stream to isolate the specific EXIF magic bytes (<code>Exif\0\0</code>). It subsequently determines the endianness (either Little Endian <code>0x4949</code> or Big Endian) to properly decode the ensuing Image File Directory (IFD) offsets [1].</p>
+            <p>This localized implementation utilizes a <code>FileReader</code> instantiation to parse incoming file blobs as an <code>ArrayBuffer</code>. By instantiating a <code>DataView</code> wrapper, the script navigates the byte stream to isolate the specific EXIF magic bytes (<code>Exif\0\0</code>). It subsequently determines the endianness (either Little Endian <code>0x4949</code> or Big Endian) to properly decode the ensuing Image File Directory (IFD) offsets [1][2].</p>
             
             <figure>
                 <img src="/blog/2026-01-17/tiff-orientation.png" alt="A minimalist interface reporting an orientation value of 'Normal' alongside debug hexadecimal output" loading="lazy">
                 <figcaption>Figure 1: The diagnostic output rendering a successfully parsed orientation tag.</figcaption>
             </figure>
 
-            <p>Once the orientation tag is intercepted, it is mapped to its human-readable equivalent constraint (e.g., Rotated 90° CW). The entire execution occurs instantaneously without allocating excessive heap memory or generating external telemetry [2].</p>
+            <p>Once the orientation tag is read, it is mapped to its human-readable equivalent (e.g., Rotated 90° CW) locally in the browser without uploading the image file [2].</p>
+
+            <p>The tool: <a href="/tools/tiff-orientation.html">TIFF Orientation Reader</a>.</p>
             
             <details>
                 <summary>Examining binary EXIF parameters</summary>
+                <p>To check the orientation tag from a terminal (after installing <code>exiftool</code>, e.g., <code>sudo apt install libimage-exiftool-perl</code>), run the command below without the <code>$</code> and replace <code>sample.jpg</code> with your JPEG path:</p>
                 <pre><code>$ exiftool -Orientation sample.jpg
 Orientation                     : Rotate 90 CW</code></pre>
             </details>
@@ -56,7 +59,7 @@ Orientation                     : Rotate 90 CW</code></pre>
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "TIFF Orientation Reader". Available: <a href="https://tools.simonwillison.net/tiff-orientation">https://tools.simonwillison.net/tiff-orientation</a>.</li>
-                    <li>Willison, S. "tiff-orientation.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/tiff-orientation.html">https://github.com/simonw/tools/blob/main/tiff-orientation.html</a>.</li>
+                    <li>Willison, S. "tiff-orientation.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/tiff-orientation.html">https://github.com/simonw/tools/blob/main/tiff-orientation.html</a>.</li>
                 </ol>
             </section>
         </article>

@@ -37,17 +37,18 @@
             
             <p>Standardizing image formats before archival or transmission is a fundamental requirement in data normalization workflows. Offloading the computational burden of converting modern image encodings into baseline Joint Photographic Experts Group (JPEG) format to the client reduces server-side processing overhead and eliminates intermediary data storage risks.</p>
             
-            <p>This implementation leverages the native HTML5 Canvas API to read uncompressed image blobs and redraw them utilizing the browser's integrated lossy compression subroutines. A functional deployment of this zero-dependency utility has been integrated into the local toolkit infrastructure [1].</p>
+            <p>This implementation leverages the native HTML5 Canvas API to read uncompressed image blobs and redraw them utilizing the browser's integrated lossy compression subroutines. It is available here as the <a href="/tools/image-to-jpeg.html">Image to JPEG Converter</a>, adapted from Simon Willison's tool [1].</p>
             
             <figure>
                 <img src="/blog/2025-07-19/image-to-jpeg.png" alt="An interface showing an image before and after JPEG compression, detailing structural savings" loading="lazy">
                 <figcaption>Figure 1: The interface demonstrating byte-size reduction metrics post-compression.</figcaption>
             </figure>
 
-            <p>The core rendering function relies entirely on vanilla JavaScript invoking the <code>canvas.toDataURL('image/jpeg', quality)</code> method. This negates the requirement for any external runtime dependencies or server-side ImageMagick processes. The architectural blueprint for this implementation was modeled directly from the referenced source documentation [2].</p>
+            <p>The core rendering function relies entirely on vanilla JavaScript invoking the <code>canvas.toDataURL('image/jpeg', quality)</code> method. This negates the requirement for any external runtime dependencies or server-side ImageMagick processes. The implementation was adapted directly from the referenced source code [2].</p>
             
             <details>
                 <summary>Verifying output mimetype</summary>
+                <p>On Linux or macOS, open a terminal and run <code>file</code> on your downloaded image (do not type the <code>$</code>; replace <code>optimized-image.jpg</code> with your file path):</p>
                 <pre><code>$ file optimized-image.jpg
 optimized-image.jpg: JPEG image data, JFIF standard 1.01</code></pre>
             </details>
@@ -57,8 +58,8 @@ optimized-image.jpg: JPEG image data, JFIF standard 1.01</code></pre>
             <section>
                 <h3>References</h3>
                 <ol>
-                    <li>Willison, S. "Drag and Drop Image Optimizer". Available: <a href="https://tools.simonwillison.net/image-to-jpeg">https://tools.simonwillison.net/image-to-jpeg</a>.</li>
-                    <li>Willison, S. "image-to-jpeg.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/image-to-jpeg.html">https://github.com/simonw/tools/blob/main/image-to-jpeg.html</a>.</li>
+                    <li>Willison, S. "Image to JPEG". Available: <a href="https://tools.simonwillison.net/image-to-jpeg">https://tools.simonwillison.net/image-to-jpeg</a>.</li>
+                    <li>Willison, S. "image-to-jpeg.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/image-to-jpeg.html">https://github.com/simonw/tools/blob/main/image-to-jpeg.html</a>.</li>
                 </ol>
             </section>
         </article>

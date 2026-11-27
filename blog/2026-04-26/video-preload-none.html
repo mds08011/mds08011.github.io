@@ -31,27 +31,25 @@
     <main>
         <article>
             <header>
-                <h1>Preventing Data Bloat with HTML5 Video Preload None</h1>
+                <h1>Stopping HTML5 Videos from Preloading</h1>
                 <time datetime="2026-04-26">April 2026</time>
             </header>
             
-            <p>Modern browser agents frequently attempt to optimize the multimedia playback experience by aggressively pre-fetching video data upon page instantiation. While this reduces buffering latency during playback, it severely impacts initial page load metrics and incurs massive, often unnecessary, bandwidth expenditures for users who do not explicitly engage with the media element.</p>
+            <p>Quick HTML tip I picked up from Simon Willison's TIL site [1]: by default, browsers often start downloading a video as soon as a page loads, even if nobody clicks play. On a slow connection or a page with large clips, that wastes a lot of bandwidth.</p>
             
-            <p>To strictly enforce a zero-bloat, privacy-conscious data transfer paradigm, developers must explicitly instruct the browser to halt speculative downloading. This is achieved by defining the <code>preload="none"</code> attribute within the standard HTML5 <code>&lt;video&gt;</code> tag [1].</p>
+            <p>Adding <code>preload="none"</code> to the HTML <code>&lt;video&gt;</code> tag tells the browser to hold off on downloading the video until the user clicks play [1].</p>
             
-            <details>
-                <summary>Implementation Syntax</summary>
-                <pre><code>&lt;video controls preload="none" src="demonstration.mp4"&gt;&lt;/video&gt;</code></pre>
-            </details>
+            <p>Put this tag in your HTML page, replacing <code>demonstration.mp4</code> with your video file path. Adding a <code>poster</code> image is also useful so visitors see a still thumbnail instead of a blank box before hitting play:</p>
+            <pre><code>&lt;video controls preload="none" poster="thumbnail.jpg" src="demonstration.mp4"&gt;&lt;/video&gt;</code></pre>
 
-            <p>When this directive is parsed, the browser defers network requests for the media asset until the user triggers a distinct play event. This architectural decision significantly improves performance indices on low-bandwidth connections and adheres to strict user-consent data acquisition guidelines.</p>
+            <p>Here <code>controls</code> shows the browser's play/pause bar, <code>src</code> points to the video file, and <code>preload="none"</code> stops the browser from fetching the file ahead of time.</p>
 
             <!-- <video controls preload="none" src=""></video> -->
 
             <section>
                 <h3>References</h3>
                 <ol>
-                    <li>Willison, S. "HTML Video Preload None". Available: <a href="https://til.simonwillison.net/html/video-preload-none">https://til.simonwillison.net/html/video-preload-none</a>.</li>
+                    <li>Willison, S. "HTML video that loads when the user clicks play". Available: <a href="https://til.simonwillison.net/html/video-preload-none">https://til.simonwillison.net/html/video-preload-none</a>.</li>
                 </ol>
             </section>
         </article>

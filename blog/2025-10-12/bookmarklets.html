@@ -37,25 +37,28 @@
             
             <p>Executing transient utility scripts against active browser Document Object Models (DOM) often necessitates the utilization of external browser extensions. This practice introduces pervasive security risks, as extensions generally request extensive cross-origin read/write permissions. Deploying vanilla JavaScript sequences as browser bookmarklets securely restricts arbitrary execution exclusively to the bounds of the active tab.</p>
             
-            <p>This toolkit aggregates highly specific, minified DOM manipulation subroutines wrapped within Immediately Invoked Function Expressions (IIFE). By prefixing these expressions with the <code>javascript:</code> protocol, the resulting Uniform Resource Identifiers (URIs) can be bound directly to a user's local bookmarks toolbar, completely eliminating dependency vectors [1].</p>
+            <p>This toolkit aggregates minified DOM manipulation scripts wrapped within Immediately Invoked Function Expressions (IIFE). By prefixing these expressions with the <code>javascript:</code> protocol, the resulting URLs can be saved directly to a user's browser bookmarks bar [1][2].</p>
             
             <figure>
                 <img src="/blog/2025-10-12/bookmarklets.png" alt="A list of drag-and-drop bookmarklet installation links" loading="lazy">
                 <figcaption>Figure 1: The installation array featuring copy-to-clipboard functionality for mobile ingestion.</figcaption>
             </figure>
 
-            <p>Notable included modules encompass an anchor extraction protocol, which queries all <code>id</code> nodes for deep-linking visibility, and an isolated source-code visualization matrix mapping the <code>document.documentElement.outerHTML</code> attribute into a stylized floating modal [2].</p>
+            <p>Notable included modules encompass an anchor extraction script, which queries all <code>id</code> nodes for deep-linking visibility, and a source-code viewer mapping the <code>document.documentElement.outerHTML</code> attribute into a floating modal [2].</p>
+
+            <p>The tool: <a href="/tools/bookmarklets.html">Bookmarklets</a> (drag any link onto your browser's bookmarks bar, or copy the code into a new bookmark's URL field).</p>
             
             <details>
                 <summary>Standard IIFE bookmarklet syntax</summary>
-                <pre><code>$ echo 'javascript:(function(){alert("Executed");})();'</code></pre>
+                <p>To test a minimal bookmarklet, create a new bookmark in your browser and paste this line into its URL field, then click the bookmark on any webpage:</p>
+                <pre><code>javascript:(function(){alert("Executed");})();</code></pre>
             </details>
 
             <section>
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "Bookmarklets Collection". Available: <a href="https://tools.simonwillison.net/bookmarklets">https://tools.simonwillison.net/bookmarklets</a>.</li>
-                    <li>Willison, S. "bookmarklets.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/bookmarklets.html">https://github.com/simonw/tools/blob/main/bookmarklets.html</a>.</li>
+                    <li>Willison, S. "bookmarklets.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/bookmarklets.html">https://github.com/simonw/tools/blob/main/bookmarklets.html</a>.</li>
                 </ol>
             </section>
         </article>

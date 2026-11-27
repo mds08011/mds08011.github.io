@@ -37,12 +37,13 @@
             
             <p>Implementing client-side optical character recognition (OCR) mitigates the privacy and bandwidth constraints typically associated with server-based text extraction. By utilizing a JavaScript compilation of the Tesseract OCR engine, it is possible to parse textual data from rasterized images and Portable Document Format (PDF) files entirely within the local execution environment.</p>
             
-            <p>The implementation relies on PDF.js to convert PDF documents into individual rasterized canvases, followed by Tesseract.js processing the visual data to yield a string extraction. This approach is highly efficient for zero-bloat workflows, as no network egress of sensitive documents is required. A live demonstration of this functionality has been adapted and deployed to the local tools repository [1].</p>
+            <p>The implementation relies on PDF.js to convert PDF documents into individual rasterized canvases, followed by Tesseract.js processing the visual data to yield a string extraction. This approach avoids uploading sensitive documents to a remote server. A local copy adapted from Simon Willison's tool [1][2] is available at <a href="/tools/ocr.html">Browser OCR</a>.</p>
             
-            <p>During local testing, users can employ the <kbd>Ctrl</kbd> + <kbd>V</kbd> shortcut to directly paste image data into the application context, triggering the extraction pipeline immediately. The core technical methodology and architectural decisions regarding the WebWorker implementation are documented comprehensively in the source reference material [2].</p>
+            <p>Users can select a file or press <kbd>Ctrl</kbd> + <kbd>V</kbd> (<kbd>Cmd</kbd> + <kbd>V</kbd> on macOS) to paste an image directly into the page. Simon Willison's original TIL post shows a shorter browser-console Tesseract.js example for page images [3].</p>
             
             <details>
                 <summary>Local dependency verification</summary>
+                <p>To check from a terminal that the Tesseract.js CDN script is reachable (do not type the <code>$</code>; <code>curl -I</code> fetches headers only and <code>200</code> means OK):</p>
                 <pre><code>$ curl -I https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js
 HTTP/2 200 
 content-type: application/javascript; charset=utf-8</code></pre>
@@ -52,7 +53,8 @@ content-type: application/javascript; charset=utf-8</code></pre>
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "OCR PDFs and images directly in your browser". Available: <a href="https://tools.simonwillison.net/ocr">https://tools.simonwillison.net/ocr</a>.</li>
-                    <li>Willison, S. "Running OCR against PDFs and images directly in the browser". Available: <a href="https://til.simonwillison.net/javascript/tesseract-ocr-javascript">https://til.simonwillison.net/javascript/tesseract-ocr-javascript</a>.</li>
+                    <li>Willison, S. "ocr.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/ocr.html">https://github.com/simonw/tools/blob/main/ocr.html</a>.</li>
+                    <li>Willison, S. "Using Tesseract.js to OCR every image on a page". Available: <a href="https://til.simonwillison.net/javascript/tesseract-ocr-javascript">https://til.simonwillison.net/javascript/tesseract-ocr-javascript</a>.</li>
                 </ol>
             </section>
         </article>

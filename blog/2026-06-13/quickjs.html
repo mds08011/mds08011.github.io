@@ -37,12 +37,15 @@
             
             <p>Executing untrusted JavaScript paradigms generally requires a rigid server-side container orchestration system to prevent host compromise. A more secure, minimal-latency approach leverages a client-side WebAssembly (WASM) build of the QuickJS engine. This compiles an entirely independent JavaScript runtime directly within the user's browser thread, guaranteeing complete isolation from the native DOM context.</p>
             
-            <p>This implementation utilizes the `quickjs-emscripten` library to instantiate the isolated execution context. Native functions, such as <code>console.log()</code> and a synchronous `fetch` equivalent, are explicitly bound into the WASM instance prior to evaluation. Code inputted into the user interface is securely executed using <code>vm.evalCodeAsync()</code> [1].</p>
+            <p>This implementation utilizes the <code>quickjs-emscripten</code> library [3] to instantiate the isolated execution context. Native functions, such as <code>console.log()</code> and a synchronous <code>fetch</code> equivalent, are explicitly bound into the WASM instance prior to evaluation. Code inputted into the user interface is executed using <code>vm.evalCodeAsync()</code> [1][2].</p>
             
-            <p>To improve usability, state retention is achieved by pushing the raw, URI-encoded script directly to the URL hash fragment. Execution interrupts are seamlessly managed through keyboard shortcuts, mapping <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to the evaluation subroutine [2].</p>
+            <p>To improve usability, state retention is achieved by pushing the raw, URI-encoded script directly to the URL hash fragment. Pressing <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (<kbd>Cmd</kbd> + <kbd>Enter</kbd> on macOS) runs the code in the editor [2].</p>
+
+            <p>The tool: <a href="/tools/quickjs.html">QuickJS in WebAssembly</a>.</p>
             
             <details>
                 <summary>Analyzing the required WASM bundle</summary>
+                <p>To peek at the first five lines of the bundled script from a Linux or macOS terminal (do not type the <code>$</code>; <code>curl -s</code> downloads quietly and <code>| head -n 5</code> prints only the first five lines):</p>
                 <pre><code>$ curl -s https://cdn.jsdelivr.net/npm/quickjs-emscripten@0.31.0/dist/index.global.js | head -n 5</code></pre>
             </details>
 
@@ -50,7 +53,8 @@
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "QuickJS Code Executor". Available: <a href="https://tools.simonwillison.net/quickjs">https://tools.simonwillison.net/quickjs</a>.</li>
-                    <li>Willison, S. "quickjs.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/quickjs.html">https://github.com/simonw/tools/blob/main/quickjs.html</a>.</li>
+                    <li>Willison, S. "quickjs.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/quickjs.html">https://github.com/simonw/tools/blob/main/quickjs.html</a>.</li>
+                    <li>quickjs-emscripten. Available: <a href="https://github.com/justjake/quickjs-emscripten">https://github.com/justjake/quickjs-emscripten</a>.</li>
                 </ol>
             </section>
         </article>

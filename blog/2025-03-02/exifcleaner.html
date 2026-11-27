@@ -35,15 +35,15 @@
                 <h5>2025.03</h5>
             </header>
             
-            <p>GPS tags are preferred on photos 95% of the time for personal archiving and travel logs. However, when posting publicly, that data is a privacy concern. This tool, ExifCleaner, is useful for that specific requirement.</p>
+            <p>Most of the time I want GPS coordinates saved on my photos for personal archiving and travel logs. When I'm posting a photo publicly, though, I don't want my location attached to the file. ExifCleaner<sup><a href="#fn1" id="ref1">1</a></sup> is the desktop app I use for stripping that out.</p>
             
-            <h2>The Tool: ExifCleaner</h2>
-            <p>ExifCleaner<sup><a href="#fn1" id="ref1">1</a></sup> is an open-source GUI tool for scrubbing metadata from photos. It is cross-platform and uses ExifTool, abstracting the command line into a drag-and-drop interface.</p>
+            <h2>What ExifCleaner does</h2>
+            <p>Photos store hidden metadata called EXIF data (camera model, date taken, and often exact GPS coordinates). ExifCleaner is a free, open-source program for Windows, macOS, and Linux that removes that metadata. Under the hood it runs ExifTool (a command-line utility), wrapped in a drag-and-drop window so you don't have to touch a terminal.</p>
             
-            <h3>Why ExifCleaner?</h3>
-            <p>It processes images locally, ensuring photos are not uploaded to remote servers. It is fast, effective, and respects privacy.</p>
+            <h3>How to use it</h3>
+            <p>Download the installer for your OS from the ExifCleaner site<sup><a href="#fn1">1</a></sup>, open the app, and drag your photos onto the window. Everything runs locally on your computer, so nothing is uploaded to a server. One thing to watch out for: ExifCleaner modifies files in place, so make a copy of your photo first if you want to keep the GPS data on your personal original.</p>
             
-            <p>Source code is available on the GitHub repository.<sup><a href="#fn2" id="ref2">2</a></sup></p>
+            <p>The source code is on GitHub.<sup><a href="#fn2" id="ref2">2</a></sup></p>
         </article>
     </main>
 

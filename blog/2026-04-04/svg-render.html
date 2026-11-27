@@ -37,17 +37,20 @@
             
             <p>Translating arbitrary Extensible Markup Language (XML) vector strings into rasterized static image formats historically required dependencies like ImageMagick or Inkscape. However, the HTML5 Canvas API natively supports painting serialized SVG blobs onto a local rendering context, negating the requirement for server-side processing architectures entirely.</p>
             
-            <p>This localized implementation utilizes a <code>DOMParser</code> to extract coordinate parameters directly from the <code>viewBox</code> vector constraint. The underlying XML is subsequently converted into a transient <code>Blob</code> and allocated an Object URL. This URL is assigned to a virtual <code>Image</code> object, which is directly painted onto an offscreen <code>canvas</code> utilizing the <code>drawImage()</code> subroutine [1].</p>
+            <p>This localized implementation utilizes a <code>DOMParser</code> to extract coordinate parameters directly from the <code>viewBox</code> vector constraint. The underlying XML is subsequently converted into a transient <code>Blob</code> and allocated an Object URL. This URL is assigned to a virtual <code>Image</code> object, which is directly painted onto an offscreen <code>canvas</code> utilizing the <code>drawImage()</code> subroutine [1][2].</p>
             
             <figure>
                 <img src="/blog/2026-04-04/svg-render.png" alt="A web application generating a downloadable PNG artifact directly from raw SVG markup" loading="lazy">
                 <figcaption>Figure 1: The rasterization pipeline exporting a base64 encoded PNG from XML syntax.</figcaption>
             </figure>
 
-            <p>Once written to the canvas buffer, the resulting image is securely exported back to the user environment via the <code>toDataURL()</code> method, enforcing localized processing requirements. State synchronization between the <code>textarea</code> inputs and the rendering loop is constrained using standard debouncing algorithms to prevent pipeline blockages during active input [2].</p>
+            <p>Once written to the canvas buffer, the resulting image is exported locally via the <code>toDataURL()</code> method. Updates from the width, padding, and background-color controls are debounced (300&nbsp;ms) before re-rendering [2].</p>
+
+            <p>The tool: <a href="/tools/svg-render.html">SVG to JPEG/PNG</a>.</p>
             
             <details>
                 <summary>Parsing SVG Dimensions</summary>
+                <p>To check a <code>viewBox</code> attribute quickly from a Linux or macOS terminal, run the command below without the leading <code>$</code>:</p>
                 <pre><code>$ echo '&lt;svg viewBox="0 0 400 300"&gt;&lt;/svg&gt;' | grep -o 'viewBox="[^"]*"'
 viewBox="0 0 400 300"</code></pre>
             </details>
@@ -56,7 +59,7 @@ viewBox="0 0 400 300"</code></pre>
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "SVG to JPEG/PNG". Available: <a href="https://tools.simonwillison.net/svg-render">https://tools.simonwillison.net/svg-render</a>.</li>
-                    <li>Willison, S. "svg-render.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/svg-render.html">https://github.com/simonw/tools/blob/main/svg-render.html</a>.</li>
+                    <li>Willison, S. "svg-render.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/svg-render.html">https://github.com/simonw/tools/blob/main/svg-render.html</a>.</li>
                 </ol>
             </section>
         </article>

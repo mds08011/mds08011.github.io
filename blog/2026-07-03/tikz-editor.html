@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Perfect LaTeX Diagram Workflow: AI + TikZ Editor | MDS</title>
+    <title>LaTeX Diagrams with TikZ Editor | MDS</title>
     
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,19 +31,19 @@
     <main>
         <article>
             <header>
-                <h1>The Perfect LaTeX Diagram Workflow: AI + TikZ Editor</h1>
+                <h1>LaTeX Diagrams with TikZ Editor</h1>
                 <time datetime="2026-07-03">July 2026</time>
             </header>
             
-            <p>LaTeX and TikZ are the gold standard for durable, plain-text civil engineering reports. However, hand-coding spatial graphics and manually tweaking absolute coordinates just to align two boxes is an absolute nightmare. It is tedious and pulls you completely out of your flow state.</p>
+            <p>LaTeX (a plain-text document typesetting system) has a drawing package called TikZ for making diagrams directly in code. Keeping diagrams in plain text is nice for technical reports, but hand-coding coordinates just to line up two boxes is tedious.</p>
             
-            <h2>The Workflow Hack</h2>
-            <p>The modern workaround I've found incredibly useful is to use an AI assistant to generate the base TikZ code from a rough text prompt. You can ask for nodes, paths, and general layout. Then, take that base code and drop it directly into <a href="https://tikz.dev/editor/" target="_blank" rel="noopener noreferrer">TikZ Editor</a>.</p>
+            <h2>The idea</h2>
+            <p>I haven't used <a href="https://tikz.dev/editor/" target="_blank" rel="noopener noreferrer">TikZ Editor</a> myself yet, so this is mostly a bookmark to try later. The workflow that caught my eye is asking an AI tool to draft the rough TikZ code (nodes, arrows, and general layout) and then pasting that <code>tikzpicture</code> code into TikZ Editor to fine-tune the positions visually.</p>
             
-            <h3>Why the Tool is Brilliant</h3>
-            <p>This open-source WYSIWYG editor lets you visually drag, drop, and resize nodes and arrows directly on your canvas. It instantly updates the coordinates (e.g., in your <code>\node</code> or <code>\draw</code> commands) in the source code without destroying your surrounding code structure or turning the file into an unreadable, generated soup.</p>
+            <h3>What TikZ Editor does</h3>
+            <p>It is an open-source visual editor in the browser that lets you drag and resize shapes and arrows on a canvas while updating the coordinates in your <code>\node</code> and <code>\draw</code> commands directly, rather than rewriting the whole file into messy generated code. When you are done, you copy the updated TikZ block back into your <code>.tex</code> file and compile it as usual.</p>
             
-            <p>It perfectly bridges the gap between AI generation and manual precision, giving you the best of both worlds. For more details on the editor's inner workings, check out its <a href="https://github.com/DominikPeters/tikz-editor" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+            <p>The source code is on <a href="https://github.com/DominikPeters/tikz-editor" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
         </article>
     </main>
 

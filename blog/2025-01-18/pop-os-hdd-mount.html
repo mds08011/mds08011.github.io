@@ -35,17 +35,20 @@
                 <time datetime="2025-01-18">January 2025</time>
             </header>
             
-            <p>If you're plugging an external USB HDD (like a WD Elements) into Pop!_OS and getting the dreaded <code>wrong fs type, bad option, bad superblock</code> error, don't panic. This usually happens for one of two reasons: either the drive wasn't safely ejected from Windows (leaving a 'dirty bit'), or your system is missing the necessary exFAT drivers.</p>
-            
-            <h2>Fix 1: Clearing the Dirty Flag (NTFS)</h2>
-            <p>If your drive is formatted as NTFS and you pulled it out of a Windows machine without safely ejecting it, a "dirty flag" is set. You can use <code>ntfsfix</code> in the terminal to clear it.</p>
-            <pre><code>sudo ntfsfix /dev/sdb1</code></pre>
-            <p><em>(Make sure to replace <code>sdb1</code> with the actual partition of your drive.)</em></p>
+            <p>When I plug an external USB hard drive (like a WD Elements) into Pop!_OS and get the error <code>wrong fs type, bad option, bad superblock</code>, it usually comes down to one of two things: either the drive is NTFS and wasn't safely ejected from Windows (leaving a "dirty flag" set on the filesystem), or the system is missing exFAT support.</p>
 
-            <h2>Fix 2: Installing Missing Drivers (exFAT)</h2>
-            <p>If your drive is formatted as exFAT and Pop!_OS doesn't mount it, you probably just need the exFAT drivers installed.</p>
-            <pre><code>sudo apt install exfat-fuse exfat-utils</code></pre>
-            <p>After running either of these fixes depending on your file system, unplug and replug the drive, and it should mount correctly.</p>
+            <p>Both fixes below run in a terminal. On Pop!_OS, open one by pressing <kbd>Super</kbd> + <kbd>T</kbd> (the Windows key plus T) or opening <strong>Terminal</strong> from the applications menu. With the drive plugged in, run <code>lsblk -f</code> to see its partition name (something like <code>sdb1</code>) and filesystem type (<code>ntfs</code> or <code>exfat</code>). Commands starting with <code>sudo</code> run with administrator privileges and will ask for your login password without showing characters as you type.</p>
+
+            <h2>Fix 1: Clearing the dirty flag (NTFS)</h2>
+            <p>If the drive uses NTFS (the default Windows filesystem) and was unplugged without safely ejecting it, Windows marks it as "dirty" and Linux refuses to mount it. You can clear that flag with <code>ntfsfix</code> (if the terminal says <code>ntfsfix</code> isn't found, install it first with <code>sudo apt install ntfs-3g</code>):</p>
+            <pre><code>sudo ntfsfix /dev/sdb1</code></pre>
+            <p>Replace <code>sdb1</code> with the actual partition name you saw in <code>lsblk -f</code>.</p>
+
+            <h2>Fix 2: Installing exFAT support</h2>
+            <p>If the drive uses exFAT (common on drives shared between Windows and macOS) and Pop!_OS won't mount it, install the exFAT package using <code>apt</code> (the package manager on Pop!_OS/Ubuntu):</p>
+            <pre><code>sudo apt install exfatprogs</code></pre>
+            <p>On older Pop!_OS or Ubuntu releases, the packages were named <code>exfat-fuse</code> and <code>exfat-utils</code> instead: <code>sudo apt install exfat-fuse exfat-utils</code>.</p>
+            <p>Once the command finishes, unplug the drive and plug it back in. It should mount normally.</p>
         </article>
     </main>
 

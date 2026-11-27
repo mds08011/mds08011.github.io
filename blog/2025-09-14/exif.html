@@ -35,19 +35,22 @@
                 <time datetime="2025-09-14">September 2025</time>
             </header>
             
-            <p>Exchangeable Image File Format (EXIF) metadata frequently contains highly sensitive geographic coordinates and device telemetry embedded within standard image captures. Transmitting these images to external servers for parsing violates strict zero-trust operational security guidelines. By processing this metadata entirely client-side, geographical positioning system (GPS) coordinates can be extracted and mapped without network egress.</p>
+            <p>Exchangeable Image File Format (EXIF) metadata frequently contains highly sensitive geographic coordinates and device telemetry embedded within standard image captures. Transmitting these images to external servers for parsing violates strict zero-trust operational security guidelines. By processing this metadata entirely client-side, Global Positioning System (GPS) coordinates can be extracted and mapped without network egress.</p>
             
-            <p>This implementation reads the binary headers of standard image files using the FileReader API and processes them through an external client-side parser to extract EXIF dictionaries. The tool successfully parses and formats these records, converting Degrees, Minutes, and Seconds (DMS) coordinates into Decimal Degrees (DD) for immediate geographical reference [1].</p>
+            <p>This implementation loads selected image files using the FileReader API and passes the image through the client-side <code>exif-js</code> library (loaded from cdnjs [3]) to extract EXIF tags. The tool parses and formats these records, converting Degrees, Minutes, and Seconds (DMS) coordinates into Decimal Degrees (DD) for immediate geographical reference [1][2].</p>
             
             <figure>
                 <img src="/blog/2025-09-14/exif.png" alt="A browser window showing extracted GPS coordinates and EXIF metadata dumped from a local photograph" loading="lazy">
                 <figcaption>Figure 1: The EXIF extraction interface detailing embedded telemetry parameters.</figcaption>
             </figure>
 
-            <p>During localized deployment, a simple drag-and-drop event listener was configured on a designated dropzone element to intercept file objects. The underlying logic prevents file upload and directly instantiates a canvas rendering context for analysis, minimizing memory overhead and securing the parsing pipeline [2].</p>
+            <p>During localized deployment, a drag-and-drop event listener was configured on a dropzone element to accept image files in the browser without uploading them to a server [2].</p>
+
+            <p>The tool: <a href="/tools/exif.html">EXIF Data Viewer</a>.</p>
             
             <details>
                 <summary>Inspecting local EXIF tags</summary>
+                <p>To check GPS tags from a terminal on Linux or macOS (after installing <code>exiftool</code>, e.g., <code>sudo apt install libimage-exiftool-perl</code>), run the command below without the <code>$</code> and replace <code>sample_image.jpg</code> with your photo's path:</p>
                 <pre><code>$ exiftool sample_image.jpg | grep "GPS Position"
 GPS Position                    : 32 deg 42' 54.99" N, 117 deg 9' 25.98" W</code></pre>
             </details>
@@ -56,7 +59,8 @@ GPS Position                    : 32 deg 42' 54.99" N, 117 deg 9' 25.98" W</code
                 <h3>References</h3>
                 <ol>
                     <li>Willison, S. "EXIF Data Viewer". Available: <a href="https://tools.simonwillison.net/exif">https://tools.simonwillison.net/exif</a>.</li>
-                    <li>Willison, S. "exif.html Source Code". Available: <a href="https://github.com/simonw/tools/blob/main/exif.html">https://github.com/simonw/tools/blob/main/exif.html</a>.</li>
+                    <li>Willison, S. "exif.html Source Code" (Apache License 2.0, <a href="/tools/LICENSE-simonw-tools.txt">local copy</a>). Available: <a href="https://github.com/simonw/tools/blob/main/exif.html">https://github.com/simonw/tools/blob/main/exif.html</a>.</li>
+                    <li>exif-js (v2.3.0 via cdnjs). Available: <a href="https://github.com/exif-js/exif-js">https://github.com/exif-js/exif-js</a>.</li>
                 </ol>
             </section>
         </article>

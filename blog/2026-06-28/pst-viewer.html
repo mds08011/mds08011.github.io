@@ -40,20 +40,18 @@
             <p>It runs directly in the web browser, processing files locally without uploading them to a remote server. This respects the privacy of sensitive communications.</p>
 
             <h2>How to Use It</h2>
-            <p>Using the tool involves visiting the site and loading the file locally. It provides DRM-free access to older communication records.</p>
+            <p>Using the tool involves visiting the site and loading the file locally.</p>
 
-            <figure>
-                <img src="/path/to/pst-viewer-screenshot.png" alt="A screenshot of the GoldFynch PST Viewer interface">
-                <figcaption>The GoldFynch PST Viewer interface.</figcaption>
-            </figure>
+            <!-- TODO: add screenshot of GoldFynch PST Viewer -->
 
-            <p>The interface allows browsing through the folder structure and reading individual emails. Browser-native search (<kbd>Ctrl</kbd> + <kbd>F</kbd>) can be used to search for specific keywords.</p>
+            <p>The interface allows browsing through the folder structure and reading individual emails. Browser find (<kbd>Ctrl</kbd> + <kbd>F</kbd>, or <kbd>Cmd</kbd> + <kbd>F</kbd> on macOS) searches the text currently visible on screen.</p>
 
             <details>
                 <summary>Looking for command-line alternatives?</summary>
-                <p>For command-line extraction of attachments from a PST file, open-source tools like <code>readpst</code> are available. On a Debian-based Linux system, it can be installed and executed as follows:</p>
+                <p>For command-line extraction from a PST file on Debian/Ubuntu/Pop!_OS, open a terminal, install <code>pst-utils</code> (<code>sudo</code> asks for your password), create an output folder, and run <code>readpst</code> (replace <code>my_archive.pst</code> with your file; see <code>man readpst</code> for format and attachment options):</p>
                 <pre><code>sudo apt-get install pst-utils
-readpst -D -M -b -o output_directory/ my_archive.pst</code></pre>
+mkdir -p output_directory
+readpst -D -M -o output_directory/ my_archive.pst</code></pre>
             </details>
         </article>
     </main>
