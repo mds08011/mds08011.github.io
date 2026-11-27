@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scaling 4&ndash;20 mA Loop Signals, Linear and Square-Root | Blog | MDS</title>
+    <title>4&ndash;20 mA Signal Scaling Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,48 +31,44 @@
     <main>
         <article>
             <header>
-                <h1>Scaling 4&ndash;20 mA Loop Signals, Linear and Square-Root</h1>
+                <h1>4&ndash;20 mA Signal Scaling Calculator</h1>
                 <time datetime="2026-07-06">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Loop checkout during commissioning is a translation exercise: the meter says 13.2 mA, the loop sheet says the transmitter spans 0&ndash;30 ft, and SCADA says 17.4 ft &mdash; do those agree? The linear arithmetic is easy enough to do on paper until you're forty loops deep, and then there's the one transmitter type that isn't linear at all and quietly breaks everyone's mental math.</p>
+            <p>Industrial sensors often transmit measurements over a 4 to 20 milliamp (mA) current loop, where 4 mA represents the bottom of the calibrated range (a &ldquo;live zero&rdquo; so 0 mA indicates a broken circuit) and 20 mA represents the top of the range. This calculator converts between loop current, percent of span, and process variable (PV, the physical reading in engineering units such as ft, psi, or GPM) for instrument loop checks between field transmitters, Programmable Logic Controllers (PLCs), and Supervisory Control and Data Acquisition (SCADA) displays.</p>
 
-            <h2>The Approach</h2>
-            <p>Linear is the standard span conversion, which handles elevated and suppressed zeros (LRV &ne; 0, including negative for vacuum or bidirectional flow) since the span is just URV &minus; LRV, signed:</p>
-            <p><code>PV = LRV + (mA &minus; 4)/16 &times; (URV &minus; LRV)</code></p>
+            <p>In standard instrumentation terminology (ANSI/ISA-51.1), the Lower Range Value (LRV) is the engineering value at 4 mA, the Upper Range Value (URV) is the value at 20 mA, and the span is <code>URV &minus; LRV</code> [1]. Setting a nonzero LRV handles elevated-zero and suppressed-zero ranges (such as vacuum or bidirectional flow). For linear signals (level, pressure, temperature, or pre-linearized flow meters):</p>
+            <p><code>P = ((I &minus; 4) / 16) &times; 100</code>, &nbsp; <code>PV = LRV + ((I &minus; 4) / 16) &times; (URV &minus; LRV)</code>, &nbsp; <code>I = 4 + 16 &times; (PV &minus; LRV) / (URV &minus; LRV)</code></p>
+            <p>Here <code>I</code> is loop current in milliamps (mA), <code>P</code> is percent of span (%), and <code>PV</code>, <code>LRV</code>, and <code>URV</code> are in the instrument's engineering units.</p>
 
-            <h3>The square-root gotcha</h3>
-            <p>Differential-pressure flow elements are the exception that trips people. DP across an orifice or venturi varies with the <em>square</em> of flow, so when the transmitter sends raw DP linearly, flow is recovered as:</p>
-            <p><code>PV = LRV + &radic;((mA &minus; 4)/16) &times; (URV &minus; LRV)</code></p>
-            <p>The consequence on a checkout: <strong>12 mA &mdash; 50% signal &mdash; is 70.7% of full flow</strong>, and 8 mA (25% signal) is 50% flow. If the SCADA readback during a loop check matches the linear column instead of the square-root column, the extraction is configured in the wrong place &mdash; or configured twice, which under-reads everything below full scale. The tool prints the five-point checkout table (4, 8, 12, 16, 20 mA) in both characterizations so the mismatch is visible in one pass [1].</p>
+            <p>For differential-pressure (DP) flow meters such as an orifice plate or venturi tube, pressure drop varies with the square of flow rate. If the transmitter sends raw linear DP and square-root extraction is configured downstream in the PLC or SCADA system, flow is recovered as:</p>
+            <p><code>PV = LRV + &radic;((I &minus; 4) / 16) &times; (URV &minus; LRV)</code></p>
+            <p>Under square-root scaling, 12 mA (50% signal) corresponds to 70.7% of full-scale flow and 8 mA (25% signal) corresponds to 50% of full-scale flow. Square-root extraction should be enabled in only one device (either the transmitter or the PLC/SCADA, never both). The calculator prints a five-point checkout table at 4, 8, 12, 16, and 20 mA (0%, 25%, 50%, 75%, and 100% of span) for the selected linear or square-root characterization.</p>
 
             <figure>
-                <img src="/blog/2026-07-06/ma-signal-scaling-calculator.png" alt="Five-point checkout table showing linear and square-root engineering values side by side for 4, 8, 12, 16, and 20 mA" loading="lazy">
-                <figcaption>Figure 1: The five-point table &mdash; the linear and square-root columns disagree everywhere except 4 and 20 mA.</figcaption>
+                <img src="/blog/2026-07-06/ma-signal-scaling-calculator.png" alt="Screenshot of the 4 to 20 mA Signal Scaling Calculator configured for a linear 0 to 30 range, converting 13.2 mA to 17.25 units and showing the five-point checkout table at 4, 8, 12, 16, and 20 mA." loading="lazy">
+                <figcaption>Figure 1: Linear scaling example for a 0 to 30 range at 13.2 mA, with the five-point checkout table at 0%, 25%, 50%, 75%, and 100% of span.</figcaption>
             </figure>
 
-            <h3>Fault bands are diagnostics, not data</h3>
-            <p>Readings outside the live range mean something specific under NAMUR NE 43: 3.8&ndash;20.5 mA is valid range including over/under-range margin; &le;3.6 mA is the transmitter signaling failure downscale (or a wiring/power problem); &ge;21.0 mA is failure upscale; and 0 mA is an open loop &mdash; broken wire, blown fuse, dead supply. The tool flags any reading in these bands rather than pretending it's a process value [2].</p>
+            <p>Under NAMUR NE 43, currents outside 4 to 20 mA distinguish valid over-range and under-range readings from hardware faults: <code>3.8</code> to <code>20.5 mA</code> is valid measuring range with margin, <code>&le; 3.6 mA</code> indicates a downscale (low) transmitter fault or wiring problem, <code>&ge; 21.0 mA</code> indicates an upscale (high) transmitter fault, and <code>0 mA</code> indicates an open loop (broken wire, blown fuse, or dead power supply) [2]. The calculator flags any entered current that falls in these diagnostic bands.</p>
 
             <details>
-                <summary>Field notes from the loop-check trenches</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Read the voltage across the loop's 250 &Omega; resistor and divide instead of breaking a running loop &mdash; 3.000 V is 12.00 mA.</li>
-                    <li>Confirm LRV/URV from the transmitter's own display or HART, not the instrument index &mdash; ranges change during startup and the paper lags [3].</li>
-                    <li>If SCADA and the field disagree by a consistent scale factor, someone scaled 0&ndash;100% where engineering units were expected at the PLC. The five-point table finds it in one pass.</li>
+                    <li>When a loop includes a precision 250-ohm (<code>250 &Omega;</code>) resistor (commonly wired at a PLC analog input), loop current can be checked without breaking the circuit by measuring DC voltage across the resistor and dividing by <code>250 &Omega;</code> using Ohm's law (<code>I = V / R</code>, so <code>3.000 V / 250 &Omega; = 12.00 mA</code>).</li>
+                    <li>Confirm configured <code>LRV</code>, <code>URV</code>, and square-root extraction settings directly from the transmitter display or using HART (Highway Addressable Remote Transducer, a digital protocol carried on the 4 to 20 mA loop), as field settings can differ from earlier project loop sheets or instrument index lists.</li>
+                    <li>If field and SCADA values disagree by a constant ratio across the five-point table, check whether the PLC analog input is scaled to 0 to 100% while SCADA expects engineering units (or vice versa).</li>
+                    <li>Below roughly 10% signal on a square-root DP flow loop, small pressure errors cause large flow swings, so control systems typically apply a low-flow cutoff.</li>
+                    <li>Approved project loop sheets and commissioning procedures govern actual loop checks. The calculator is a single offline HTML file with no external dependencies and stores inputs in browser <code>localStorage</code> (local storage on your device).</li>
                 </ul>
             </details>
 
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
-
-            <p>The tool: <a href="/tools/ma-signal-scaling-calculator.html">4&ndash;20 mA Signal Scaling Calculator</a>.</p>
+            <p>Tool: <a href="/tools/ma-signal-scaling-calculator.html">4&ndash;20 mA Signal Scaling Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ISA-51.1 &mdash; Process Instrumentation Terminology (ranges, spans, elevated/suppressed zero). <a href="https://www.isa.org/">https://www.isa.org/</a></li>
-                <li>[2] NAMUR NE 43 &mdash; Standardization of the Signal Level for Failure Information of Digital Transmitters.</li>
-                <li>[3] Project loop sheets and instrument index &mdash; the governing configuration documents.</li>
+                <li>ANSI/ISA-51.1-1979 (R1993), <em>Process Instrumentation Terminology</em> (range, span, LRV, URV, and elevated/suppressed zero definitions).</li>
+                <li>NAMUR Recommendation NE 43 (2003), <em>Standardization of the Signal Level for the Failure Information of Digital Transmitters</em>.</li>
             </ol>
         </article>
     </main>

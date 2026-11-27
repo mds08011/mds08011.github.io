@@ -35,36 +35,38 @@
                 <time datetime="2026-05-29">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Temporary power on a job site means long runs: a generator a few hundred feet from a bypass pump, cord strung down the fence line to a trailer, a welder at the far end of the yard. Long runs mean voltage drop, and low voltage at a motor is sneaky &mdash; the motor draws <em>more</em> current to do the same work, which makes more heat, which is how a marginal temp feeder quietly cooks a rental pump motor over a week without ever tripping a breaker.</p>
+            <h2>Overview</h2>
+            <p>Long temporary electrical runs, such as feeders from a generator or distribution panel to distant equipment, lose voltage along the cable due to conductor resistance. Reduced voltage at a motor causes it to draw higher current to deliver the same mechanical output, increasing heat in the motor windings. Excessive voltage drop can also cause variable frequency drives (VFDs, electronic motor speed controllers) or magnetic contactor coils (motor starter switches) to trip. This calculator estimates voltage drop, percent drop, load-end voltage, and maximum one-way cable length at a 3% drop limit for single-phase and three-phase circuits.</p>
 
-            <h2>The Approach</h2>
-            <p>The standard estimating method is the circular-mil formula:</p>
-            <p>Three-phase: <code>V_d = &radic;3 &times; K &times; I &times; L / CM</code> &nbsp;&nbsp; Single-phase: <code>V_d = 2 &times; K &times; I &times; L / CM</code></p>
-            <p>K is conductor resistivity in &Omega;&middot;cmil/ft (12.9 for copper, 21.2 for aluminum at operating temperature), L is one-way length, and CM is the conductor's circular-mil area. Parallel sets split the current, which is arithmetically the same as multiplying CM. The method neglects reactance, which is fine at high power factor and modest conductor sizes &mdash; exactly the temp-power regime [1].</p>
-
-            <p>The result gets checked against the NEC's familiar 3%/5% guideline. Worth knowing: that's an informational note, not a code mandate &mdash; a recommendation for &ldquo;reasonable efficiency of operation.&rdquo; But motors, VFDs, and contactor coils all get grumpy well before the lights dim, so the guideline is a sensible field line to hold.</p>
+            <h2>Formulas</h2>
+            <p>The tool uses the standard circular-mil voltage-drop formula:</p>
+            <p>Three-phase: <code>V_d = &radic;3 &times; K &times; I &times; L / CM</code><br>
+            Single-phase: <code>V_d = 2 &times; K &times; I &times; L / CM</code></p>
+            <p>Here <code>V_d</code> is voltage drop in volts (V), <code>K</code> is conductor resistivity in ohm-circular-mils per foot (<code>&Omega;&middot;cmil/ft</code>, taken as 12.9 for copper and 21.2 for aluminum at operating temperature), <code>I</code> is load current in amperes (A), <code>L</code> is one-way circuit length in feet (ft), and <code>CM</code> is the conductor cross-sectional area in circular mils (cmil). One circular mil is the area of a circle 0.001 inch in diameter. Selecting a wire size in American Wire Gauge (AWG, where smaller gauge numbers mean thicker wire) or kcmil (thousands of circular mils) fills in the corresponding area from National Electrical Code (NEC) Chapter 9 Table 8 [1]. When parallel conductors per phase are entered, the tool multiplies <code>CM</code> by the number of parallel sets.</p>
 
             <figure>
-                <img src="/blog/2026-05-29/voltage-drop-calculator.png" alt="Calculator showing percent voltage drop for a 480 V three-phase run against the 3 percent guideline" loading="lazy">
-                <figcaption>Figure 1: A 300-ft generator-to-pump feeder checked against the 3% line.</figcaption>
+                <img src="/blog/2026-05-29/voltage-drop-calculator.png" alt="Voltage drop calculator showing voltage drop in volts, percent drop, load voltage, and maximum length at 3 percent for a 480 V three-phase run" loading="lazy">
+                <figcaption>Figure 1: Voltage drop calculation for a 480 V three-phase feeder checked against the 3% guideline.</figcaption>
             </figure>
 
-            <p>Since the current draw is the input you rarely have memorized, the tool carries the NEC Table 430.250 motor FLA values for 460 V three-phase motors (a 25 HP pump pulls 34 A, a 100 HP pulls 124 A) &mdash; table values, which are what sizing uses, not nameplate [1].</p>
+            <p>The calculator compares percent voltage drop against the NEC Articles 210 and 215 informational notes, which recommend limiting voltage drop to 3% for a single branch circuit or feeder and 5% total combined drop from source to load for reasonable efficiency of operation [1]. These percentages are non-mandatory recommendations rather than code requirements. For quick lookup of motor loads, the tool includes a reference table of NEC Table 430.250 full-load amperes (FLA, rated running current) for 460 V three-phase motors by horsepower (HP), such as 34 A for 25 HP and 124 A for 100 HP, since NEC conductor sizing uses table FLA values rather than motor nameplate current [1].</p>
 
             <details>
-                <summary>Scope note</summary>
-                <p>This is a voltage-drop estimator, deliberately. Ampacity, overcurrent protection, grounding, and anything that becomes permanent belong to the electrician and the electrical engineer of record &mdash; the tool says so on its face rather than pretending a drop calc is a circuit design [2].</p>
+                <summary>Assumptions and limits</summary>
+                <ul>
+                    <li>The circular-mil formula accounts only for conductor resistance and neglects inductive reactance (opposition to alternating current from magnetic fields around the conductors). This approximation is most accurate at high power factor (the ratio of real power to apparent power) and on smaller to mid-sized conductors. Larger cables and lower-power-factor motor loads can have higher actual voltage drop.</li>
+                    <li>Across-the-line motor starting draws roughly six times FLA briefly, so a cable run with acceptable running voltage drop can still experience a much larger temporary drop during motor startup.</li>
+                    <li>This calculator estimates voltage drop only. Conductor ampacity (safe continuous current capacity), temperature or bundling derating, overcurrent protection (breakers or fuses), grounding, and any permanent electrical installation require a licensed electrician or electrical engineer of record.</li>
+                </ul>
             </details>
 
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs offline in a single HTML file using plain JavaScript with no external libraries, and saves your inputs in your browser's local storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/voltage-drop-calculator.html">Voltage Drop Quick-Check Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] NFPA 70 (NEC) &mdash; Art. 210/215 informational notes on voltage drop; Table 430.250 motor FLA; Chapter 9 Table 8 conductor properties. <a href="https://www.nfpa.org/">https://www.nfpa.org/</a></li>
-                <li>[2] The electrician / electrical engineer of record &mdash; ampacity, protection, and anything permanent.</li>
+                <li>NFPA 70, National Electrical Code (NEC): Articles 210.19 and 215.2 informational notes (voltage drop), Table 430.250 (three-phase motor full-load current), and Chapter 9 Table 8 (conductor properties).</li>
             </ol>
         </article>
     </main>

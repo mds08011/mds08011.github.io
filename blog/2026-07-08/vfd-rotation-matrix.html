@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnosing VFD Rotation Conflicts Between Hand and Auto | Blog | MDS</title>
+    <title>VFD Hand and Auto Rotation Checklist | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,40 +31,42 @@
     <main>
         <article>
             <header>
-                <h1>Diagnosing VFD Rotation Conflicts Between Hand and Auto</h1>
+                <h1>VFD Hand and Auto Rotation Checklist</h1>
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A blower runs backward in Hand during startup. The reflex is muscle memory from across-the-line motors: open the MCC bucket and swap two leads. But on a VFD-driven machine that reflex can be exactly wrong &mdash; if the drive's Hand reference is inverted in software, the motor may run <em>correctly</em> in Auto, and swapping leads &ldquo;fixes&rdquo; Hand while quietly breaking Auto. The crew leaves site with the machine verified in the mode they tested and wrong in the mode it will actually run in.</p>
+            <p>A variable frequency drive (VFD) is an electronic motor controller that regulates a three-phase motor's speed and direction. Most VFD-driven equipment can be run in two modes: Hand mode (local manual control at the drive keypad or panel) and Auto mode (remote automatic control from a programmable logic controller, or PLC, or a supervisory control and data acquisition, or SCADA, system). Unlike an across-the-line motor wired directly to a starter, a VFD can receive an inverted direction setting or speed reference in one mode while running forward in the other. Swapping two power leads after testing only Hand mode can reverse Auto mode into the wrong direction.</p>
 
-            <h2>The Approach</h2>
-            <p>The tool is a state matrix: add an equipment ID, record observed rotation in Hand and in Auto (Forward / Reverse / Untested), and let one piece of logic issue the verdict. The logic rests on a single fact worth internalizing:</p>
-            <p><strong>Physical wiring affects Hand and Auto identically.</strong> The same three leads feed the same motor in either mode. So if rotation <em>differs</em> between modes, it cannot be wiring &mdash; one of the two references is inverted in software. Only when rotation is wrong in <em>both</em> modes is it a lead problem.</p>
-            <p>That yields the verdict table: Hand-Reverse/Auto-Forward flags yellow &mdash; <em>software conflict, do not swap physical leads, find the drive parameter</em>. Hand-Forward/Auto-Reverse is the same conflict on the Auto path (PLC reference sign or terminal mapping). Reverse in both flags red &mdash; <em>hardware: swap two leads at the MCC and retest both modes</em>. Forward in both goes green, and anything Untested gets no verdict at all &mdash; the tool refuses to conclude from partial data.</p>
+            <p>This checklist tracks observed motor rotation per equipment ID across both modes. For each piece of equipment, you select Forward, Reverse, or Untested for Hand and for Auto, and the page evaluates the combination using a simple rule based on three-phase motor wiring [1]. Because the same three power leads feed the motor in both Hand and Auto, physical wiring affects both modes identically:</p>
+            <ul>
+                <li><code>Hand = Forward, Auto = Forward</code>: Verified.</li>
+                <li><code>Hand = Reverse, Auto = Reverse</code>: Physical wiring fault. Swap any two of the three power leads (such as L1 and L2) at the motor control center (MCC, the electrical panel feeding the motor) and retest both modes [1].</li>
+                <li><code>Hand = Reverse, Auto = Forward</code> or <code>Hand = Forward, Auto = Reverse</code>: Software or control conflict. Do not swap physical power leads. Check the drive's direction parameter, the PLC or SCADA speed-reference sign, or the control terminal wiring.</li>
+                <li><code>Hand = Untested</code> or <code>Auto = Untested</code>: Testing incomplete. No verdict is shown until both modes are recorded.</li>
+            </ul>
 
             <figure>
-                <img src="/blog/2026-07-08/vfd-rotation-matrix.png" alt="Equipment cards with Hand and Auto rotation radios, one highlighted yellow with a software-conflict warning" loading="lazy">
-                <figcaption>Figure 1: A card in the yellow state &mdash; rotation differs between modes, so the leads are innocent.</figcaption>
+                <img src="/blog/2026-07-08/vfd-rotation-matrix.png" alt="Screenshot of the VFD rotation checklist showing equipment cards with Hand and Auto rotation selections and a yellow software-conflict warning" loading="lazy">
+                <figcaption>Figure 1: An equipment card with reverse rotation in Hand and forward rotation in Auto, flagged as a software conflict.</figcaption>
             </figure>
 
+            <p>Entries are saved automatically in the browser's <code>localStorage</code> (local device storage that persists across page reloads) and can be exported as a comma-separated values (CSV) spreadsheet file for commissioning (equipment startup) records. The tool runs offline in the browser with no external scripts.</p>
+
             <details>
-                <summary>Test discipline that rides along</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>Bump-test at low speed with the drive train ready for it &mdash; some machines (screw pumps, certain gearboxes) must never run backward even briefly. Check the O&amp;M first.</li>
-                    <li>Verify against the rotation arrow on the casing, not against what sounds right &mdash; a centrifugal machine running backward delivers roughly half flow and head and can sound nearly normal.</li>
-                    <li>After any fix &mdash; parameter or leads &mdash; retest <em>both</em> modes. That's the entire point of tracking them as a matrix.</li>
+                    <li>Check the motor and driven-equipment operation and maintenance (O&amp;M) manual before bump-testing (briefly jogging the motor at low speed to observe rotation). Positive-displacement machines such as screw pumps and some gearboxes can be damaged if rotated backward even briefly and may need to be uncoupled first.</li>
+                    <li>Confirm rotation against the direction arrow cast or stamped on the equipment casing. A centrifugal machine (such as a centrifugal pump or blower) running backward can still deliver roughly half its rated flow and head (pressure expressed as fluid column height) while sounding close to normal.</li>
+                    <li>After any drive parameter adjustment or power-lead swap, retest both Hand and Auto modes to verify both match the casing arrow.</li>
+                    <li>The drive manufacturer's parameter manual governs software direction settings, and the equipment O&amp;M manual governs mechanical rotation limits.</li>
                 </ul>
             </details>
 
-            <p>The matrix persists in <code>localStorage</code> and exports to CSV (with verdicts) for the commissioning record. Single file, vanilla JS, no dependencies [1][2].</p>
-
-            <p>The tool: <a href="/tools/vfd-rotation-matrix.html">VFD &ldquo;Hand vs. Auto&rdquo; Rotation Matrix</a>.</p>
+            <p>Tool: <a href="/tools/vfd-rotation-matrix.html">VFD &ldquo;Hand vs. Auto&rdquo; Rotation Matrix</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The drive manufacturer's parameter manual &mdash; direction/reference parameters (governing document for the software side).</li>
-                <li>[2] Motor and driven-equipment O&amp;M &mdash; rotation arrow and reverse-rotation restrictions.</li>
+                <li>NEMA MG 1, <em>Motors and Generators</em>, National Electrical Manufacturers Association (polyphase motor phase sequence and direction of rotation).</li>
             </ol>
         </article>
     </main>

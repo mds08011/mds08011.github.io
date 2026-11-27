@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logging Rain Events and SWPPP Inspections Client-Side | Blog | MDS</title>
+    <title>SWPPP Rain Event and Inspection Tracker | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,48 +31,38 @@
     <main>
         <article>
             <header>
-                <h1>Logging Rain Events and SWPPP Inspections Client-Side</h1>
+                <h1>SWPPP Rain Event and Inspection Tracker</h1>
                 <time datetime="2026-07-07">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Stormwater compliance is a bookkeeping problem wearing a hydrology costume. The permit says: inspect on a routine interval, and inspect within some window after any rain event over a threshold. Simple rules &mdash; but they generate real questions on a Tuesday in February. Did Thursday's 0.6 inches qualify? Did anyone inspect after it? When's the next routine one due? Stormwater enforcement runs on records, and a rain log kept daily, matched to signed inspection forms, is the difference between a clean audit and a notice of violation built on gaps [1].</p>
+            <p>This browser-based tracker logs rain events and site inspections for a construction Stormwater Pollution Prevention Plan (SWPPP). Under the U.S. Environmental Protection Agency (EPA) Construction General Permit (CGP) or a state equivalent, sites must conduct inspections on a routine schedule and after qualifying rain events [1]. You enter three rules from the governing permit (the qualifying storm threshold in inches, the post-rain inspection due window in calendar days, and the routine inspection interval in calendar days), then log 24-hour rainfall totals and completed inspections (routine, post-rain, or pre-storm). The tool reports which qualifying storms still need an inspection and when the next routine inspection is due.</p>
 
-            <h2>The Approach</h2>
-            <p>The tracker keeps two logs &mdash; rain events with amounts, and inspections with types (routine, post-rain, pre-storm) &mdash; against configurable permit rules: qualifying threshold, post-rain due window, routine interval. A qualifying event is covered if an inspection lands between the event date and the event date plus the window; otherwise it surfaces as awaiting inspection, and overdue once the window passes. The matching logic is deliberately simple and visible &mdash; if your permit counts working days or combines events, adjust behavior, not expectations.</p>
+            <p>The status summary uses three date-based checks. A rain event with 24-hour rainfall <code>R</code> (in) qualifies when <code>R &gt;= R_thresh</code>, where <code>R_thresh</code> (in) is the permit threshold (commonly 0.25 in under the 2022 EPA CGP) [1]. A qualifying storm on date <code>d_rain</code> is marked covered if any logged inspection falls on date <code>d_insp</code> within <code>d_rain &lt;= d_insp &lt;= d_rain + W</code>, where <code>W</code> is the post-rain due window (calendar days). Otherwise the storm shows as due, or overdue once the current date passes <code>d_rain + W</code>. The next routine inspection due date is <code>d_next = d_last + I</code>, where <code>d_last</code> is the date of the most recent logged inspection and <code>I</code> is the routine interval (calendar days, commonly 7 or 14 days) [1].</p>
 
             <figure>
-                <img src="/blog/2026-07-07/swppp-rain-tracker.png" alt="Tracker status showing next routine inspection due date and a qualifying rain event awaiting its post-rain inspection" loading="lazy">
-                <figcaption>Figure 1: The status verdict &mdash; qualifying events awaiting inspection and the next routine due date, computed from the two logs.</figcaption>
+                <img src="/blog/2026-07-07/swppp-rain-tracker.png" alt="Tracker status showing last inspection date, next routine inspection due date, and qualifying rain events awaiting inspection" loading="lazy">
+                <figcaption>Figure 1: Inspection status summary computed from the rain event and inspection logs.</figcaption>
             </figure>
 
-            <h3>The date bug that isn't obvious until it is</h3>
-            <p>One implementation detail worth passing along, because it silently corrupts any date-only log: in JavaScript, <code>new Date("2026-07-07")</code> parses as <em>UTC midnight</em>. In any US timezone, that instant is still the previous local day &mdash; so every date in your log displays one day early, and a rain event slides to the wrong side of a compliance window. The fix is to split the string and construct by components, which the engine treats as local time:</p>
-            <pre><code>// wrong: UTC midnight, off by one day west of Greenwich
-var d = new Date("2026-07-07");
-
-// right: local midnight
-var p = "2026-07-07".split("-");
+            <p>In JavaScript, calling <code>new Date("2026-07-07")</code> parses an ISO date string as midnight Coordinated Universal Time (UTC). In US time zones (west of Greenwich), UTC midnight falls on the previous local calendar day, which would shift logged dates by one day. To keep calculations in local calendar time, both this tracker and the <a href="/blog/2026-07-08/working-day-tracker.html">working-day tracker</a> split the string and construct local dates from numeric year, month, and day components, where unary <code>+</code> converts each text part to a number and <code>- 1</code> accounts for JavaScript's 0-to-11 month index (0 for January through 11 for December):</p>
+            <pre><code>var p = "2026-07-07".split("-");
 var d = new Date(+p[0], +p[1] - 1, +p[2]);</code></pre>
-            <p>Both this tracker and the <a href="/blog/2026-07-08/working-day-tracker.html">working-day tracker</a> use the component form everywhere a date enters or leaves storage.</p>
 
             <details>
-                <summary>Why contemporaneous logging matters</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>Log the rain even when it doesn't qualify &mdash; a string of 0.2-inch days that never triggered an inspection is itself a record that you were watching.</li>
-                    <li>Forecast-triggered requirements (pre-storm inspections, REAP-type action plans in some states) are on you to track from the forecast &mdash; the pre-storm inspection type records that you did.</li>
-                    <li>The daily habit is the compliance; the tracker just makes the habit cheap.</li>
+                    <li><strong>Non-qualifying rain:</strong> Recording rainfall days below the qualifying threshold documents ongoing gauge checks alongside signed inspection forms, which helps avoid record gaps that can lead to a notice of violation (a formal regulatory citation) during a permit audit.</li>
+                    <li><strong>Forecast-based requirements:</strong> Some state permits require actions before a forecasted storm, such as pre-storm inspections or a Rain Event Action Plan (REAP, a pre-storm checklist used in states such as California). Track those triggers from weather forecasts, and use the pre-storm inspection type to record completed checks.</li>
+                    <li><strong>Permit-specific rules:</strong> This tool uses simple calendar-day windows. If the federal, state, or site-specific SWPPP counts working days, combines consecutive storm days, or allows reduced frequency on stabilized areas, follow the permit and SWPPP terms.</li>
+                    <li><strong>Local browser storage:</strong> The tracker is a single HTML page written in plain JavaScript that runs offline and stores all entries only in browser <code>localStorage</code> (local storage on your device). Clearing browser site data or switching devices removes the log, so maintain signed inspection forms and the project SWPPP as the official compliance records.</li>
                 </ul>
             </details>
-
-            <p>Everything lives in this browser's <code>localStorage</code> and nothing leaves it &mdash; the tracker is a field aid; the signed inspection forms and the SWPPP remain the compliance documents [2]. Single file, vanilla JS.</p>
 
             <p>The tool: <a href="/tools/swppp-rain-tracker.html">SWPPP Rain Event &amp; Inspection Tracker</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] EPA Construction General Permit (or the state-issued equivalent) &mdash; qualifying events, frequencies, and deadlines. <a href="https://www.epa.gov/npdes/stormwater-discharges-construction-activities">https://www.epa.gov/npdes/stormwater-discharges-construction-activities</a></li>
-                <li>[2] The project SWPPP &mdash; site-specific inspection requirements (governing document).</li>
+                <li>U.S. Environmental Protection Agency (EPA), <em>2022 Construction General Permit (CGP)</em>, Part 4 (Site Inspection Requirements), via EPA Stormwater Discharges from Construction Activities. <a href="https://www.epa.gov/npdes/stormwater-discharges-construction-activities">https://www.epa.gov/npdes/stormwater-discharges-construction-activities</a></li>
             </ol>
         </article>
     </main>

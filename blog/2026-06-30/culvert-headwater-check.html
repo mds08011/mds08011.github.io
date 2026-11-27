@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Hand-Method HDS-5 Culvert Headwater Check | Blog | MDS</title>
+    <title>Culvert Headwater Check (FHWA HDS-5) | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,44 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>A Hand-Method HDS-5 Culvert Headwater Check</h1>
+                <h1>Culvert Headwater Check (FHWA HDS-5)</h1>
                 <time datetime="2026-06-30">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Culvert hydraulics has a fork in it that confuses everyone the first time: a culvert operates under either <em>inlet control</em> or <em>outlet control</em>, they're governed by completely different physics, and the culvert runs under whichever one produces the higher headwater. You can't pick the convenient one. The full HDS-5 method computes both and takes the max &mdash; and doing it by hand off the nomographs is exactly the kind of fiddly, error-prone arithmetic a single-purpose page should own.</p>
+            <p>This calculator performs a preliminary headwater check for a single circular culvert (a pipe passing water under a road or embankment) using the Federal Highway Administration (FHWA) Hydraulic Design Series No. 5 (HDS-5) hand method [1]. A culvert operates under either inlet control (the entrance geometry limits capacity) or outlet control (barrel friction, exit losses, and downstream water depth limit capacity). The calculator computes the headwater depth (<code>HW</code>, the upstream water depth above the inlet invert, in ft) for both conditions and reports the larger value as the governing headwater.</p>
 
-            <h2>The Approach</h2>
-            <p><strong>Inlet control</strong> means the entrance is the bottleneck &mdash; the barrel could carry more than the inlet admits. HDS-5 fits two regression forms to the lab data behind the nomographs, on the discharge parameter <code>Q/(A&middot;D^0.5)</code>: an unsubmerged form (a weir-like power law) below 3.5, a submerged form (the inlet acting as an orifice) above 4.0, and linear interpolation in the transition band between. Six inlet configurations from grooved concrete to projecting CMP each carry their own K, M, c, Y coefficients, and mitered inlets get the <code>+0.7S</code> slope term instead of <code>&minus;0.5S</code> [1].</p>
-            <p><strong>Outlet control</strong> assumes the barrel flows full and sums the losses &mdash; entrance, friction, exit &mdash; <code>H = [1 + K_e + 29n&sup2;L/R^(4/3)]&middot;V&sup2;/2g</code>, with the tailwater and critical depth setting the effective downstream head. <strong>Critical depth</strong> for the circular section is solved by bisection on <code>Q&sup2;T/(gA&sup3;) = 1</code>. The governing headwater is simply the larger of the two.</p>
+            <p><strong>Inlet control</strong> uses the HDS-5 Appendix A regression equations in US customary units, based on the discharge parameter <code>Q / (A &middot; D^0.5)</code>, where <code>Q</code> is flow rate in cubic feet per second (cfs), <code>A</code> is the full pipe cross-sectional area in square feet (ft&sup2;), and <code>D</code> is inside pipe diameter in feet (ft) [1]. For unsubmerged inlets (<code>Q / (A &middot; D^0.5) &le; 3.5</code>), <code>HW / D = H_c / D + K &middot; [Q / (A &middot; D^0.5)]^M &minus; 0.5 &middot; S</code>, where <code>H_c = d_c + V_c&sup2; / (2g)</code> is critical specific energy (ft), <code>d_c</code> is critical depth (ft), <code>V_c</code> is velocity at critical depth (ft/s), <code>g = 32.174 ft/s&sup2;</code> is gravitational acceleration, <code>S</code> is barrel slope (ft/ft), and <code>K</code> and <code>M</code> are dimensionless inlet coefficients. For submerged inlets (<code>Q / (A &middot; D^0.5) &ge; 4.0</code>, where the entrance acts as an orifice), <code>HW / D = c &middot; [Q / (A &middot; D^0.5)]&sup2; + Y &minus; 0.5 &middot; S</code>, where <code>c</code> and <code>Y</code> are dimensionless inlet coefficients. Between <code>3.5</code> and <code>4.0</code>, the calculator interpolates linearly. Six concrete and corrugated metal pipe (CMP) entrance types are included. For mitered inlets (pipe ends cut flush with the embankment slope), the slope term is <code>+0.7 &middot; S</code> instead of <code>&minus;0.5 &middot; S</code> [1].</p>
+
+            <p><strong>Outlet control</strong> assumes the barrel flows full and computes total head loss in US customary units as <code>H = [1 + K_e + 29 &middot; n&sup2; &middot; L / R^(4/3)] &middot; V&sup2; / (2g)</code>, where <code>H</code> is total head loss (ft), <code>K_e</code> is the dimensionless entrance loss coefficient, <code>n</code> is Manning's roughness coefficient (dimensionless), <code>L</code> is barrel length (ft), <code>R = D / 4</code> is full-pipe hydraulic radius (ft), <code>V = Q / A</code> is full-flow velocity (ft/s), and <code>29</code> is the US customary unit factor (<code>2g / 1.486&sup2;</code>) [1]. Outlet-control headwater is <code>HW = H + h_o &minus; S &middot; L</code>, where <code>h_o = max(TW, (d_c + D) / 2)</code> approximates the downstream control depth (ft) and <code>TW</code> is tailwater depth above the outlet invert (ft). <strong>Critical depth</strong> (<code>d_c</code>, the depth where Froude number equals <code>1</code>) is solved by bisection (repeatedly halving a depth bracket until convergence) on <code>Q&sup2; &middot; T / (g &middot; A_w&sup3;) = 1</code>, where <code>T</code> is water-surface top width (ft) and <code>A_w</code> is wetted flow area (ft&sup2;) at depth <code>d_c</code>.</p>
 
             <figure>
-                <img src="/blog/2026-06-30/culvert-headwater-check.png" alt="Culvert check showing inlet-control and outlet-control headwater with the governing value and HW/D ratio" loading="lazy">
-                <figcaption>Figure 1: Both control headwaters computed side by side, with the governing max and the HW/D ratio flagged against 1.5.</figcaption>
+                <img src="/blog/2026-06-30/culvert-headwater-check.png" alt="Culvert headwater calculator output comparing inlet-control headwater, outlet-control headwater, governing headwater, and HW/D ratio" loading="lazy">
+                <figcaption>Figure 1: Inlet-control and outlet-control headwater results with the governing maximum and headwater-to-diameter ratio (HW/D).</figcaption>
             </figure>
 
-            <h3>The verification I actually enjoyed</h3>
-            <p>Two independent checks give confidence the coefficients are transcribed right. The critical-depth solver hits Froude = 1 to six decimals &mdash; that's just the bisection converging. The satisfying one: the unsubmerged and submerged inlet regression forms, which are separate equations fit to the same lab data, agree to within <strong>0.002 in HW/D</strong> right at the 3.5&ndash;4.0 transition zone. Coefficients fit to one dataset <em>should</em> meet in the middle, and watching two different equations shake hands at the seam is how you know the numbers went in correctly.</p>
-
             <details>
-                <summary>The practical wisdom the warnings carry</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Typical criteria allow HW/D of 1.2&ndash;1.5 at the design storm; the tool flags beyond 1.5. Overtopping checks compare governing HW to the road profile, not just a ratio.</li>
-                    <li>If inlet control governs by a wide margin, the barrel is being wasted &mdash; an improved inlet (beveled or grooved end, headwall) buys capacity far cheaper than a bigger pipe.</li>
-                    <li>Full-flow outlet velocity above ~10 ft/s wants energy dissipation or riprap at the outlet (HEC-14).</li>
-                    <li>Debris and sediment appear in <em>none</em> of these equations, and they're how culverts actually fail. Maintenance access beats another six inches of diameter.</li>
+                    <li>Design standards often limit the headwater-to-diameter ratio (<code>HW/D</code>) to <code>1.2</code> to <code>1.5</code> at the design storm (the target runoff event), and the tool flags values above <code>1.5</code>. Roadway overtopping checks compare governing <code>HW</code> directly to the road profile elevation.</li>
+                    <li>When inlet control governs by a large margin, an improved entrance (such as a beveled or grooved end with a headwall, a retaining wall built around the pipe entrance) can increase capacity without enlarging the pipe diameter [1].</li>
+                    <li>Full-flow outlet velocities above about <code>10 ft/s</code> typically require outlet scour protection such as riprap (graded rock armor) or an energy dissipator sized per FHWA Hydraulic Engineering Circular No. 14 (HEC-14) [3].</li>
+                    <li>The equations assume an unobstructed barrel. Sediment buildup, debris blockage, and maintenance access must be evaluated separately.</li>
+                    <li>This is a preliminary hand check for a single circular barrel assuming full flow under outlet control. For partially full outlet-control profiles, box culverts, multiple barrels, or final design analysis, use FHWA's HY-8 software [2].</li>
                 </ul>
             </details>
 
-            <p>It's a hand check &mdash; for anything past preliminary, FHWA's HY-8 does the full analysis. Single file, vanilla JS, <code>localStorage</code> persistence [1][2][3].</p>
+            <p>The calculator runs in the browser and saves inputs in browser local storage (<code>localStorage</code>, a built-in browser store on the current device) until cleared.</p>
 
             <p>The tool: <a href="/tools/culvert-headwater-check.html">Culvert Headwater Quick-Check (HDS-5)</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] FHWA HDS-5, <em>Hydraulic Design of Highway Culverts</em> &mdash; the governing method, coefficient tables, and nomographs. <a href="https://www.fhwa.dot.gov/engineering/hydraulics/">https://www.fhwa.dot.gov/engineering/hydraulics/</a></li>
-                <li>[2] FHWA HY-8 &mdash; free culvert analysis software for anything past a hand check.</li>
-                <li>[3] FHWA HEC-14 &mdash; outlet energy dissipators.</li>
+                <li>Federal Highway Administration (FHWA), <em>Hydraulic Design of Highway Culverts</em>, Hydraulic Design Series No. 5 (HDS-5), 3rd Edition, FHWA-HIF-12-026 (2012), Appendix A.</li>
+                <li>Federal Highway Administration (FHWA), <em>HY-8 Culvert Hydraulic Analysis Program</em>.</li>
+                <li>Federal Highway Administration (FHWA), <em>Hydraulic Design of Energy Dissipators for Culverts and Channels</em>, Hydraulic Engineering Circular No. 14 (HEC-14), 3rd Edition, FHWA-NHI-06-086 (2006).</li>
             </ol>
         </article>
     </main>

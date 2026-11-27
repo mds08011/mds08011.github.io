@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coordinate Conversion from Snyder, Verified Against Its Own Invariants | Blog | MDS</title>
+    <title>Coordinate Converter for Decimal Degrees, DMS, UTM, and California State Plane | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,56 +31,38 @@
     <main>
         <article>
             <header>
-                <h1>Coordinate Conversion from Snyder, Verified Against Its Own Invariants</h1>
+                <h1>Coordinate Converter for Decimal Degrees, DMS, UTM, and California State Plane</h1>
                 <time datetime="2026-05-16">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>You get a point in decimal degrees and the plans want California State Plane in survey feet. Or a survey gives you State Plane and you need lat/lon to drop a pin. The usual answer is an online converter you have to trust, or a GIS install you don't have open. I wanted the projection math itself &mdash; the real thing, not a lookup table &mdash; running locally in a page, and I wanted to be able to <em>prove</em> it was right.</p>
+            <p>The <a href="/tools/coordinate-converter.html">Coordinate Converter</a> converts a single point locally in the browser among four formats: decimal degrees (DD, signed latitude and longitude), degrees-minutes-seconds (DMS, with separate degree, minute, second, and hemisphere fields), Universal Transverse Mercator (UTM, a metric grid covering California in zones 10 and 11 split at 120 degrees west), and all six zones of the California State Plane Coordinate System (SPCS) on the North American Datum of 1983 (NAD83) in US survey feet [2][3]. Pick an input format, enter the coordinates, choose the California State Plane output zone, and copy any of the converted lines.</p>
 
-            <h2>The Approach</h2>
-            <p>Four-way conversion among decimal degrees, DMS (structured fields, no fragile free-text parsing), UTM (zones 10/11, auto-selected from longitude), and all six California SPCS NAD83 zones in US survey feet. The projection code is straight out of Snyder's <em>Map Projections &mdash; A Working Manual</em> [1]: Lambert Conformal Conic (2 standard parallels) for State Plane, Transverse Mercator for UTM, forward and inverse, on the GRS80 ellipsoid &mdash; about 120 lines of vanilla JS, no library. The series formulas are accurate to well under a millimeter within a zone; the real error budget is datum handling and input quality, not the math.</p>
-
-            <p>One detail that's easy to get wrong and expensive at State Plane magnitudes: the <strong>US survey foot</strong> (1200/3937 m exactly) versus the international foot differ by about 2 ppm, which is real feet when your northing is 500,000. The tool handles that distinction explicitly.</p>
+            <p>All map projection equations follow Snyder's <em>Map Projections: A Working Manual</em> on the Geodetic Reference System 1980 (GRS80) reference ellipsoid (semi-major axis <code>a = 6,378,137 m</code>, inverse flattening <code>1/f = 298.257222101</code>) [1]. California SPCS uses the two-standard-parallel Lambert Conformal Conic projection (where the projection cone touches the ellipsoid at two standard parallels, with false easting <code>2,000,000 m</code> and false northing <code>500,000 m</code> added to keep coordinates positive) [1][2]. UTM uses the Transverse Mercator projection (central meridian scale factor <code>k&#8320; = 0.9996</code>, 6-degree zone width, and <code>500,000 m</code> false easting) [1]. Angle and unit conversions use <code>DD = &plusmn;(D + M/60 + S/3600)</code> (with degrees <code>D</code>, arcminutes <code>M</code>, arcseconds <code>S</code>, positive for N/E and negative for S/W) and the exact US survey foot definition <code>ft_US = m &times; (3937 / 1200)</code>, where <code>m</code> is meters and <code>ft_US</code> is US survey feet. The US survey foot (<code>1200 / 3937 m</code>) differs from the international foot (<code>0.3048 m</code>) by about 2 parts per million (ppm), which shifts State Plane coordinates of several million feet by multiple feet. California NAD83 zones in US survey feet correspond to European Petroleum Survey Group (EPSG) codes 2225 through 2230, while the meter versions are EPSG 26941 through 26946 [3].</p>
 
             <figure>
-                <img src="/blog/2026-05-16/coordinate-converter.png" alt="Coordinate converter showing a decimal-degrees input with DMS, UTM, and California State Plane outputs" loading="lazy">
-                <figcaption>Figure 1: One point expressed four ways, with copy buttons on every output line.</figcaption>
+                <img src="/blog/2026-05-16/coordinate-converter.png" alt="Coordinate converter showing a decimal-degrees input converted to DMS, UTM, and California State Plane outputs" loading="lazy">
+                <figcaption>Figure 1: Decimal-degree input converted to DMS, UTM, and California State Plane coordinates with copy buttons.</figcaption>
             </figure>
 
-            <h3>Verifying against the projection's own invariants</h3>
-            <p>This is the part I promised myself I'd do properly. You can't eyeball whether a Lambert conic is right, but the projection has <em>defining properties</em> you can test against:</p>
-            <ul>
-                <li>The Zone 6 grid origin returns exactly 2,000,000 E / 500,000 N &mdash; the false easting/northing, by definition.</li>
-                <li>SPCS round-trips (forward then inverse) close to zero within floating point; UTM round-trips to 0.00003 m.</li>
-                <li>The UTM central meridian at the equator returns exactly 500,000 / 0.</li>
-                <li>The grid scale factor on Zone 6's standard parallel comes back 1.0000000 &mdash; which is the <em>definition</em> of a standard parallel, where the cone touches the ellipsoid.</li>
-            </ul>
-            <p>When independent test points all land on the values the projection's geometry requires, the coefficients went in right. That last one is the satisfying check &mdash; the scale factor being exactly unity on the standard parallel isn't something you code, it's something that falls out if and only if the math is correct.</p>
+            <p>Because projection math is difficult to check by eye, any implementation should be tested against known geometric properties (such as verifying that a zone origin maps to its defined false easting and northing, that forward-then-inverse round-trips return the starting point, and that the grid scale factor equals 1.0 along a standard parallel) as well as against a published National Geodetic Survey (NGS) control-point datasheet in the project zone [2]. The page runs offline as a single HTML file with no external libraries, and entered inputs are stored locally on your device in browser <code>localStorage</code>.</p>
 
             <details>
-                <summary>What happened to Zone 7 (the LA County story)</summary>
-                <p>Under NAD27, California had seven State Plane zones and Zone 7 was Los Angeles County alone. When the system moved to NAD83, Zone 7 was folded into Zone 5, leaving six. So an old LA-area drawing labeled &ldquo;Zone 7&rdquo; is NAD27 coordinates &mdash; different datum, different constants, roughly 90 m off its NAD83 equivalent. Converting those properly needs NADCON grid-shift files (QGIS, proj, or NGS tools do it); no closed-form approximation is safe for anything you'd stake. The tool handles NAD83; it won't pretend to shift datums it can't.</p>
-            </details>
-
-            <details>
-                <summary>Guardrails and the OSM note</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>West longitude is negative; a California point with positive longitude is in China, and the tool says so.</li>
-                    <li>SPCS grid distance is not ground distance &mdash; the combined scale factor matters on long lines. That's survey territory.</li>
-                    <li>For OSM work, treat WGS84 and NAD83 as identical (the 1&ndash;2 m difference is below imagery alignment error). For control, never.</li>
+                    <li><strong>Datum differences (NAD83, WGS84, NAD27):</strong> the calculator works strictly on NAD83/GRS80 and does not shift datums. Consumer Global Positioning System (GPS) receivers and web maps such as OpenStreetMap use World Geodetic System 1984 (WGS84), which differs from NAD83 in California by roughly 1 to 2 meters (small enough to ignore for locating a feature on aerial imagery, but unacceptable for survey control or boundary work). Different NAD83 realizations (such as HARN, CORS96, and NAD83(2011)) also differ at the centimeter to decimeter level.</li>
+                    <li><strong>Legacy California Zone 7 (NAD27):</strong> under the older North American Datum of 1927 (NAD27), California had seven zones, with Zone 7 covering Los Angeles County. Under NAD83, Zone 7 was merged into Zone 5. Drawings labeled Zone 7 use NAD27, which is roughly 90 meters off NAD83 and requires North American Datum Conversion (NADCON) grid-shift transformations in Geographic Information System (GIS) software such as QGIS, PROJ, or NGS online tools [2].</li>
+                    <li><strong>Grid distance vs. ground distance:</strong> State Plane coordinates measure distance on the map projection grid rather than true horizontal distance on the ground. Precise survey layouts and long lines require applying the combined scale factor (grid scale factor times elevation factor).</li>
+                    <li><strong>Sign and zone warnings:</strong> west longitudes in California are negative in decimal degrees. The calculator displays a warning for positive longitudes, points outside California, or points far outside the selected State Plane zone's latitude band.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence [2][3].</p>
 
             <p>The tool: <a href="/tools/coordinate-converter.html">Coordinate Converter</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Snyder, J.P., <em>Map Projections &mdash; A Working Manual</em>, USGS Professional Paper 1395. <a href="https://pubs.usgs.gov/pp/1395/report.pdf">https://pubs.usgs.gov/pp/1395/report.pdf</a></li>
-                <li>[2] NGS &mdash; State Plane Coordinate System zone definitions and datasheets. <a href="https://geodesy.noaa.gov/">https://geodesy.noaa.gov/</a></li>
-                <li>[3] EPSG registry &mdash; CA SPCS NAD83 zones are EPSG 2225&ndash;2230 (meters). <a href="https://epsg.org/">https://epsg.org/</a></li>
+                <li>Snyder, J. P., <em>Map Projections: A Working Manual</em>, USGS Professional Paper 1395 (1987), pp. 60&ndash;64 and pp. 106&ndash;109. <a href="https://pubs.usgs.gov/pp/1395/report.pdf">https://pubs.usgs.gov/pp/1395/report.pdf</a></li>
+                <li>National Geodetic Survey (NGS), <em>State Plane Coordinate System of 1983</em> (NOAA Manual NOS NGS 5) and NGS Control Point Datasheets. <a href="https://geodesy.noaa.gov/">https://geodesy.noaa.gov/</a></li>
+                <li>EPSG Geodetic Parameter Registry, California NAD83 State Plane Zones 1&ndash;6: EPSG:2225&ndash;2230 (US survey feet) and EPSG:26941&ndash;26946 (meters). <a href="https://epsg.org/">https://epsg.org/</a></li>
             </ol>
         </article>
     </main>

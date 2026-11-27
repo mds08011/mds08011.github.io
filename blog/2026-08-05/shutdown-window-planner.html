@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning a Shutdown Against a Hard Window, Buffer and All | Blog | MDS</title>
+    <title>Shutdown Window Planner | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Planning a Shutdown Against a Hard Window, Buffer and All</h1>
+                <h1>Shutdown Window Planner</h1>
                 <time datetime="2026-08-05">August 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A planned shutdown &mdash; a valve tie-in, a process isolation, a main cut-over &mdash; is a race against a clock somebody else set. Customers can be out of water for so long, the tanks hold so many hours, the lane closure ends at dawn. The work is a serial chain of steps that mostly can't overlap, and the honest question the night before is not &ldquo;can we do it?&rdquo; but &ldquo;does it fit, <em>with</em> room for the thing that goes wrong?&rdquo; I wanted to lay the steps on the clock and get a straight go or no-go.</p>
+            <p>A planned utility shutdown (such as replacing a valve, isolating a section of piping, or connecting a new water main to an existing line) has to finish within a fixed out-of-service window. That limit is usually set by storage tank capacity, permitted traffic lane closures, or the utility's customer-notification and outage rules [1]. Because shutdown tasks normally happen one after another, this calculator checks whether a sequence of steps plus a contingency buffer fits inside the allowable window.</p>
 
-            <h2>The Approach</h2>
-            <p>You list the steps in order with a duration each, set the maximum allowable out-of-service window, and add a contingency buffer as a percentage of the planned time. The tool sums the serial durations, stamps each step with its start and end clock time (rolling past midnight with a <code>+1d</code>), and compares the committed time &mdash; planned plus buffer &mdash; against the window. The verdict is a go/no-go with the slack, and a timeline draws the steps end to end with the buffer appended and the window marked, so an overrun is a bar crossing the line, not a number you have to interpret.</p>
+            <p>You enter each task with its estimated duration <code>d<sub>i</sub></code> (in minutes or hours), the maximum allowable out-of-service window <code>W</code> (in hours), and a contingency buffer percentage <code>b</code> (% of planned work time). The calculator adds the sequential step durations for the planned duration <code>P = &sum; d<sub>i</sub></code>, computes the contingency buffer <code>B = P &times; (b / 100)</code>, and finds the committed duration <code>C = P + B</code>, all converted to the same time unit (minutes). Slack against the window is <code>S = W &minus; C</code>, where positive slack means the plan fits (GO) and negative slack means it exceeds the limit (NO-GO). If you enter a planned start date and time, the tool also computes start and end clock times for each step, marking times past midnight with <code>+1d</code> (next day), and draws a horizontal timeline with the window deadline marked.</p>
 
             <figure>
-                <img src="/blog/2026-08-05/shutdown-window-planner.png" alt="The planner: eight sequenced steps with clock times, a GO verdict with 1 hour to spare, and a timeline where the step bars and gold buffer bar land just inside the 8-hour window line" loading="lazy">
-                <figcaption>Figure 1: An eight-step valve replacement &mdash; 5:50 of work plus a 20% buffer commits 7:00 of an 8-hour window. GO, with an hour to spare.</figcaption>
+                <img src="/blog/2026-08-05/shutdown-window-planner.png" alt="Screenshot of the shutdown window planner showing eight sequenced steps with start and end times, a GO result with 1 hour of slack, and a timeline chart where the step bars and buffer bar end before the 8-hour window line" loading="lazy">
+                <figcaption>Figure 1: Example eight-step valve replacement totaling 5 hours 50 minutes of work plus a 20% contingency buffer (7 hours committed) inside an 8-hour window.</figcaption>
             </figure>
 
-            <h3>The buffer lives inside the window</h3>
-            <p>The one discipline the tool is built to enforce is that the contingency buffer belongs <em>inside</em> the window, not outside it. Serial work has no float of its own &mdash; every step waits for the one before &mdash; so the reserve for the valve that won't seat, the coupling that's the wrong size, or the pipe that turns out to be a different material than the record drawing claims has to be planned time, sitting between the last real step and the deadline. Squeeze it to make a too-long job &ldquo;fit&rdquo; and you've simply deleted your only response to the overrun you should expect. And some steps can't be compressed at all no matter the manpower: a pressure test holds for its full duration, sample results come back when the lab runs them, the inspector arrives when they arrive &mdash; so the tool lets you flag those as hold points.</p>
+            <p>Including the contingency buffer inside the allowable window accounts for delays in sequential work, where a single overrun pushes back every step that follows because there is no float (spare time) between consecutive tasks. Unexpected conditions, such as an existing valve that does not close tightly or pipe dimensions that differ from the as-built record drawing, consume that reserve. The planner also lets you flag hold points, which are steps whose duration is fixed and cannot be shortened by adding more crew (such as holding pressure for a hydrostatic test, waiting for laboratory water sample results, or waiting for an inspection). Return-to-service tasks such as <a href="/tools/pipe-flushing-scour-calculator.html">pipe flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">chlorine disinfection</a> also take measurable time and should be listed as steps in the sequence [2].</p>
 
             <details>
-                <summary>Planning notes</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Set a go/no-go decision time &mdash; the point of no return where, if you're not at a given step, you abort and restore service on the old configuration rather than run past the window.</li>
-                    <li>Have a real plan B for restoring service: temporary connections, a bypass pump, a valve that lets you re-pressurize the old alignment. &ldquo;We'll hurry&rdquo; is not a contingency.</li>
-                    <li>If the committed time doesn't fit, the answer is to phase the work across two shorter shutdowns, bypass so service continues, or move the constraint &mdash; not to shave the buffer.</li>
-                    <li>The return-to-service steps have their own tools: <a href="/tools/pipe-flushing-scour-calculator.html">flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">disinfection</a> take real, plannable time. Put them in the sequence.</li>
+                    <li>This planner models a strictly serial sequence where one step starts only after the previous step finishes. Parallel crews working on independent tasks are not modeled separately.</li>
+                    <li>The utility's or owner's outage procedures, boil-water rules, and customer-notification policies govern the allowable window and required return-to-service testing.</li>
+                    <li>For tight windows, setting a go/no-go checkpoint (a time before cutting into the existing main when work can be stopped and the existing pipe returned to service) and confirming backup options such as temporary connections or a bypass pump (a temporary pump routed around the work area) helps prevent overrunning the limit.</li>
+                    <li>If the committed time exceeds the allowable window, splitting the work into shorter phased shutdowns, installing a temporary bypass, or requesting a longer window is safer than reducing the contingency buffer.</li>
                 </ul>
             </details>
 
-            <p>It's a single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser &mdash; and it slots in with the other <a href="/tools/">project-controls tools</a> like the <a href="/tools/two-week-lookahead-gantt.html">look-ahead Gantt</a>, just at the scale of one long night instead of two weeks.</p>
+            <p>The planner runs directly in the web browser with no external scripts and saves entries on your device using browser storage (<code>localStorage</code>). It sits alongside the <a href="/tools/two-week-lookahead-gantt.html">two-week look-ahead schedule</a> on the <a href="/tools/">tools</a> page for hour-by-hour outage sequencing.</p>
 
             <p>The tool: <a href="/tools/shutdown-window-planner.html">Shutdown Window Planner</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The utility's / owner's shutdown and outage procedures, and the customer-notification or boil-water policy that sets the allowable duration (governing).</li>
-                <li>[2] Companion field tools: <a href="/tools/pipe-flushing-scour-calculator.html">pipe flushing</a> and <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing</a> for the return-to-service steps.</li>
+                <li>American Water Works Association (AWWA), <em>ANSI/AWWA G200: Distribution Systems Operation and Management</em>.</li>
+                <li>American Water Works Association (AWWA), <em>ANSI/AWWA C651: Disinfecting Water Mains</em>.</li>
             </ol>
         </article>
     </main>

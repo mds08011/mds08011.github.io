@@ -35,36 +35,37 @@
                 <time datetime="2026-06-26">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Two rebar questions come up constantly and neither is hard, but both are easy to fumble in a hurry. One: how much does this mat weigh, for the order and the crane pick? Two: how long is the lap? The lap question in particular gets answered from a dog-eared table that may or may not match the bar grade, the concrete strength, or the cover condition on <em>this</em> drawing &mdash; and a lap that's too short is a rejection, while a lap that's too long is steel you bought and bent for nothing.</p>
+            <p>This page combines two reinforcing steel (rebar) calculations. The first section is a multi-line weight takeoff (a quantity list for ordering and handling estimates) that sums deformed bar (ribbed steel reinforcing bar) weights across standard US bar sizes #3 through #18, where sizes #3 through #8 correspond to nominal diameters in eighths of an inch (for example, a #4 bar has a 0.500 in nominal diameter). Each row computes <code>W = n &times; L &times; w<sub>b</sub></code>, where <code>W</code> is weight in pounds (lb), <code>n</code> is the number of bars, <code>L</code> is length per bar in feet (ft), and <code>w<sub>b</sub></code> is the ASTM A615 nominal unit weight in pounds per foot (lb/ft, such as 0.668 lb/ft for #4 bars and 1.043 lb/ft for #5 bars) [3]. Totals are shown in pounds, US short tons (2,000 lb), and with a 5% placing allowance.</p>
 
-            <h2>The Approach</h2>
-            <p>The takeoff side is a multi-line table of bar size, length, and count, using the ASTM A615 nominal weights (#4 at 0.668 lb/ft, #5 at 1.043, and so on) to total the tonnage. The splice side runs the ACI 318 simplified tension development equations. For deformed bars in tension with favorable spacing and cover (Case 1):</p>
-            <p>#6 and smaller: <code>&ell;d = (fy&middot;&psi;t&middot;&psi;e / (25&middot;&lambda;&middot;&radic;f&prime;c))&middot;db</code><br>
-            #7 and larger: <code>&ell;d = (fy&middot;&psi;t&middot;&psi;e / (20&middot;&lambda;&middot;&radic;f&prime;c))&middot;db</code></p>
-            <p>Case 2 (tighter spacing/cover) multiplies both by 1.5. The code limits are built in: the product &psi;t&middot;&psi;e is capped at 1.7, &radic;f&prime;c is capped at 100 psi, and &ell;d never goes below 12 in. A Class B tension lap is 1.3&middot;&ell;d; Class A is 1.0&middot;&ell;d [1].</p>
+            <p>The second section computes tension development length (<code>&ell;<sub>d</sub></code>, the embedment length required for concrete to develop a bar's yield strength) and tension lap splice lengths (the overlap needed when splicing two bars side by side in tension) using the ACI 318-14 simplified equations [1]. For Case 1 spacing and cover (clear spacing at least <code>d<sub>b</sub></code>, clear concrete cover at least <code>d<sub>b</sub></code>, and code-minimum transverse stirrups or ties, or clear spacing at least <code>2d<sub>b</sub></code> with clear cover at least <code>d<sub>b</sub></code>), the equations are:</p>
+            <p>#6 and smaller: <code>&ell;<sub>d</sub> = (f<sub>y</sub> &middot; &psi;<sub>t</sub> &middot; &psi;<sub>e</sub> / (25 &middot; &lambda; &middot; &radic;f&prime;<sub>c</sub>)) &middot; d<sub>b</sub></code><br>
+            #7 and larger: <code>&ell;<sub>d</sub> = (f<sub>y</sub> &middot; &psi;<sub>t</sub> &middot; &psi;<sub>e</sub> / (20 &middot; &lambda; &middot; &radic;f&prime;<sub>c</sub>)) &middot; d<sub>b</sub></code></p>
+            <p>Here <code>&ell;<sub>d</sub></code> is development length in inches (minimum 12 in), <code>f<sub>y</sub></code> is bar yield strength in pounds per square inch (psi; 60,000 for Grade 60 or 80,000 for Grade 80), <code>f&prime;<sub>c</sub></code> is concrete compressive strength in psi (with <code>&radic;f&prime;<sub>c</sub></code> capped at 100 psi), <code>d<sub>b</sub></code> is nominal bar diameter in inches, <code>&psi;<sub>t</sub></code> is the casting location factor (1.3 for horizontal top bars with more than 12 in of fresh concrete cast below, 1.0 otherwise), <code>&psi;<sub>e</sub></code> is the epoxy coating factor (1.5 for epoxy-coated bars in this simplified tool, 1.0 for uncoated bars, with the product <code>&psi;<sub>t</sub> &middot; &psi;<sub>e</sub></code> capped at 1.7), and <code>&lambda;</code> is the concrete weight factor (1.0 for normalweight concrete, 0.75 for lightweight concrete) [1]. Case 2 (tighter spacing or thinner cover) multiplies <code>&ell;<sub>d</sub></code> by 1.5. A Class B tension lap splice is <code>1.3 &middot; &ell;<sub>d</sub></code> and a Class A splice is <code>1.0 &middot; &ell;<sub>d</sub></code> (minimum 12 in for both) [1].</p>
 
             <figure>
-                <img src="/blog/2026-06-26/rebar-takeoff-lap-calculator.png" alt="Multi-line rebar takeoff totalling weight, alongside a computed Class B tension lap length" loading="lazy">
-                <figcaption>Figure 1: A wall takeoff totalling to tonnage, with the tension lap length computed from the bar and concrete inputs.</figcaption>
+                <img src="/blog/2026-06-26/rebar-takeoff-lap-calculator.png" alt="Rebar weight takeoff table totaling pounds and tons alongside the ACI 318 tension development and Class A and Class B lap splice calculator" loading="lazy">
+                <figcaption>Figure 1: Rebar weight takeoff totals and computed tension development and lap splice lengths.</figcaption>
             </figure>
 
-            <p>The tool defaults laps to Class B, which is what most drawings do unless noted &mdash; Class A needs at least twice the steel provided over the splice and no more than half the bars spliced in one place, conditions the field can rarely verify. It also flags the traps: #14 and #18 bars can't be lap spliced at all (mechanical or welded only), and Grade 80 laps run about a third longer than Grade 60, so the bar tags matter before you assume.</p>
-
             <details>
-                <summary>Why laps quietly blow the order quantity</summary>
-                <p>Each splice adds one lap length of bar per splice. On a long wall built from 60-ft stock, that's a splice every stick, and the lap allowance adds up fast enough to matter at the order &mdash; which is exactly why the takeoff and the lap calc live in the same tool. Stagger and splice location are design decisions from the drawings; this only computes the length.</p>
+                <summary>Assumptions and limits</summary>
+                <ul>
+                    <li>Most structural drawings default tension lap splices to Class B. Class A is permitted only when the area of steel provided is at least twice the area required by analysis over the entire splice length and no more than half the bars are spliced at one location [1].</li>
+                    <li>Under ACI 318, #14 and #18 bars cannot be lap spliced in tension and require mechanical couplers or welded splices, though <code>&ell;<sub>d</sub></code> still applies for anchorage [1].</li>
+                    <li>ACI 318-19 added a reinforcement grade factor <code>&psi;<sub>g</sub> = 1.15</code> for Grade 80 bars (1.0 for Grade 60), which makes Grade 80 laps roughly 53% longer than Grade 60 instead of 33% longer under ACI 318-14 [2]. This calculator uses the ACI 318-14 equations without <code>&psi;<sub>g</sub></code>, so projects governed by ACI 318-19 using Grade 80 steel should multiply the Grade 80 result by 1.15 or follow the project splice schedule.</li>
+                    <li>Each lap splice adds one lap length of bar to the takeoff. On long walls or slabs built from standard 60-ft stock bars, lap allowances should be included in the bar lengths. Splice locations, splice stagger (offsetting adjacent splices), and placing tolerances follow the structural drawings and CRSI standard practice [4].</li>
+                    <li>Where structural drawings include a lap splice schedule, the drawings govern. Confirm steel grade on the fabricator bar tags before ordering or placing. The tool runs offline in the browser and saves inputs in <code>localStorage</code> (browser-side local storage).</li>
+                </ul>
             </details>
-
-            <p>Single file, vanilla JS, the takeoff table and inputs persisted in <code>localStorage</code>.</p>
 
             <p>The tool: <a href="/tools/rebar-takeoff-lap-calculator.html">Rebar Weight Takeoff &amp; Tension Lap Splice Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ACI 318 &mdash; Building Code Requirements for Structural Concrete, development and splice provisions (Ch. 25 in current editions). <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
-                <li>[2] CRSI, <em>Manual of Standard Practice</em> &mdash; bar data and placing conventions. <a href="https://www.crsi.org/">https://www.crsi.org/</a></li>
-                <li>[3] ASTM A615 &mdash; deformed bar dimensions and weights.</li>
+                <li>ACI 318-14, <em>Building Code Requirements for Structural Concrete</em>, Chapter 25 (Section 25.4.2.2 simplified tension development length and Section 25.5.2 tension lap splices), American Concrete Institute.</li>
+                <li>ACI 318-19, <em>Building Code Requirements for Structural Concrete</em>, Table 25.4.2.3 (addition of reinforcement grade factor &psi;<sub>g</sub> for Grade 80 bars), American Concrete Institute.</li>
+                <li>ASTM A615/A615M, <em>Standard Specification for Deformed and Plain Carbon-Steel Bars for Concrete Reinforcement</em> (nominal bar diameters and unit weights), ASTM International.</li>
+                <li>Concrete Reinforcing Steel Institute (CRSI), <em>Manual of Standard Practice</em>, 29th ed. (bar data, splice detailing, and placing conventions).</li>
             </ol>
         </article>
     </main>

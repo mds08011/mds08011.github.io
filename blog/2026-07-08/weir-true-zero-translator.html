@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Translating a Raw Ultrasonic Reading into Weir Flow | Blog | MDS</title>
+    <title>Converting Ultrasonic Level Readings to Weir Flow | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,49 @@
     <main>
         <article>
             <header>
-                <h1>Translating a Raw Ultrasonic Reading into Weir Flow</h1>
+                <h1>Converting Ultrasonic Level Readings to Weir Flow</h1>
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>An ultrasonic level element over a diversion weir reports a number in feet. The question on site is GPM. Between those two is a datum problem and a hydraulics problem: the instrument has no idea where the weir crest is, and the person reading it doesn't have <code>Q = 2.5&middot;H^2.5</code> memorized. The missing ingredient is one calibration fact &mdash; the <em>true zero</em>, the instrument's reading at the moment the water surface sits exactly at the crest. Capture that once and every future reading is a subtraction away from head, and head is a power law away from flow.</p>
+            <p>An ultrasonic level element (LE) mounted over an open-channel weir measures water surface position in feet, referenced to its own sensor datum (zero point) rather than the weir crest (the bottom edge of the notch where water begins to spill). To convert a raw reading into discharge, you first need the true zero: the sensor reading when the water surface sits exactly level with the crest. Subtracting between the live reading and the true zero gives the head over the weir, which feeds a standard sharp-crested (thin-plate) weir equation.</p>
 
-            <h2>The Approach</h2>
-            <p>Enter the true zero, the weir type, and the live reading; the tool does the rest and prints GPM in numbers you can read from arm's length in sunlight:</p>
-            <p><code>H = live &minus; true zero</code> &nbsp;&rarr;&nbsp; <code>Q = 2.5&middot;H^2.5</code> (90&deg; V-notch) &nbsp;or&nbsp; <code>1.443&middot;H^2.5</code> (60&deg;) &nbsp;or&nbsp; <code>3.33&middot;L&middot;H^1.5</code> (rectangular, suppressed)</p>
-            <p>with output in GPM, MGD, and cfs. If H comes out at or below zero, the tool says &ldquo;water below crest &mdash; no flow&rdquo; instead of printing a negative flow, and it warns outside the 0.2&ndash;2.0 ft band where sharp-crested formulas are actually rated [1].</p>
+            <p>Because some overhead ultrasonic sensors output water level (reading increases as water rises) while others output distance down from the sensor face to the water (reading decreases as water rises), the calculator includes a direction toggle:</p>
+            <ul>
+                <li>Level mode: <code>H = R_live &minus; R_zero</code></li>
+                <li>Distance-down mode: <code>H = R_zero &minus; R_live</code></li>
+            </ul>
+            <p>Here <code>H</code> is head above the weir crest in feet (ft), <code>R_live</code> is the current sensor reading in ft, and <code>R_zero</code> is the true-zero crest reading in ft. When <code>H &le; 0</code>, the water surface is at or below the crest and flow is reported as zero.</p>
 
-            <h3>The direction toggle</h3>
-            <p>One wrinkle the simple subtraction misses: many ultrasonic LEs mounted above the channel report <em>distance down</em> to the water &mdash; the reading <em>falls</em> as the water rises. Subtract in the wrong direction and you get confidently wrong flow. The tool has a two-way toggle: level mode computes <code>live &minus; true zero</code>, distance mode computes <code>true zero &minus; live</code>. Either way, the true zero is captured the same way &mdash; note the reading when the water sits at the crest.</p>
+            <p>From <code>H</code>, the calculator computes discharge <code>Q</code> in cubic feet per second (cfs) using standard sharp-crested weir equations [1][2]:</p>
+            <ul>
+                <li>90&deg; V-notch weir: <code>Q = 2.5 &middot; H^2.5</code> (field form, while the U.S. Bureau of Reclamation, or USBR, also gives <code>2.49 &middot; H^2.48</code>, which agrees within about 1% over normal heads) [1]</li>
+                <li>60&deg; V-notch weir: <code>Q = 1.443 &middot; H^2.5</code> (from <code>2.5 &middot; tan(30&deg;) &middot; H^2.5</code>) [1]</li>
+                <li>Suppressed rectangular weir (full channel width, no side contractions): <code>Q = 3.33 &middot; L &middot; H^1.5</code>, where <code>L</code> is the weir crest width in ft [1]</li>
+            </ul>
+            <p>The tool converts <code>Q</code> from cfs to gallons per minute (GPM) and million gallons per day (MGD) using <code>1 cfs = 448.831 GPM = 0.646317 MGD</code>, and displays <code>H</code> in feet and inches. Inputs are saved in the browser's <code>localStorage</code> (local device storage) so the true-zero datum persists between page reloads.</p>
 
             <figure>
-                <img src="/blog/2026-07-08/weir-true-zero-translator.png" alt="The translator showing head on weir and a large GPM output from a live ultrasonic reading" loading="lazy">
-                <figcaption>Figure 1: Live reading in, head and GPM out &mdash; large enough to read off a phone at the splitter box.</figcaption>
+                <img src="/blog/2026-07-08/weir-true-zero-translator.png" alt="Screenshot of the weir flow calculator showing head on the weir and flow output in GPM, MGD, and cfs from an ultrasonic sensor reading" loading="lazy">
+                <figcaption>Figure 1: Head on weir and converted flow in GPM, MGD, and cfs from a true-zero crest reading and live sensor reading.</figcaption>
             </figure>
 
             <details>
-                <summary>Accuracy fine print</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The weir must run free &mdash; air under the nappe, no submergence from downstream.</li>
-                    <li>Ultrasonics average over a footprint and dislike foam and standing waves; if the raw reading bounces, read the trend, not one sample.</li>
-                    <li>This is a startup verification device, not a billing meter. The fuller device set (Cipolletti, contracted rectangular, submerged orifice) lives in the <a href="/tools/weir-orifice-flow-calculator.html">Weir &amp; Orifice Flow Calculator</a>.</li>
+                    <li>Free discharge is required: air must circulate beneath the nappe (the sheet of water spilling over the crest), with no downstream submergence backing water up against the weir [1][2].</li>
+                    <li>The calculator displays a general warning when <code>H &lt; 0.2 ft</code> (where surface tension causes the nappe to cling to the plate) or <code>H &gt; 2.0 ft</code>. Under USBR Chapter 7 [1] and ISO 1438 [2], the rated upper head limit for a rectangular weir depends on crest width (commonly <code>H &le; L / 3</code>) and approach-channel geometry rather than a fixed 2.0 ft ceiling.</li>
+                    <li>The rectangular equation assumes a suppressed weir. If the notch is narrower than the channel (a contracted rectangular weir), the effective crest width is reduced by <code>L &minus; 0.2 &middot; H</code>. For Cipolletti (trapezoidal) weirs, contracted rectangular weirs, or submerged orifices (underwater openings), use the <a href="/tools/weir-orifice-flow-calculator.html">Weir &amp; Orifice Flow Calculator</a>.</li>
+                    <li>Ultrasonic sensors average over an acoustic beam footprint and can fluctuate if foam, steam, or surface waves are present. Check stable readings rather than a single transient sample.</li>
+                    <li>This calculator is intended for quick verification checks rather than custody-transfer or billing measurement.</li>
                 </ul>
             </details>
 
-            <p>Single file, vanilla JS, inputs persisted in <code>localStorage</code> [2].</p>
-
-            <p>The tool: <a href="/tools/weir-true-zero-translator.html">Weir Flow &ldquo;True Zero&rdquo; Translator</a>.</p>
+            <p>Tool: <a href="/tools/weir-true-zero-translator.html">Weir Flow &ldquo;True Zero&rdquo; Translator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] USBR, <em>Water Measurement Manual</em> &mdash; weir formulas and installation conditions. <a href="https://www.usbr.gov/tsc/techreferences/mands/wmm/">https://www.usbr.gov/tsc/techreferences/mands/wmm/</a></li>
-                <li>[2] ISO 1438 &mdash; Hydrometry: thin-plate weirs.</li>
+                <li>U.S. Bureau of Reclamation (USBR), <em>Water Measurement Manual</em>, 3rd ed., Chapter 7: Weirs. <a href="https://www.usbr.gov/tsc/techreferences/mands/wmm/">https://www.usbr.gov/tsc/techreferences/mands/wmm/</a></li>
+                <li>ISO 1438:2017, <em>Hydrometry: Open channel flow measurement using thin-plate weirs</em>, International Organization for Standardization.</li>
             </ol>
         </article>
     </main>

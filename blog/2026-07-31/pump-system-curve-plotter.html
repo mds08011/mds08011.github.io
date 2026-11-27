@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finding the Pump Operating Point, and Why Parallel Pumps Don't Double Flow | Blog | MDS</title>
+    <title>Pump and System Curve Plotter | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Finding the Pump Operating Point, and Why Parallel Pumps Don't Double Flow</h1>
+                <h1>Pump and System Curve Plotter</h1>
                 <time datetime="2026-07-31">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A pump doesn't run where the catalog says it does; it runs where its curve crosses the system's. The manufacturer gives you head versus flow, the piping gives you a static lift plus friction that climbs with flow, and the pump settles at the one flow where those two are equal. It's the most fundamental picture in pumping and the one most often left as two separate PDFs. I wanted to draw both curves on the same axes and mark the intersection.</p>
+            <p>A centrifugal pump operates at the flow rate and head (energy per unit weight of water, expressed in feet of water column) where the pump's head-capacity curve intersects the piping system's head-loss curve [2]. This calculator plots both curves on the same axes, finds their intersection (the operating point), and supports combining up to four identical pumps in parallel.</p>
 
-            <h2>The Approach</h2>
-            <p>You read four to six points off the manufacturer's head-capacity curve &mdash; including shutoff (zero flow) and a far-right point &mdash; and the tool least-squares fits a quadratic, <code>H = a + bQ + cQ&sup2;</code>, through them. The system curve is <code>H<sub>static</sub> + K&middot;Q<sup>n</sup></code>, with <code>K</code> backed out from one design point (a flow and its friction head) and <code>n</code> either 2 (Darcy) or 1.85 (Hazen-Williams). Since the pump head falls and the system head rises, there's exactly one intersection when the pump can beat the static lift, and the tool bisects to it.</p>
+            <p>To enter the pump curve, read four to six pairs of flow rate <code>Q</code> in gallons per minute (gpm) and head <code>H</code> in feet (ft) from the manufacturer's chart, including shutoff (zero flow) and a point near the right end of the curve. The tool fits a least-squares quadratic curve (minimizing squared error to the entered points): <code>H<sub>pump</sub> = a + b &middot; Q + c &middot; Q&sup2;</code>, where <code>a</code> is fitted shutoff head (ft) and <code>b</code> and <code>c</code> are curve coefficients. For the piping system, enter the static head <code>H<sub>static</sub></code> (ft, the vertical elevation lift plus any discharge pressure head independent of flow) and either a design point (a flow <code>Q<sub>design</sub></code> in gpm and its friction head loss <code>H<sub>f</sub></code> in ft) or a friction coefficient <code>K</code> directly. The system curve is <code>H<sub>sys</sub> = H<sub>static</sub> + K &middot; Q<sup>n</sup></code>, where <code>K = H<sub>f</sub> / Q<sub>design</sub><sup>n</sup></code> (ft / gpm<sup>n</sup>) and <code>n</code> is the friction exponent (2.0 for Darcy-Weisbach head loss or 1.85 for Hazen-Williams head loss) [3]. When shutoff head exceeds <code>H<sub>static</sub></code>, the tool uses bisection (repeatedly halving a flow bracket) to find the flow where <code>H<sub>pump</sub> = H<sub>sys</sub></code>.</p>
 
             <figure>
-                <img src="/blog/2026-07-31/pump-system-curve-plotter.png" alt="A drooping pump curve and a rising system parabola crossing at a marked operating point of 1650 gpm at 76 ft, with the data points on the pump curve" loading="lazy">
-                <figcaption>Figure 1: Pump curve, system curve, and the operating point where they cross &mdash; 1,650 gpm at 76 ft.</figcaption>
+                <img src="/blog/2026-07-31/pump-system-curve-plotter.png" alt="Plot of a falling pump curve and a rising system curve intersecting at an operating point of 1,650 gpm and 76 ft of head, with entered pump data points marked" loading="lazy">
+                <figcaption>Figure 1: Single-pump curve, system curve, and operating point at 1,650 gpm and 76 ft of head.</figcaption>
             </figure>
 
-            <h3>Parallel pumps never double the flow</h3>
-            <p>The feature I find most worth seeing is what happens with pumps in parallel. Parallel pumps add flow at equal head, so two identical pumps make a combined curve that carries twice the flow <em>at any given head</em>. The intuition is &ldquo;two pumps, twice the water&rdquo; &mdash; and it's wrong, because the system curve climbs steeply with flow. Push more flow and friction rises as its square, so the operating point slides up a stiffening system curve. In the worked example, the second pump takes flow from about 1,650 to 2,100 gpm &mdash; a 27% gain, not 100%. The plot shows you the actual number for your system, which is the difference between a lead-lag pair that helps and one that mostly just burns power and beats itself up.</p>
+            <p>When <code>N</code> identical pumps operate in parallel (discharging into the same header), their flows add at equal head, so the combined curve evaluates the single-pump quadratic at <code>Q / N</code> [2]. Because pipe friction increases roughly with the square of flow, running a second pump moves the operating point to a higher head on the system curve, which gives less than double the single-pump flow. In the example shown in Figure 1, one pump delivers about 1,650 gpm at 76 ft, while two identical pumps in parallel deliver about 2,100 gpm (a 27% increase).</p>
 
             <details>
-                <summary>Reading the operating point like a pump curve</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>The manufacturer curve is for one speed and impeller diameter. Trim the impeller or add a VFD and it shifts &mdash; scale it with the <a href="/tools/pump-affinity-calculator.html">affinity laws</a> first, then intersect.</li>
-                    <li>Run the system curve twice: clean and new (low K), then aged and throttled (high K). The operating point walks left up the pump curve as the system stiffens, often into a worse-efficiency, higher-vibration zone.</li>
-                    <li>An operating point far right of best-efficiency (flat system, oversized pump) risks cavitation and motor overload; far left risks recirculation. Confirm it lands near BEP, and check the suction side separately with the <a href="/tools/npsha-calculator.html">NPSH available</a> tool.</li>
-                    <li>The friction head for the design point comes from a real head-loss calc &mdash; the <a href="/tools/bypass-tdh-calculator.html">total dynamic head calculator</a> gives it directly.</li>
+                    <li><strong>Speed and impeller changes:</strong> A manufacturer's curve applies to one rotational speed and impeller (rotating wheel) diameter. If a VFD (variable frequency drive) or trimmed impeller changes the curve, scale the points with the <a href="/tools/pump-affinity-calculator.html">pump affinity laws calculator</a> before plotting.</li>
+                    <li><strong>System curve range:</strong> Friction losses change with pipe age, valve throttling, and varying tank levels. Checking both a low-friction (new pipe) and high-friction (aged pipe) case shows the range of operating points.</li>
+                    <li><strong>Operating region and suction margin:</strong> Check that the operating point stays near the pump's BEP (best efficiency point). Running far right of BEP can increase the risk of cavitation (vapor bubble collapse) and motor overload, while running far left can cause internal recirculation and vibration [1]. Check suction pressure separately with the <a href="/tools/npsha-calculator.html">NPSH (net positive suction head) available calculator</a>.</li>
+                    <li><strong>Friction head input:</strong> The <a href="/tools/bypass-tdh-calculator.html">total dynamic head (TDH) calculator</a> can be used to estimate static head and friction head loss at a design flow.</li>
+                    <li><strong>Local storage:</strong> Inputs are stored locally in the browser via <code>localStorage</code> and can be cleared with the reset button.</li>
                 </ul>
             </details>
-
-            <p>It's the usual shape: one static file, vanilla JS, the quadratic fit and the intersection solved in a few microseconds, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/pump-system-curve-plotter.html">Pump System-Curve Plotter</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Hydraulic Institute / pump handbooks &mdash; head-capacity and system-head curves, and parallel operation.</li>
-                <li>[2] Companion tools: <a href="/tools/pump-affinity-calculator.html">pump affinity laws</a>, <a href="/tools/npsha-calculator.html">NPSH available</a>, and <a href="/tools/bypass-tdh-calculator.html">total dynamic head</a>.</li>
+                <li>Hydraulic Institute, <em>ANSI/HI 9.6.3 Rotodynamic Pumps - Guideline for Operating Regions</em>.</li>
+                <li>Karassik, I. J., Messina, J. P., Cooper, P., and Heald, C. C., <em>Pump Handbook</em>, 4th ed., McGraw-Hill, 2008 (Head-capacity curves, system-head curves, and parallel operation).</li>
+                <li>Crane Co., <em>Flow of Fluids Through Valves, Fittings, and Pipe</em>, Technical Paper No. 410 (TP-410).</li>
             </ol>
         </article>
     </main>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculating NPSH Available Before the Pump Tells You Itself | Blog | MDS</title>
+    <title>Calculating Net Positive Suction Head Available (NPSHa) | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,44 +31,42 @@
     <main>
         <article>
             <header>
-                <h1>Calculating NPSH Available Before the Pump Tells You Itself</h1>
+                <h1>Calculating Net Positive Suction Head Available (NPSHa)</h1>
                 <time datetime="2026-06-05">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Cavitation sounds like pumping gravel. By the time you hear it, the impeller eye is already pitting, flow and head are falling, and the amps are fluctuating. The check that prevents it is comparing the net positive suction head <em>available</em> at the pump against what the pump <em>requires</em> at its operating flow &mdash; and NPSHa is four terms that are each easy to look up and easier to forget.</p>
+            <p>This calculator computes Net Positive Suction Head Available (NPSHa) at a pump inlet and compares it against Net Positive Suction Head Required (NPSHr), the minimum suction head a pump needs at its operating flow rate. Head is pressure expressed as the height of an equivalent column of water (in feet). If pressure at the pump inlet drops to the liquid's vapor pressure, the water boils into vapor bubbles that collapse inside the pump. That process, called cavitation, can pit the rotating impeller and reduce flow and head [2].</p>
 
-            <h2>The Approach</h2>
-            <p><code>NPSHa = h_atm &plusmn; h_static &minus; h_vp &minus; h_friction</code> &nbsp;(all in feet of water)</p>
-            <p>Atmospheric pressure falls with site elevation per the standard atmosphere, <code>P = 14.696 &times; (1 &minus; 6.8754&times;10&#8315;&#8310; &times; elev)^5.2559</code> psia, converted at 2.31 ft/psi &mdash; Denver starts with about 2 ft less head than the coast. Static head is positive for flooded suction, negative for lift. Vapor pressure is interpolated from the water temperature table and subtracted, because once local pressure falls to it, the water flashes &mdash; and that flashing is cavitation [2].</p>
+            <p>The tool sums four suction terms, all in feet of water [2]:</p>
+            <p><code>NPSHa = h_atm &plusmn; h_static &minus; h_vp &minus; h_friction</code> &nbsp;(ft of water)</p>
+            <p>Here <code>h_atm</code> is local atmospheric pressure head (ft), computed from site elevation <code>elev</code> (ft above sea level) using the U.S. Standard Atmosphere formula <code>P_atm = 14.696 &times; (1 &minus; 6.8754&times;10&#8315;&#8310; &times; elev)^5.2559</code> in pounds per square inch absolute (psia, pressure relative to a full vacuum) [3] and multiplied by <code>2.31 ft/psi</code> (the conversion for clean water with specific gravity near 1). The static term <code>h_static</code> is the vertical distance (ft) between the water surface and the pump centerline, added for flooded suction (water surface above the pump) and subtracted for suction lift (water surface below the pump). The vapor pressure term <code>h_vp</code> (ft) is linearly interpolated from a 32&deg;F to 212&deg;F water vapor pressure table (in psia) and multiplied by <code>2.31 ft/psi</code>. The friction term <code>h_friction</code> (ft) is the head loss through the suction pipe, fittings, valves, and strainer.</p>
 
-            <p>The temperature term is the one that ambushes people. Vapor pressure is a rounding error at 60&deg;F (0.26 psia) but it climbs fast: 3.7 psia at 150&deg;F, 7.5 at 180&deg;F. The same suction arrangement that runs happily on cold water can cavitate outright on 130&deg;F digester recirculation.</p>
+            <p>Water temperature has a large effect on <code>h_vp</code>: vapor pressure is 0.26 psia (about 0.6 ft of water) at 60&deg;F, rises to 2.22 psia (about 5.1 ft) at 130&deg;F, and reaches 7.51 psia (about 17.3 ft) at 180&deg;F. When an optional NPSHr value (from the manufacturer's certified pump curve at the actual operating flow) and a required safety margin are entered, the calculator reports whether NPSHa meets NPSHr plus the margin. Hydraulic Institute guideline ANSI/HI 9.6.1 recommends maintaining an explicit margin above NPSHr because published NPSHr typically marks a 3% head drop where cavitation is already underway [1].</p>
 
             <figure>
-                <img src="/blog/2026-06-05/npsha-calculator.png" alt="Calculator summing atmospheric, static, vapor pressure, and friction terms into NPSHa with margin over NPSHr" loading="lazy">
-                <figcaption>Figure 1: The four-term sum with the margin over the pump's NPSHr called out.</figcaption>
+                <img src="/blog/2026-06-05/npsha-calculator.png" alt="Screenshot of the NPSH Available calculator showing atmospheric, static, vapor pressure, and friction head terms, total NPSHa, and margin over NPSHr" loading="lazy">
+                <figcaption>Figure 1: Breakdown of the four suction head terms and the resulting margin over NPSHr.</figcaption>
             </figure>
 
-            <p>The tool compares the result against the NPSHr you read off the manufacturer's curve and shows the margin &mdash; the Hydraulic Institute publishes margin guidance because running at exactly NPSHr is itself a cavitation regime [1].</p>
-
             <details>
-                <summary>Field diagnosis notes baked into the tool</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>NPSHr rises steeply with flow. A pump running far out to the right of its curve (low system head &mdash; short bypass discharge, say) can cavitate purely from over-flow. Throttling the discharge walks it back up the curve.</li>
-                    <li>The classic marginal case is additive: self-priming trash pump + hot day + long suction hose + plugged strainer + wet well drawn low. Every term moves the same direction.</li>
-                    <li>NPSHa margin is not a substitute for intake hydraulics &mdash; submergence against vortexing is a separate Hydraulic Institute check.</li>
+                    <li>The vapor pressure table and <code>2.31 ft/psi</code> conversion assume clean water with specific gravity close to 1. Other liquids or temperatures outside 32&deg;F to 212&deg;F need fluid-specific properties.</li>
+                    <li>Read NPSHr from the manufacturer's certified pump curve at the actual operating flow rate, not just the rated design point. NPSHr rises steeply at high flow rates, so a pump running against low system head (total elevation lift plus pipe friction) can run out of margin unless flow is reduced, such as by partially closing a discharge valve.</li>
+                    <li>Evaluate suction conditions at the lowest expected water level and include strainer or foot-valve losses, especially when a suction screen can partially plug.</li>
+                    <li>An adequate NPSHa margin does not guarantee good intake hydraulics. Minimum water submergence above the suction inlet to prevent air-drawing vortices is a separate check under Hydraulic Institute intake standards.</li>
                 </ul>
             </details>
 
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs in the browser and stores your last inputs locally in browser storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/npsha-calculator.html">NPSH Available Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ANSI/HI 9.6.1 &mdash; Rotodynamic Pumps: Guideline for NPSH Margin. <a href="https://www.pumps.org/">https://www.pumps.org/</a></li>
-                <li>[2] Karassik et al., <em>Pump Handbook</em> &mdash; NPSH fundamentals.</li>
-                <li>[3] Manufacturer's certified pump curve &mdash; NPSHr at the actual operating flow (governing input).</li>
+                <li>ANSI/HI 9.6.1, <em>Rotodynamic Pumps: Guideline for NPSH Margin</em>, Hydraulic Institute.</li>
+                <li>I. J. Karassik, J. P. Messina, P. Cooper, and C. C. Heald, <em>Pump Handbook</em>, 4th ed., McGraw-Hill, 2008 (NPSH and cavitation fundamentals).</li>
+                <li><em>U.S. Standard Atmosphere, 1976</em>, NOAA-S/T 76-1562, National Oceanic and Atmospheric Administration, NASA, and U.S. Air Force, 1976 (pressure versus altitude relation).</li>
             </ol>
         </article>
     </main>

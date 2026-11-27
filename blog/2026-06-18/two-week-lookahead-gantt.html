@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Look-Ahead Gantt That Deliberately Has No Dependency Logic | Blog | MDS</title>
+    <title>Two-Week Look-Ahead Gantt Chart | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,36 @@
     <main>
         <article>
             <header>
-                <h1>A Look-Ahead Gantt That Deliberately Has No Dependency Logic</h1>
+                <h1>Two-Week Look-Ahead Gantt Chart</h1>
                 <time datetime="2026-06-18">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>The two-week look-ahead is the most useful planning artifact on a jobsite and the one most often built wrong. Hand a foreman a fragment of the P6 schedule with logic ties and float and it becomes an argument about the master schedule; hand them a blank grid and they'll fill it with what they actually intend to do next week. I wanted a Gantt that draws the second thing &mdash; tasks as bars across a short date axis &mdash; and pointedly refuses to be the first.</p>
+            <p>This tool draws a short-range Gantt chart (a horizontal bar chart of scheduled tasks across calendar dates) for a construction look-ahead schedule (a near-term plan covering upcoming field work). Choose a window start date and window length (7, 14, or 21 days), then click <code>+ Add task</code> to enter each task's name, optional crew or trade label, start date, duration, and duration mode (calendar days or working days). Tasks sharing the same crew label share a bar color from a four-color palette. Edit any cell directly to update the chart, delete a row with the <code>&times;</code> button, or clear all tasks with Clear all data.</p>
 
-            <h2>The Approach</h2>
-            <p>You set a window start and a length (7, 14, or 21 days) and add tasks: a name, an optional crew label, a start date, a duration, and a toggle for whether that duration is calendar or working days. The chart shades weekend columns, drops a line on today, and draws one bar per task, colored by crew. Tasks that run past the window get a clipped bar and a line in a flag list; a small stats panel reports how many tasks fall in the window and which day is busiest. That's the whole tool. There is no field for a predecessor, because there is no predecessor.</p>
+            <p>In calendar-day mode, the inclusive finish date is <code>end = start + (duration &minus; 1)</code> days, where <code>start</code> is the task start date and <code>duration</code> is the task length in calendar days (so a 5-day task starting Friday ends Tuesday). In working-day mode, the tool starts on <code>start</code> and advances one day at a time, counting only weekdays (Monday through Friday) until the count equals <code>duration</code> working days (so a 5-working-day task starting Friday spans Friday plus Monday through Thursday, ending the following Thursday). Each bar is drawn as one continuous block across shaded weekend columns so skipped weekend days stay visible. Entered <code>YYYY-MM-DD</code> strings are split into year, month, and day numbers and built as local dates instead of calling JavaScript's <code>new Date("YYYY-MM-DD")</code>, which treats date-only strings as UTC (Coordinated Universal Time) midnight and can shift displayed dates back one day in western timezones. Below the chart, the summary table reports how many tasks overlap the window, lists any tasks starting before or running past the window (marked with clipped bar ends), and identifies the busiest day by peak concurrent tasks.</p>
 
             <figure>
-                <img src="/blog/2026-06-18/two-week-lookahead-gantt.png" alt="A 14-day Gantt with weekend shading, a today line, six crew-colored task bars, and a stats panel flagging a task outside the window" loading="lazy">
-                <figcaption>Figure 1: Bars across a two-week window, weekends shaded and today marked &mdash; and a flag for the task that runs past the window's end.</figcaption>
+                <img src="/blog/2026-06-18/two-week-lookahead-gantt.png" alt="A 14-day Gantt chart showing weekend shading, a vertical today marker, crew-colored task bars, and a summary panel listing tasks extending past the window" loading="lazy">
+                <figcaption>Figure 1: Fourteen-day look-ahead chart with shaded weekends, today marker, and clipped-task flags.</figcaption>
             </figure>
 
-            <h3>Working-day durations, computed the way a foreman means them</h3>
-            <p>The one bit of arithmetic worth getting right is the working-day mode. A five-working-day task starting on a Friday does not end four days later on Tuesday &mdash; it spans Friday, then Monday through Thursday, and ends the following Thursday, six calendar days out. The tool walks the calendar counting only weekdays until it has counted the duration, and draws the bar as one continuous block so the shaded weekend shows the skip underneath it. Dates are parsed as local values, split from the <code>YYYY-MM-DD</code> string, so the axis never drifts a day across a timezone boundary [2].</p>
+            <p>All tasks and window settings are saved in browser <code>localStorage</code> (local storage on your device). This tool intentionally omits task predecessors (prior tasks that control when a following task can start), logic ties (automatic dependency links), float (allowable schedule slippage), and critical path (the longest linked sequence setting project completion) calculations. Those belong in the governing project master schedule (such as Primavera P6 or Microsoft Project).</p>
 
             <details>
-                <summary>Why no dependencies is a feature, not an omission</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>A look-ahead is a commitment device. It works when it's built <em>with</em> the foreman and updated weekly &mdash; not printed once and taped to the trailer wall.</li>
-                    <li>Its real job is make-ready: surfacing constraints &mdash; material, access, information, manpower &mdash; early enough to clear them before the work is due [1].</li>
-                    <li>Anything still on the look-ahead three weeks running is a constraint problem, not a scheduling problem. Bumping it another week doesn't make it ready.</li>
-                    <li>If moving one bar should move another, you're describing logic ties, and those belong in the master schedule where float and the critical path actually live &mdash; not in a bigger look-ahead.</li>
+                    <li>In lean construction (the Last Planner System), look-ahead planning supports make-ready planning: checking that materials, site access, design information, and crew assignments are ready before work starts [1].</li>
+                    <li>When a task carries over across several consecutive look-ahead windows, it usually reflects an unresolved prerequisite rather than a simple date adjustment [1].</li>
+                    <li>Working-day mode skips Saturdays and Sundays only. It does not automatically skip project-specific holidays.</li>
+                    <li>Contractual dates, task dependencies, float, and critical path logic remain governed by the project master schedule.</li>
                 </ul>
             </details>
-
-            <p>The master schedule is still the governing document for dates and sequence [2]. This is the near-term commitment view that sits in front of it. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/two-week-lookahead-gantt.html">Two-Week Look-Ahead Gantt</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Ballard, G. (2000). <em>The Last Planner System of Production Control</em> &mdash; look-ahead planning and make-ready (lean construction).</li>
-                <li>[2] The project master schedule (Primavera P6, MS Project, or equivalent) &mdash; the governing document for dates, durations, logic, and float.</li>
+                <li>Ballard, H. G. (2000). <em>The Last Planner System of Production Control</em>. PhD dissertation, Faculty of Engineering, University of Birmingham.</li>
             </ol>
         </article>
     </main>

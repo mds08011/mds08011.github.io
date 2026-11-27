@@ -35,38 +35,32 @@
                 <time datetime="2026-06-19">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Trench paving is ordered in tons, but the encroachment permit thinks in geometry: a T-patch whose base course runs at trench width and whose surface course extends a cutback beyond the saw cut on each side. Converting the T-shaped cross-section to tonnage per course, with a realistic waste factor, is the difference between the paving crew finishing the day and a partial load of cooling mix with nowhere to go.</p>
+            <p>This calculator converts pavement patch dimensions into order quantities of HMA (hot-mix asphalt) in short tons and truckloads. Under Patch Geometry, select Trench T-patch (a two-layer trench repair where the top layer overhangs the trench edges like the letter T) or Simple patch (a single rectangular layer). For a T-patch, enter patch length, trench width, surface cutback width on each side (the extra strip of existing pavement removed beyond the saw cut so the top layer rests on undisturbed ground), base course depth (the lower structural asphalt layer placed inside the trench width), and surface course depth (the top wearing layer). Under Ordering, set compacted density (default 145 pcf, pounds per cubic foot), waste factor (default 10%), and truck capacity (default 15 tons).</p>
 
-            <h2>The Approach</h2>
-            <p>Per course, it's the standard density conversion:</p>
-            <p><code>tons = area (sf) &times; depth (in) / 12 &times; density (pcf) / 2000</code></p>
-            <p>with the T-patch geometry handled by running the base course at trench width and the surface course at trench width plus the cutback each side. The pay area reported is the surface (widest) footprint in SF and SY, because that's usually what the permit measures. A handy cross-check the tool exposes: at 145 pcf, one ton covers about 16.5 sf per inch of compacted depth &mdash; the &ldquo;110 lb per square yard per inch&rdquo; rule estimators carry around [2].</p>
+            <p>For each course, neat tonnage is <code>T = (A &times; d / 12) &times; &gamma; / 2000</code>, where <code>T</code> is neat HMA weight in short tons (2,000 lb per ton), <code>A</code> is course area in square feet (sf), <code>d</code> is compacted lift thickness in inches (in.), and <code>&gamma;</code> is compacted asphalt density in pcf. For a T-patch, the base area is <code>A_base = L &times; W_trench</code> and the surface area (also reported as pay area in sf and square yards, sy) is <code>A_surf = L &times; (W_trench + 2 &times; c)</code>, where <code>L</code> is patch length in feet, <code>W_trench</code> is trench width in feet, and <code>c</code> is the cutback width on each side in feet. Total order tonnage is <code>T_order = (T_base + T_surf) &times; (1 + w / 100)</code>, where <code>w</code> is the waste factor in percent, and truckloads are <code>N = ceil(T_order / C_truck)</code> for truck capacity <code>C_truck</code> in tons. As a cross-check, at 145 pcf one inch of compacted asphalt weighs 12.1 lb/sf (109 lb/sy, close to the common 110 lb per square yard per inch rule of thumb), so one short ton covers about 165.5 sf (18.4 sy) at 1 inch of compacted depth [1].</p>
 
             <figure>
-                <img src="/blog/2026-06-19/asphalt-patch-calculator.png" alt="Calculator showing base and surface course tonnage for a T-patch with cutback, waste factor, and truckloads" loading="lazy">
-                <figcaption>Figure 1: A T-patch split into base and surface course tonnage with the waste factor applied.</figcaption>
+                <img src="/blog/2026-06-19/asphalt-patch-calculator.png" alt="Calculator showing base and surface course tonnage, pay area, total tonnage with waste factor, and truckloads for an asphalt T-patch" loading="lazy">
+                <figcaption>Figure 1: Base and surface course tonnage, pay area, and truckloads for a T-patch with waste factor.</figcaption>
             </figure>
 
+            <p>Inputs are saved in browser <code>localStorage</code> (local storage on your device) and can be reset with Clear all inputs. The calculator flags orders smaller than one truckload as a reminder to check plant minimums. Final patch dimensions, cutback widths, and mix types are governed by the agency encroachment permit (the permit authorizing work in the public right-of-way) and standard trench restoration details, and actual compacted density comes from the approved mix design (the laboratory-approved asphalt mix recipe).</p>
+
             <details>
-                <summary>Where the waste actually comes from</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Small patches have brutal waste percentages by construction: a 10-ton minimum load against a 6-ton patch is 40% &ldquo;waste&rdquo; no matter how careful the crew is. Batching nearby patches into one paving day is the real fix.</li>
-                    <li>HMA loses workability with temperature &mdash; a long haul or a slow crew on a cold day means more raked-off, unusable mix. That's waste factor too.</li>
-                    <li>Milling the cutback instead of a second saw cut usually gives a better joint and a cleaner tack surface, if the permit allows it.</li>
-                    <li>Confirm whether the permit measures by surface area or tonnage tickets &mdash; and keep the tickets either way.</li>
+                    <li>Asphalt plants often require a minimum order weight (for example, 10 tons). Ordering 10 tons for a 6-ton patch produces 40% excess mix regardless of placement accuracy, so grouping nearby patches into one paving run reduces leftover material.</li>
+                    <li>HMA loses workability as it cools, so long haul distances, cold ambient temperatures, or hand placement around utility castings can increase waste [1].</li>
+                    <li>Where permitted by the agency, milling (grinding off the top pavement layer) the cutback instead of making a second full-depth saw cut can provide a stepped joint and clean surface for the tack coat (the asphalt emulsion sprayed to bond new mix to existing pavement) [1].</li>
+                    <li>Check whether the encroachment permit measures restoration by surface area (sy) or by plant tonnage tickets (scale weight slips for delivered loads), and keep delivery tickets for project records.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The agency's standard trench restoration detail governs the dimensions; the approved mix design governs the density [1][3].</p>
 
             <p>The tool: <a href="/tools/asphalt-patch-calculator.html">Asphalt Patch Tonnage Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Agency encroachment permit / standard trench restoration details &mdash; governing dimensions and mix requirements.</li>
-                <li>[2] Asphalt Institute MS-22, <em>Construction of Quality Asphalt Pavements</em>. <a href="https://www.asphaltinstitute.org/">https://www.asphaltinstitute.org/</a></li>
-                <li>[3] Approved mix design &mdash; actual compacted density.</li>
+                <li>Asphalt Institute, <em>MS-22: Construction of Quality Asphalt Pavements</em>, 3rd ed. (2020).</li>
             </ol>
         </article>
     </main>

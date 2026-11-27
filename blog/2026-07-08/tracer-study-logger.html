@@ -35,45 +35,37 @@
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A tracer study is two time series that have to line up: chlorine residuals from grab samples, and flow from the SCADA historian. The flow side keeps immaculate time. The sample side is a tech holding a bottle, a reagent kit, and a phone, writing &ldquo;~10:35&rdquo; on a wet clipboard &mdash; and at analysis time, that reconstructed timestamp column is exactly what the T10 curve hangs on. The weak link isn't the chemistry; it's the clock.</p>
+            <p>A drinking-water tracer study measures how long water actually takes to pass through a disinfection contact basin or clearwell by tracking a chemical tracer (often a step change in chlorine residual, the remaining free or total chlorine concentration) at the outlet [1]. The test data are used to find <code>T10</code> (the detention time at which 10% of the tracer reaches the outlet, min) and the baffling factor <code>BF = T10 / HDT</code>, where <code>HDT = V / Q</code> is the theoretical hydraulic detention time (min), <code>V</code> is the basin water volume (gal), and <code>Q</code> is the plant flow rate (gpm) [1].</p>
 
-            <h2>The Approach</h2>
-            <p>The tool is a digital clipboard with one oversized control: a full-width <strong>LOG SAMPLE TIME</strong> button sized for a gloved thumb in sunlight. Tapping it captures the device timestamp to the second and opens a table row with an empty field for the residual, which gets back-filled whenever the titration catches up. Grab now, type later &mdash; the time column stays trustworthy because it was never typed at all.</p>
+            <p>During a study, grab samples (individual water samples collected at specific times) are tested for chlorine concentration in parts per million (ppm, equivalent to mg/L in dilute water) using a benchtop meter or field titration kit, while flow rates are recorded by the plant's Supervisory Control and Data Acquisition (SCADA) historian (the automated process data logger). This tool provides a large <strong>LOG SAMPLE TIME</strong> button that records the device clock to the second and opens a table row with a blank input for the chlorine concentration, so sample times can be recorded when the bottle is filled and concentrations entered once the measurement is ready.</p>
 
             <figure>
-                <img src="/blog/2026-07-08/tracer-study-logger.png" alt="The logger with a large LOG SAMPLE TIME button and rows of timestamps with chlorine ppm entry fields" loading="lazy">
-                <figcaption>Figure 1: One tap per grab; the ppm column fills in whenever the bench catches up.</figcaption>
+                <img src="/blog/2026-07-08/tracer-study-logger.png" alt="Tracer study sample logger with a LOG SAMPLE TIME button and a table of timestamps and chlorine ppm inputs" loading="lazy">
+                <figcaption>Figure 1: Sample timestamp button and log table for entering chlorine residual measurements in ppm.</figcaption>
             </figure>
 
-            <p>The log persists in <code>localStorage</code> (with a <code>confirm()</code>-guarded clear), and exports to CSV via the Blob API for the join against the historian's flow trend &mdash; chronological in the file even though the screen shows newest first [1].</p>
-
-            <h3>The timestamp bug this avoids</h3>
-            <p>Same lesson as the <a href="/blog/2026-07-07/swppp-rain-tracker.html">SWPPP tracker</a>, opposite direction: formatting a JS date with <code>toISOString()</code> renders <em>UTC</em>, which in any US timezone shifts every sample by hours and can shift the date. The logger builds its stamps from local components:</p>
-            <pre><code>// wrong: renders UTC — 10:35 PDT becomes 17:35 in the log
-new Date().toISOString()
-
-// right: local wall-clock time, matching the historian
-d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate())
-  + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())</code></pre>
+            <p>Rows display newest-first on screen, persist in browser <code>localStorage</code> (local storage on the device) with a confirmation dialog (<code>confirm()</code>) before clearing, and export chronologically as a comma-separated values (CSV) file using the browser's <code>Blob</code> file download API. Like the <a href="/blog/2026-07-07/swppp-rain-tracker.html">Stormwater Pollution Prevention Plan (SWPPP) rain tracker</a>, the logger avoids JavaScript's <code>toISOString()</code> method because it outputs Coordinated Universal Time (UTC), which shifts US local times by several hours and can shift the calendar date. Instead, timestamps are built from local clock components, where <code>pad(n)</code> adds a leading zero to single-digit numbers and <code>getMonth() + 1</code> converts JavaScript's 0-to-11 month index to 1-to-12:</p>
+            <pre><code>function pad(n) { return n &lt; 10 ? "0" + n : "" + n; }
+var d = new Date(ms);
+var ts = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())
+  + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());</code></pre>
 
             <details>
-                <summary>Clock discipline for the SCADA join</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>Before the first grab, compare the phone's clock to the plant historian's clock and write down the offset &mdash; a two-minute skew looks like a baffling-factor error at analysis time.</li>
-                    <li>Sample on a fixed cadence through the breakthrough curve (every couple minutes), stretching out on the tail &mdash; the join and the curve both come out cleaner.</li>
-                    <li>Export the CSV and join on the timestamp column, applying the noted offset as a constant shift.</li>
+                    <li><strong>Clock offset:</strong> Before collecting the first sample, compare the phone or tablet clock against the SCADA historian clock and record any difference. Applying that constant offset during analysis keeps clock skew from distorting <code>T10</code> and the baffling factor [1].</li>
+                    <li><strong>Sampling cadence:</strong> Collecting samples on a fixed interval (such as every 2 minutes) across the breakthrough curve (the period when outlet tracer concentration rises sharply) and spacing samples farther apart along the tail (where concentration levels off) simplifies plotting and data alignment [1].</li>
+                    <li><strong>Joining with flow data:</strong> Export the CSV and align it with the historian's flow export on the adjusted timestamp column in a spreadsheet (for example, using <code>XLOOKUP</code> or <code>VLOOKUP</code> in Excel) or a script (such as <code>pandas.merge_asof</code> in Python).</li>
+                    <li><strong>Regulatory protocols:</strong> Check the governing state drinking-water primacy agency protocol for tracer selection, sampling intervals, and <code>T10</code> calculation rules, as state requirements may add to EPA guidance.</li>
+                    <li><strong>Browser storage:</strong> The logger is a single HTML page written in plain JavaScript that runs offline. Clearing browser site data or switching devices removes <code>localStorage</code> entries, so export the CSV after completing a study.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, no dependencies, nothing leaves the browser.</p>
 
             <p>The tool: <a href="/tools/tracer-study-logger.html">Tracer Study Sample Logger</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> &mdash; tracer study procedure and T10 determination. <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
-                <li>[2] State primacy agency tracer study protocol, where one governs the facility.</li>
+                <li>U.S. Environmental Protection Agency (EPA), <em>Disinfection Profiling and Benchmarking Technical Guidance Manual</em> (EPA 815-R-20-003, 2020; originally EPA 815-R-99-013, 1999), tracer study procedure and T10 determination. Surface Water Treatment Rules overview: <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
             </ol>
         </article>
     </main>

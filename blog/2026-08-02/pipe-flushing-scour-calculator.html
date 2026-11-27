@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flushing a Water Main: Velocity Scours, Not Flow | Blog | MDS</title>
+    <title>Pipe Flushing and Scour Velocity Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Flushing a Water Main: Velocity Scours, Not Flow</h1>
+                <h1>Pipe Flushing and Scour Velocity Calculator</h1>
                 <time datetime="2026-08-02">August 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>&ldquo;We flushed it&rdquo; and &ldquo;we scoured it&rdquo; are not the same claim, and the difference is velocity. Opening a hydrant and moving a lot of water feels productive, but if the water is crawling through a big main it isn't lifting anything off the wall. What clears sediment, air, and biofilm is <em>velocity</em> &mdash; and reaching it on a large main is harder than it looks. I wanted a calculator that turns a target velocity into the flow it demands, and tells me whether that flow is even realistic from a hydrant.</p>
+            <p>Flushing a water main (a pressurized potable water distribution pipe) relies on water velocity to move trapped air, loose sediment, and biofilm (surface microbial growth) out of the pipe. This calculator converts between flow rate and full-pipe velocity, estimates pipe storage volume, and calculates the flush duration and total water volume needed to exchange a chosen number of pipe volumes (multiples of the water held inside the flushed segment).</p>
 
-            <h2>The Approach</h2>
-            <p>The full-pipe relationship is <code>V (ft/s) = 0.4085 &middot; Q (gpm) / D (in)&sup2;</code>, and inverted, <code>Q = 2.448 &middot; V &middot; D&sup2;</code>. Give the tool a diameter and a target velocity and it returns the required flow; give it an available flow instead and it returns the velocity you'll actually get. It also works out the pipe volume (<code>0.0408 &middot; D&sup2;</code> gallons per foot), the flush duration to exchange a chosen number of pipe volumes, and the total water used &mdash; the number you'll be dechlorinating and disposing of. A gauge places the velocity in one of three bands: below 2.5 ft/s is a rinse, 2.5&ndash;5 is conventional flushing, and 5+ is real scour.</p>
+            <p>Enter the pipe's actual inside diameter <code>D</code> (in inches, rather than nominal pipe size, since wall thickness varies by material and pressure class), the length flushed <code>L</code> (ft), and the number of pipe volumes <code>N</code>. Choose either to solve for the required flow from a target velocity or to solve for the velocity produced by an available flow (for example, from a hydrant flow test). From full-pipe continuity (<code>Q = A &middot; V</code> with circular area <code>A = (&pi; / 4) &middot; (D / 12)&sup2;</code> and 448.831 gpm per cfs), the tool uses <code>V = 0.4085 &middot; Q / D&sup2;</code> and <code>Q = 2.448 &middot; V &middot; D&sup2;</code>, where <code>V</code> is average velocity in feet per second (ft/s), <code>Q</code> is flow rate in gallons per minute (gpm), and <code>D</code> is inside diameter in inches. Pipe capacity per foot is <code>v<sub>ft</sub> = 0.0408 &middot; D&sup2;</code> (gal/ft, from <code>(&pi; / 4) &middot; 7.4805 / 144</code>), total pipe volume is <code>Vol = v<sub>ft</sub> &middot; L</code> (gal), total water used is <code>Vol<sub>total</sub> = N &middot; Vol</code> (gal), and flush duration is <code>t = Vol<sub>total</sub> / Q</code> (min).</p>
 
             <figure>
-                <img src="/blog/2026-08-02/pipe-flushing-scour-calculator.png" alt="The flushing calculator: 8-inch main at 5 ft/s needs 783 gpm, 1306-gallon pipe volume, 5-minute flush, 3917 gallons total, with a velocity gauge marker in the scour band" loading="lazy">
-                <figcaption>Figure 1: To scour an 8-inch main at 5 ft/s you need 783 gpm &mdash; and the gauge shows where that lands.</figcaption>
+                <img src="/blog/2026-08-02/pipe-flushing-scour-calculator.png" alt="Pipe flushing calculator showing an 8-inch main at 5 ft/s requiring 783 gpm, with a 1,306-gallon pipe volume, 5-minute flush duration, 3,917 gallons total water, and the velocity marker in the scour band" loading="lazy">
+                <figcaption>Figure 1: Example calculation for an 8 in. inside-diameter main, 500 ft long, flushed at 5.0 ft/s for 3 pipe volumes (783 gpm, 5.0 min, 3,917 gal).</figcaption>
             </figure>
 
-            <h3>Why big mains need unidirectional flushing</h3>
-            <p>The <code>D&sup2;</code> in the denominator is the whole story. Velocity falls with the square of diameter, so doubling the pipe size <em>quarters</em> the velocity at the same flow. An 8-inch main hits scour velocity at a manageable ~780 gpm; a 16-inch main at the same flow is barely moving, and to scour it you'd need over 3,000 gpm &mdash; far more than any single 2½-inch hydrant outlet will pass at usable residual pressure. That's the entire reason unidirectional flushing exists: instead of opening one hydrant and hoping, you close valves to force the system's available flow down a single pipe, concentrating it until the velocity is actually there. The tool flags when the required flow outruns what a hydrant can give, which is the moment to stop wishing and start isolating.</p>
+            <p>Because velocity varies inversely with <code>D&sup2;</code>, doubling pipe diameter cuts velocity to one quarter at the same flow rate. Reaching a 5.0 ft/s unidirectional scour (pipe-wall cleaning) velocity requires about 783 gpm in an 8 in. main, but about 3,133 gpm in a 16 in. main [3]. A single 2-1/2-inch fire hydrant outlet typically passes around 1,000 to 1,200 gpm while maintaining usable residual pressure (pressure remaining in the main during flow) [2]. Unidirectional flushing addresses this by closing isolating valves in a planned sequence so available flow moves in one direction through a single pipe run rather than splitting across looped mains [3].</p>
 
             <details>
-                <summary>Flushing field notes</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>New-main disinfection (AWWA C651) flushes both before chlorination and to remove the heavily chlorinated water after &mdash; 2.5 ft/s is the usual floor. Pair this with the <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing calculator</a>.</li>
-                    <li>Heavily chlorinated flush water must be dechlorinated before it hits a storm drain or stream; the total-water figure is what you're neutralizing.</li>
-                    <li>Open and close hydrants and valves slowly. A slammed hydrant spikes velocity, tears loose too much at once, and becomes discolored-water complaints across the neighborhood.</li>
-                    <li>Near the edge of what a hydrant can deliver? Confirm with a hydrant flow test, or isolate valves to concentrate the flow, before you commit to a velocity you can't actually reach.</li>
+                    <li><strong>AWWA C651 minimum velocity:</strong> The calculator's gauge displays bands below 2.5 ft/s, 2.5 to 5.0 ft/s, and 5.0+ ft/s, with presets at 2.5 ft/s and 5.0 ft/s plus a custom field. Note that AWWA (American Water Works Association) C651-14 and later editions set the minimum flushing velocity for disinfecting new water mains at <strong>3.0 ft/s</strong> (increased from 2.5 ft/s in the 2005 edition) [1]. Enter 3.0 in the custom target field when checking compliance with current C651.</li>
+                    <li><strong>Disinfection and dechlorination:</strong> New-main disinfection involves flushing before chlorination and flushing out heavily chlorinated water afterward [1]. Heavily chlorinated water generally requires dechlorination (chemical neutralization) before discharging to storm drains or surface waters. For dosing calculations, see the <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing and disinfection calculator</a>.</li>
+                    <li><strong>Valve and hydrant operation:</strong> Hydrants and isolation valves are normally opened and closed slowly to limit pressure surges and sudden sediment disturbance [2], [3].</li>
+                    <li><strong>Available hydrant flow:</strong> When required flow approaches hydrant capacity, confirm available discharge and residual pressure with a hydrant flow test (measuring outlet velocity pressure and system pressure) [2].</li>
+                    <li><strong>Local storage:</strong> Inputs are stored locally in the browser via <code>localStorage</code> and can be cleared with the reset button.</li>
                 </ul>
             </details>
-
-            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/pipe-flushing-scour-calculator.html">Pipe Flushing &amp; Scour Velocity Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] AWWA C651 &mdash; Disinfecting Water Mains (flushing velocity and procedure).</li>
-                <li>[2] AWWA M17 / unidirectional flushing program guidance. Companion tool: <a href="/tools/chlorine-dosing-calculator.html">chlorine dosing &amp; disinfection calculator</a>.</li>
+                <li>American Water Works Association (AWWA), <em>ANSI/AWWA C651, Disinfecting Water Mains</em> (C651-14 and later editions specify a 3.0 ft/s minimum flushing velocity).</li>
+                <li>American Water Works Association (AWWA), <em>Manual M17, Fire Hydrants: Installation, Field Testing, and Maintenance</em> (hydrant outlet flow capacity and flow testing).</li>
+                <li>American Water Works Association (AWWA), <em>Manual M68, Water Quality in Distribution Systems</em> (unidirectional flushing and scour velocity guidance).</li>
             </ol>
         </article>
     </main>

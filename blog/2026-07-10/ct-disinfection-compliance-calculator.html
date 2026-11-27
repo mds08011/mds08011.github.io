@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CT Compliance, T10, and Why Peak Flow Governs Disinfection | Blog | MDS</title>
+    <title>CT Disinfection Compliance Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,45 @@
     <main>
         <article>
             <header>
-                <h1>CT Compliance, T10, and Why Peak Flow Governs Disinfection</h1>
+                <h1>CT Disinfection Compliance Calculator</h1>
                 <time datetime="2026-07-10">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>CT compliance under the Surface Water Treatment Rule is a small ratio wrapped around two numbers that are easy to get subtly wrong. CT-achieved is residual concentration times contact time; CT-required is a value from a regulatory table. The trap is that both the &ldquo;time&rdquo; and the &ldquo;required&rdquo; hide assumptions &mdash; the time is not the tank's theoretical detention time, and the required value is a specific cell in a table that swings steeply with temperature and pH. I wanted a calculator that does the ratio honestly without pretending to know your table cell for you.</p>
+            <p>Under the U.S. Surface Water Treatment Rule (SWTR, 40 CFR Part 141 Subpart H), drinking-water disinfection performance is evaluated using CT (Concentration times Time, in mg&middot;min/L) [1][2]. This calculator computes the achieved CT for one or more sequential disinfection segments (such as a contact pipeline followed by a clearwell, or treated-water storage basin), divides each segment's achieved CT by the required CT you look up from the regulatory tables, and sums the resulting inactivation ratios.</p>
 
-            <h2>The Approach</h2>
-            <p>Each disinfection segment gets a row: contact volume, peak flow, a baffling factor, the measured residual, and the CT-required you read from the governing table. The tool computes <code>T10 = (volume &divide; peak flow) &times; baffling</code>, then <code>CT-achieved = C &middot; T10</code>, then the ratio against your entered CT-required. Sequential segments add their ratios, and compliance needs the sum to reach 1.0. The effective log inactivation is the log target times that sum. Deliberately, the CT tables are <em>not</em> embedded &mdash; the conditions fields (disinfectant, temperature, pH, residual) exist only to make sure you pull the right cell and to put those conditions on the printout.</p>
+            <p>For each segment, the calculator uses three equations [1]:</p>
+            <ul>
+                <li><code>T10 = (V / Q) &times; BF</code></li>
+                <li><code>CT_achieved = C &middot; T10</code></li>
+                <li><code>Ratio = CT_achieved / CT_required</code></li>
+            </ul>
+            <p>Here <code>V</code> is the active contact volume in gallons (gal), <code>Q</code> is the peak hourly flow rate in gallons per minute (gpm), <code>BF</code> is the dimensionless baffling factor (<code>T10 / T</code>, where <code>T = V / Q</code> is theoretical detention time in minutes), <code>T10</code> is the contact time in minutes (min) that at least 90% of the water spends in the segment (the time for the fastest 10% to exit), <code>C</code> is the residual disinfectant concentration at the segment outlet in milligrams per liter (mg/L), and <code>CT_required</code> is the required CT in mg&middot;min/L for the target pathogen and water conditions. Across sequential segments, the individual ratios add together, and compliance requires <code>&Sigma; Ratio &ge; 1.0</code> [1]. Effective log inactivation (base-10 pathogen reduction, where 1-log is 90% and 3-log is 99.9%) is computed as <code>Log_target &times; &Sigma; Ratio</code>.</p>
+
+            <p>The SWTR CT lookup tables are not embedded in the page because required CT varies non-linearly with disinfectant, water temperature (&deg;C), pH (for free chlorine), and residual concentration, and state primacy agencies (state drinking-water regulators enforcing federal rules) may adopt specific versions [1][2]. The conditions section records disinfectant, pathogen (<em>Giardia</em>, a waterborne protozoan parasite, or viruses), log target, temperature, and pH so you can pull the matching value from the U.S. Environmental Protection Agency (USEPA) Guidance Manual tables [1] and keep those conditions visible on the calculation summary. An optional volume helper computes tank or pipe volume in gallons from dimensions. All inputs are saved in the browser's <code>localStorage</code> (local device storage) and the calculator runs offline.</p>
 
             <figure>
-                <img src="/blog/2026-07-10/ct-disinfection-compliance-calculator.png" alt="CT calculator with two segments (pipeline and clearwell), their T10, CT-achieved and ratios, and a PASS verdict with the ratios summing to 1.10" loading="lazy">
-                <figcaption>Figure 1: Two segments summing to a ratio of 1.10 &mdash; each below 1.0 on its own, which is normal; compliance is on the sum.</figcaption>
+                <img src="/blog/2026-07-10/ct-disinfection-compliance-calculator.png" alt="Screenshot of the CT disinfection calculator with two segments (pipeline and clearwell), showing T10, CT-achieved, individual ratios, and a pass result with a combined ratio of 1.10" loading="lazy">
+                <figcaption>Figure 1: Two sequential segments with individual ratios below 1.0 whose combined ratio reaches 1.10.</figcaption>
             </figure>
 
-            <h3>T10 is not detention time, and peak flow is the worst hour</h3>
-            <p>The two field truths the tool is built around. First, <code>T10</code> &mdash; the time the fastest-moving ten percent of the water spends in contact &mdash; is the theoretical detention time knocked down by a baffling factor, and that factor is brutal: an unbaffled basin is 0.1, a well-baffled one 0.7, and only a pipe approaches 1.0. Short-circuiting is the norm, not the exception, and the presets here are for planning &mdash; a tracer study measures the real number. Second, the flow that governs is the <em>peak hourly</em> flow, not the average day, because the worst case is the busiest hour when contact time is shortest. Size CT on the average and you've certified the plant for a condition it doesn't actually run.</p>
-
             <details>
-                <summary>Why the tool makes you enter CT-required</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The SWTR CT tables vary steeply and non-linearly with temperature, pH, and residual. Transcribing them from memory into a calculator is how a wrong value gets institutionalized behind a confident interface.</li>
-                    <li>Temperature is the big lever: required CT roughly doubles from summer to winter, so a basin that passes in August can fail in February. Profile the cold-water condition.</li>
-                    <li>Filtration provides most of the Giardia and virus credit; disinfection covers the remainder. Set the log target to the portion your plan assigns to disinfection, not the whole-plant requirement.</li>
-                    <li>Measure the residual at the <em>outlet</em> of the segment it credits &mdash; the concentration that survived the contact, not what went in.</li>
+                    <li>Peak hourly flow governs <code>T10</code> under the SWTR rather than average daily flow because contact time is shortest during peak demand [1].</li>
+                    <li>Typical USEPA Guidance Manual baffling factors are 0.1 (unbaffled basin), 0.3 (poor), 0.5 (average), 0.7 (superior), and 1.0 (plug flow in a pipe) to account for short-circuiting (water bypassing part of the tank volume) [1]. Planning presets are estimates, and a tracer study (measuring a benign chemical tracer through the basin) provides the actual <code>T10 / T</code> ratio for reporting where available.</li>
+                    <li>Required CT increases sharply in cold water (roughly doubling from warm summer water to cold winter water for free chlorine), so cold-water conditions usually govern [1].</li>
+                    <li>Measure residual <code>C</code> at the outlet of the segment being credited rather than at the chemical injection point [1].</li>
+                    <li>Filtration normally provides part of the plant's total <em>Giardia</em> and virus credit, so set the log target to the disinfection portion assigned in the system's approved monitoring plan [2].</li>
+                    <li>This calculator performs arithmetic only. Official compliance is determined by the state primacy agency under the system's approved monitoring plan and disinfection profiling and benchmarking records (historical CT tracking required under the SWTR) [2].</li>
                 </ul>
             </details>
 
-            <p>This is arithmetic, not certification. The state primacy agency and the system's approved monitoring plan certify compliance; the tool exists so the arithmetic and the conditions behind it are explicit and on the record. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
-
-            <p>The tool: <a href="/tools/ct-disinfection-compliance-calculator.html">CT Disinfection Compliance Calculator</a>.</p>
+            <p>Tool: <a href="/tools/ct-disinfection-compliance-calculator.html">CT Disinfection Compliance Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] USEPA &mdash; <em>Guidance Manual for Compliance with the Filtration and Disinfection Requirements for Public Water Systems Using Surface Water Sources</em> (the CT tables and T10/baffling guidance).</li>
-                <li>[2] 40 CFR 141 Subpart H &mdash; Surface Water Treatment Rule, and the state primacy agency's adopted version.</li>
-                <li>[3] The system's approved disinfection profiling / benchmarking and monitoring plan &mdash; governing for what must be demonstrated.</li>
+                <li>U.S. Environmental Protection Agency (USEPA), <em>Guidance Manual for Compliance with the Filtration and Disinfection Requirements for Public Water Systems Using Surface Water Sources</em>, EPA 570/9-91-011, March 1991 (Appendix E CT tables and Chapter 3 T10/baffling guidance). <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
+                <li>40 CFR Part 141, Subpart H, <em>Filtration and Disinfection</em> (Surface Water Treatment Rule), Electronic Code of Federal Regulations. <a href="https://www.ecfr.gov/current/title-40/chapter-I/subchapter-D/part-141/subpart-H">https://www.ecfr.gov/current/title-40/chapter-I/subchapter-D/part-141/subpart-H</a></li>
             </ol>
         </article>
     </main>

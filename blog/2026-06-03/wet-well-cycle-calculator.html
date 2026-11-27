@@ -35,29 +35,32 @@
                 <time datetime="2026-06-03">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Commissioning a lift station, the number that quietly decides whether the pumps live a long life is starts per hour. Every across-the-line start dumps heat into the motor windings that takes minutes to shed. Exceed the manufacturer's allowable starts and you are looking at a warranty argument now and a burned-out winding later. The setpoints between the pump-on and pump-off floats define an effective volume, and that volume &mdash; against the inflow and the pump capacity &mdash; sets how often the station cycles.</p>
+            <p>This calculator checks pump cycle time and starts per hour for a wastewater lift station (a pumping station that lifts sewage to a higher elevation). A lift station collects incoming flow in a storage chamber called a wet well, and a pump cycles on and off between high and low water levels set by float switches or a level transducer (a pressure or ultrasonic depth sensor). Starting an electric motor directly across the line (at full voltage) generates heat in the motor windings, so motor manufacturers limit how many starts per hour are allowed. Too many starts, known as short-cycling, can overheat the motor.</p>
 
-            <p>The trap during startup is that you are usually testing with clean water from a hydrant or a temp line at some throttled inflow. If that inflow happens to land near half the pump capacity, you are unknowingly sitting in the worst case for cycling and short-cycling the pump you are trying to prove out.</p>
+            <p>The tool computes effective volume <code>V</code> (gallons, gal) between the pump-on and pump-off levels from rectangular dimensions (length and width in feet), a circular inside diameter (feet), or a direct volume entry, converting cubic feet at <code>7.48 gal/ft&sup3;</code>. For a single constant-speed pump with discharge capacity <code>Q_p</code> (gallons per minute, gpm) and steady incoming flow <code>Q_i</code> (gpm), one full cycle is fill time plus pump-down time [1]:</p>
+            <p><code>t_cycle = V / Q_i + V / (Q_p &minus; Q_i)</code> &nbsp;(minutes)</p>
+            <p>Starts per hour for the station equal <code>60 / t_cycle</code>. Cycle time reaches its shortest value when inflow equals half of pump capacity (<code>Q_i = Q_p / 2</code>). Substituting <code>Q_p / 2</code> gives <code>t_min = 4&middot;V / Q_p</code> (minutes), so the worst-case station start rate is <code>60 / t_min = 15&middot;Q_p / V</code> starts per hour. Solving for the minimum effective volume needed to stay within an allowable <code>N</code> starts per hour per pump across <code>n</code> alternating pumps gives [1]:</p>
+            <p><code>V_min = 15&middot;Q_p / (N&middot;n)</code> &nbsp;(gal)</p>
+            <p>In a duplex station with alternation (<code>n = 2</code>), two pumps take turns as the lead pump, so each pump sees half of the station starts. The calculator reports effective volume, worst-case cycle time and starts per hour (for the station and per pump), cycle times at an optional entered inflow, and the minimum required volume. It warns if entered inflow meets or exceeds pump capacity, or if worst-case starts per pump exceed the entered limit.</p>
 
-            <h2>The Approach</h2>
-            <p>For a single pump cycling between fixed levels, cycle time is fill time plus draw-down time:</p>
-            <p><code>t_cycle = V/Q_i + V/(Q_p &minus; Q_i)</code> &nbsp;(minutes)</p>
-            <p>Differentiate that and the minimum falls out cleanly: cycle time is shortest when inflow is exactly half of pump capacity. Substitute <code>Q_i = Q_p/2</code> and you get the worst case directly:</p>
-            <p><code>t_min = 4V/Q_p</code> &nbsp;&rarr;&nbsp; max starts/hr = <code>15&middot;Q_p/V</code></p>
-            <p>Rearranged for design, the minimum effective volume to stay under an allowable <code>N</code> starts per hour, crediting alternation across <code>n</code> pumps, is <code>V_min = 15&middot;Q_p/(N&middot;n)</code>. Duplex alternation splits the station's starts between two pumps, which is why alternating effectively doubles the cycling a station can tolerate [1].</p>
+            <details>
+                <summary>Assumptions and limits</summary>
+                <ul>
+                    <li>This model assumes a single lead pump cycling at constant flow between fixed on and off levels. Stations with variable frequency drives (VFDs) that adjust speed to match inflow, or multi-pump lag staging, require a different analysis.</li>
+                    <li>Allowable starts per hour depend on the specific motor and starter type (for example, soft starters or VFDs reduce starting heat compared to across-the-line starts). Check the motor manufacturer's data sheet for the governing limit.</li>
+                    <li>Testing a station with a throttled clean-water supply near half of pump capacity produces the fastest cycling condition.</li>
+                    <li>Actual float or transducer setpoints can differ from design drawings, which changes the effective volume <code>V</code>. Confirm setpoints against the approved control narrative (the document specifying pump elevations and sequence) and check wet well geometry against Hydraulic Institute intake guidance [2].</li>
+                </ul>
+            </details>
 
-            <p>The tool reports cycle time, starts per hour at the entered inflow, and the worst-case starts, and flags when you are near that half-capacity danger zone. It also solves the minimum-volume form for design checks.</p>
-
-            <p>One honest caveat it surfaces: if the field float or transducer setpoints differ from the design levels &mdash; and they often do after the electrician trims them &mdash; the effective volume changes and the whole calculation moves. Verify setpoints against the approved control narrative before you draw conclusions. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs in the browser and stores your last entered values in browser storage (<code>localStorage</code>) so they stay filled in between visits.</p>
 
             <p>The tool: <a href="/tools/wet-well-cycle-calculator.html">Wet Well Cycle Time &amp; Pump Starts Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Metcalf &amp; Eddy, <em>Wastewater Engineering: Collection and Pumping of Wastewater</em> &mdash; wet well sizing and cycle time derivation.</li>
-                <li>[2] Hydraulic Institute &mdash; intake design and pump cycling guidance. <a href="https://www.pumps.org/">https://www.pumps.org/</a></li>
-                <li>[3] Motor manufacturer data sheets &mdash; allowable starts per hour for the specific motor on site.</li>
+                <li>Metcalf &amp; Eddy (edited by G. Tchobanoglous), <em>Wastewater Engineering: Collection and Pumping of Wastewater</em>, McGraw-Hill, 1981 (wet well sizing and pump cycle time derivation).</li>
+                <li>ANSI/HI 9.8, <em>Rotodynamic Pumps for Pump Intake Design</em>, Hydraulic Institute (wet well geometry and pump cycling guidance).</li>
             </ol>
         </article>
     </main>

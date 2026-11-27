@@ -35,39 +35,38 @@
                 <time datetime="2026-07-03">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>During startup and testing you constantly need a flow number in a place with no meter: verifying a pump against its curve, splitting flow between basins, confirming a drawdown. A plate with a notch in it is the oldest flow meter there is, and it still works &mdash; a sharp-crested weir converts a head reading you can take with a ruler into a flow, as long as you use the right formula and respect its fine print.</p>
+            <p>A sharp-crested weir (a thin vertical plate with a notch cut into the top edge) or a submerged orifice (a submerged opening of known area) estimates open-channel flow from a water-level measurement when no permanent flow meter is present. This calculator converts measured head (water height above the weir crest or pressure-level difference across an orifice) into flow rate in cubic feet per second (cfs), gallons per minute (GPM), and million gallons per day (MGD).</p>
 
-            <h2>The Approach</h2>
-            <p>The tool carries the standard sharp-crested family (US units, Q in cfs, h and L in ft) [1]:</p>
+            <p>The calculator uses standard US customary weir and orifice discharge equations from the U.S. Bureau of Reclamation (USBR) Water Measurement Manual [1] (thin-plate weir methods are also standardized in ISO 1438 [2]):</p>
             <pre><code>90&deg; V-notch (USBR):        Q = 2.49 &middot; h^2.48
 V-notch, other angles:     Q = 2.5 &middot; tan(&theta;/2) &middot; h^2.5
 Rectangular, contracted:   Q = 3.33 &middot; (L &minus; 0.2h) &middot; h^1.5   (Francis)
 Rectangular, suppressed:   Q = 3.33 &middot; L &middot; h^1.5
 Cipolletti:                Q = 3.367 &middot; L &middot; h^1.5
 Submerged orifice:         Q = C_d &middot; A &middot; &radic;(2g&Delta;h)</code></pre>
-            <p>with output in cfs, GPM, and MGD. The Cipolletti's trapezoidal 1:4 side slopes exist specifically to compensate for end contractions, which is why its coefficient looks like the suppressed rectangular's &mdash; a nice piece of 19th-century empiricism that still earns its keep.</p>
+            <p>Here <code>Q</code> is flow rate in cfs, <code>h</code> is water head measured upstream above the weir crest or V-notch vertex in feet (entered in inches in the tool and converted internally), <code>&theta;</code> is the V-notch angle in degrees (90&deg;, 60&deg;, or 45&deg; presets), <code>L</code> is horizontal crest length in feet, <code>C_d</code> is the dimensionless orifice discharge coefficient (default <code>0.61</code> for a sharp-edged opening), <code>A</code> is net open orifice area in square feet (entered in square inches in the tool), <code>&Delta;h</code> is differential head across the submerged orifice in feet (upstream water elevation minus downstream water elevation, entered in inches), and <code>g = 32.174 ft/s&sup2;</code> is gravitational acceleration.</p>
 
-            <p>Device selection is half the value: V-notch for low or variable flows (best sensitivity at low Q), rectangular or Cipolletti when a V-notch would need excessive head, and a submerged orifice where there isn't enough drop for any weir to run free.</p>
+            <p>In a <strong>contracted</strong> rectangular weir, the notch is narrower than the channel, so water narrows (contracts) at both ends and the Francis term <code>(L &minus; 0.2h)</code> accounts for those end contractions [1]. A <strong>suppressed</strong> rectangular weir spans the full channel width to eliminate side contractions, while a <strong>Cipolletti</strong> weir uses trapezoidal 1 horizontal to 4 vertical side slopes whose extra area compensates for end contractions [1]. V-notch weirs give better sensitivity at low or variable flows. Rectangular and Cipolletti weirs suit higher flows where a V-notch would require excessive head. A submerged orifice is used when there is not enough drop for water to fall freely over a weir.</p>
 
             <details>
-                <summary>The accuracy fine print the formulas assume</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li><strong>Head range:</strong> most sharp-crested formulas are rated for roughly 0.2&ndash;2.0 ft of head. Below ~0.2 ft, surface tension and nappe clinging dominate &mdash; the tool warns.</li>
-                    <li><strong>Free nappe:</strong> air must circulate under the falling sheet. A clinging nappe over-reads; suppressed rectangular weirs need vents.</li>
-                    <li><strong>Approach conditions:</strong> a proper weir pool (low approach velocity), no submergence from downstream, crest at least ~2&times; the head above the channel bottom.</li>
-                    <li><strong>Sharp crest means sharp:</strong> &frac14;-in. plate chamfered downstream, or angle iron. A 2&times; lumber crest is a broad-crested weir with a different, mushier coefficient.</li>
+                    <li><strong>Head measurement and range:</strong> Measure head <code>h</code> upstream of the weir (at least <code>4h</code> back from the crest) rather than at the crest where surface drawdown occurs. Most sharp-crested weir equations are rated for roughly <code>0.2</code> to <code>2.0 ft</code> of head. Below about <code>0.2 ft</code>, surface tension causes the falling sheet of water (the nappe) to cling to the plate, and the tool displays a warning [1][2].</li>
+                    <li><strong>Free (aerated) nappe:</strong> Air must circulate underneath the falling sheet of water. A clinging nappe causes the equation to overestimate flow, so full-width suppressed rectangular weirs require side air vents [1].</li>
+                    <li><strong>Approach and downstream conditions:</strong> The equations assume a calm upstream weir pool (low approach velocity), free discharge with no downstream submergence (downstream water level remains below the crest), and a crest height at least <code>2h</code> above the upstream channel bottom [1].</li>
+                    <li><strong>Crest geometry:</strong> A sharp-crested weir requires a thin, square upstream edge (such as <code>&frac14;</code>-in. plate beveled downstream). A thick crest such as <code>2&times;</code> lumber behaves as a broad-crested weir with a different discharge coefficient.</li>
+                    <li><strong>Accuracy:</strong> Properly installed temporary weirs are typically accurate to around <code>&plusmn;5%</code> and are suited for short-term verification rather than billing or permit reporting, which require a calibrated flume or permanent meter [1].</li>
                 </ul>
             </details>
 
-            <p>And the honest limit: a temporary weir is a startup verification device. For anything that needs defensible accuracy over days &mdash; billing, permit reporting &mdash; rent a flume or a real meter [1][2]. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs in the browser and saves inputs in browser local storage (<code>localStorage</code>, a built-in browser store on the current device) until cleared.</p>
 
             <p>The tool: <a href="/tools/weir-orifice-flow-calculator.html">Weir &amp; Orifice Flow Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] USBR, <em>Water Measurement Manual</em> &mdash; weir and orifice formulas, installation conditions. <a href="https://www.usbr.gov/tsc/techreferences/mands/wmm/">https://www.usbr.gov/tsc/techreferences/mands/wmm/</a></li>
-                <li>[2] ISO 1438 &mdash; Hydrometry: thin-plate weirs.</li>
+                <li>U.S. Bureau of Reclamation (USBR), <em>Water Measurement Manual</em>, 3rd Edition (2001), Chapters 7 and 9. <a href="https://www.usbr.gov/tsc/techreferences/mands/wmm/">https://www.usbr.gov/tsc/techreferences/mands/wmm/</a></li>
+                <li>International Organization for Standardization, <em>ISO 1438:2017, Hydrometry: Open channel flow measurement using thin-plate weirs</em>.</li>
             </ol>
         </article>
     </main>

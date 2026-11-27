@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Water Units That Cause Real Errors, in One Converter | Blog | MDS</title>
+    <title>Hydrology and Water/Wastewater Unit Converter | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,50 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>The Water Units That Cause Real Errors, in One Converter</h1>
+                <h1>Hydrology and Water/Wastewater Unit Converter</h1>
                 <time datetime="2026-06-20">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Water and wastewater work runs on a fistful of units that don't play nicely together: flow in cfs, GPM, and MGD; volume in gallons, cubic feet, and acre-feet; rainfall as a depth that has to become a volume over an area. A generic unit converter doesn't know that a gallon of water weighs 8.34 pounds, and the mistakes here aren't rounding errors &mdash; they're factor-of-694 pump-sizing catastrophes.</p>
+            <p>This page converts common water, wastewater, and drainage units across five categories: flow rate, volume, rainfall depth over an area, rainfall intensity (rate of rain accumulation over time, such as inches per hour), and land area. Entering one value updates a full table of equivalent units at once, covering cubic feet per second (cfs), gallons per minute (GPM), million gallons per day (MGD), acre-feet per day, liters per second (L/s), cubic meters per second (m&sup3;/s), cubic feet (cf), US gallons, acre-feet (ac-ft, the volume of water 1 foot deep over 1 acre), acre-inches (1 inch deep over 1 acre), cubic meters (m&sup3;), and related area and rainfall units [1].</p>
 
-            <h2>The Approach</h2>
-            <p>A domain converter across flow, volume, intensity, area, and rainfall-over-area, with live equivalents tables, plus a dedicated loading calculator built around the one equation plant operators use more than any other [2]:</p>
-            <p><code>lb/day = mg/L &times; MGD &times; 8.34</code></p>
-            <p>&mdash; because a gallon of water weighs 8.34 lb and mg/L is parts per million by mass. The rainfall category extends a depth to a volume over an acreage, closing the loop with the drainage tools.</p>
+            <p>For rainfall over an area, the calculator converts depth and acreage into total runoff or detention volume (temporary stormwater storage volume) using <code>V = (d / 12) &times; A &times; 43,560</code>, where <code>V</code> is volume in cubic feet (cf), <code>d</code> is rainfall depth in inches, <code>A</code> is area in acres, <code>12</code> converts inches to feet, and <code>43,560</code> is square feet per acre [1].</p>
+
+            <p>A separate section computes chemical or pollutant mass loading in pounds per day (lb/day) from concentration and flow using the standard water and wastewater formula <code>L = C &times; Q &times; 8.34</code>, where <code>L</code> is mass loading in lb/day, <code>C</code> is concentration in milligrams per liter (mg/L, equivalent to parts per million by mass in dilute water), <code>Q</code> is flow rate in MGD, and <code>8.34</code> is the approximate weight of one US gallon of water in pounds (lb/gal) [2].</p>
 
             <figure>
-                <img src="/blog/2026-06-20/hydrology-unit-converter.png" alt="Converter showing a flow value with live equivalents across cfs, GPM, MGD, and acre-feet per day, plus the 8.34 loading calculator" loading="lazy">
-                <figcaption>Figure 1: One flow entry, every equivalent at once &mdash; and the 8.34 loading calculator alongside.</figcaption>
+                <img src="/blog/2026-06-20/hydrology-unit-converter.png" alt="Hydrology unit converter showing equivalent values for a flow rate in cfs, GPM, MGD, and acre-feet per day, along with the 8.34 mass loading calculator" loading="lazy">
+                <figcaption>Figure 1: Flow rate equivalents table and the 8.34 mass loading calculator.</figcaption>
             </figure>
 
             <details>
-                <summary>The factors worth memorizing anyway</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li><code>1 cfs = 448.83 GPM = 0.6463 MGD &asymp; 1.983 ac-ft/day</code> &mdash; &ldquo;a cfs is about two acre-feet a day.&rdquo;</li>
-                    <li><code>1 MGD = 694.4 GPM = 1.547 cfs</code></li>
-                    <li><code>1 ac-ft = 43,560 cf = 325,851 gal</code>; <code>1 inch over 1 acre = 3,630 cf &asymp; 27,154 gal</code></li>
-                    <li><code>1 cf = 7.4805 gal</code>; <code>1 m&sup3; = 264.17 gal</code></li>
+                    <li>Common reference factors: <code>1 cfs = 448.83 GPM = 0.6463 MGD &asymp; 1.983 ac-ft/day</code>, <code>1 MGD = 694.4 GPM = 1.547 cfs</code>, <code>1 ac-ft = 43,560 cf = 325,851 US gal</code>, <code>1 acre-inch = 3,630 cf &asymp; 27,154 US gal</code>, <code>1 cf = 7.4805 US gal</code>, and <code>1 m&sup3; = 264.17 US gal = 35.315 cf</code> [1].</li>
+                    <li>MGD and GPM differ by a factor of 694.4, and acre-feet and acre-inches differ by a factor of 12, so verifying units on plans and pump schedules prevents large scaling errors.</li>
+                    <li>Flow rates in cfs often represent instantaneous peak flows in drainage calculations, while MGD often represents daily average flows in treatment plants. Converting the units does not convert a daily average into a peak flow.</li>
+                    <li>The 8.34 lb/gal factor assumes freshwater with a specific gravity of 1.0 near standard temperature. Dense sludges or concentrated chemical solutions require adjusting for specific gravity [2].</li>
+                    <li>All gallons are US liquid gallons and lengths use the international foot (0.3048 m exactly) [1]. The 2-parts-per-million difference between the international foot and the US survey foot is negligible for tank and basin volumes, though it matters for surveying coordinates (see the <a href="/tools/coordinate-converter.html">Coordinate Converter</a>).</li>
+                    <li>The calculator runs offline in the browser and saves recent inputs in <code>localStorage</code> (browser-side local storage).</li>
                 </ul>
             </details>
-
-            <details>
-                <summary>The gotchas that cause the real errors</summary>
-                <ul>
-                    <li><strong>MGD vs. GPM</strong> is the classic pump-sizing catastrophe &mdash; a factor of 694. If a station &ldquo;needs 2&rdquo; of something, make everyone say the unit out loud.</li>
-                    <li><strong>Acre-feet vs. acre-inches:</strong> detention volumes get quoted in both, and a factor of 12 hides in the paperwork.</li>
-                    <li><strong>cfs is instantaneous; MGD usually means daily average.</strong> Converting between them is arithmetic; equating a peak to an average is a design error.</li>
-                </ul>
-            </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. All gallons are US gallons; feet here are the ordinary international foot, which is fine for volumes &mdash; the survey-foot distinction matters for coordinates, not tanks (see the <a href="/tools/coordinate-converter.html">Coordinate Converter</a> for where it does) [1].</p>
 
             <p>The tool: <a href="/tools/hydrology-unit-converter.html">Hydrology &amp; Water/Wastewater Unit Converter</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] NIST Handbook 44, Appendix C &mdash; general tables of units of measurement.</li>
-                <li>[2] Any water/wastewater operator certification manual &mdash; the 8.34 formula and its uses.</li>
+                <li>National Institute of Standards and Technology, <em>NIST Handbook 44</em> (2024 Edition), Appendix C, General Tables of Units of Measurement.</li>
+                <li>Office of Water Programs, California State University, Sacramento, <em>Operation of Wastewater Treatment Plants</em>, Volume 1, Appendix (Applied Math: the 8.34 lb/gal mass loading formula).</li>
             </ol>
         </article>
     </main>

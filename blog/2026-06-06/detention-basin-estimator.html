@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Why Detention Basins Size on a Storm Longer Than Tc | Blog | MDS</title>
+    <title>Estimating Detention Basin Storage with the Modified Rational Method | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,44 +31,40 @@
     <main>
         <article>
             <header>
-                <h1>Why Detention Basins Size on a Storm Longer Than Tc</h1>
+                <h1>Estimating Detention Basin Storage with the Modified Rational Method</h1>
                 <time datetime="2026-06-06">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>There's a genuinely counterintuitive result buried in detention design, and it trips up people who are perfectly comfortable with peak-flow hydrology: the storm that fills a detention basin fullest is <em>not</em> the storm that produces the peak flow. Size a basin on the time-of-concentration storm &mdash; the one you'd use for the pipe &mdash; and you'll undersize the basin. This tool exists mostly to make that visible.</p>
+            <p>This calculator gives a preliminary storage volume estimate for a stormwater detention basin (a pond or storage area that temporarily holds runoff and releases it at a controlled rate). When sizing a storm drain pipe for peak flow, engineers evaluate a storm equal to the watershed's time of concentration, <code>Tc</code> (the time it takes runoff to travel from the hydraulically farthest point of the drainage area to the outlet, in minutes). For detention storage, however, a longer storm often produces a larger required volume because total runoff volume keeps growing faster than the outlet can release it [2].</p>
 
-            <h2>The Approach</h2>
-            <p>The Modified Rational method sweeps storm duration. For each trial duration D from Tc up to the sweep limit: intensity <code>i = a/(D+b)&#8319;</code>, inflow <code>Q_in = C&middot;i&middot;A</code>, and required storage as inflow volume minus what the outlet releases over the same window:</p>
-            <p><code>V(D) = (Q_in &minus; Q_allow) &middot; D &middot; 60</code> &nbsp;(cubic feet, rectangular inflow approximation)</p>
-            <p>Short storms are intense but brief; long storms are big but weak. In between, <code>V(D)</code> peaks &mdash; that maximum is the <strong>critical duration</strong> and the required storage. The tool sweeps 400 durations, finds the max, and shows a representative table with the critical row bolded. And the critical duration always lands longer than Tc, which is the whole point [1].</p>
+            <p>In its main mode, the tool uses the Modified Rational method to sweep 400 trial storm durations <code>D</code> (minutes) from <code>Tc</code> up to a chosen maximum duration. At each duration it computes rainfall intensity <code>i</code> (inches per hour, in/hr) from a local Intensity-Duration-Frequency (IDF) equation <code>i = a / (D + b)&#8319;</code> using local storm coefficients <code>a</code>, <code>b</code>, and <code>n</code>, then calculates peak inflow <code>Q_in = C&middot;i&middot;A</code> in cubic feet per second (cfs), where <code>C</code> is the dimensionless post-development runoff coefficient (between 0 and 1) and <code>A</code> is the drainage area in acres (using the Rational method approximation that 1 acre-inch per hour is about 1 cfs). Required storage is then computed with a rectangular inflow approximation (assuming constant inflow and constant allowable outlet release <code>Q_allow</code> in cfs over the duration <code>D</code>, with <code>60</code> converting minutes to seconds) [2]:</p>
+            <p><code>V(D) = (Q_in &minus; Q_allow) &middot; D &middot; 60</code> &nbsp;(cubic feet)</p>
+            <p>The tool finds the storm duration that maximizes <code>V(D)</code> (the critical duration), displays the result in acre-feet, cubic feet, and gallons, and prints a summary table across the sweep range. It flags when the peak sits at the upper end of the sweep range (meaning the maximum duration should be increased) or when inflow never exceeds <code>Q_allow</code> (for example, if <code>Q_allow</code> was entered in gallons per minute instead of cfs).</p>
 
             <figure>
-                <img src="/blog/2026-06-06/detention-basin-estimator.png" alt="Duration sweep table with required storage peaking at a critical duration longer than the time of concentration" loading="lazy">
-                <figcaption>Figure 1: Storage climbing, peaking, and falling across the duration sweep &mdash; the peak sits well past Tc.</figcaption>
+                <img src="/blog/2026-06-06/detention-basin-estimator.png" alt="Screenshot of the Detention Basin Storage Estimator showing a duration sweep table and peak required storage" loading="lazy">
+                <figcaption>Figure 1: Duration sweep output showing required storage across storm durations past the time of concentration.</figcaption>
             </figure>
 
-            <p>A second tab does the volume-difference framing &mdash; post minus pre runoff volume for the same storm &mdash; built to take the <a href="/tools/tr55-runoff-calculator.html">TR-55 tool's</a> output directly: run it twice, existing vs. proposed CN, bring the two volumes here. Some criteria want peak-shaving, some want the captured volume, some want the larger of both.</p>
+            <p>A second mode computes a simple volume difference, <code>V = V_post &minus; V_pre</code>, subtracting pre-development runoff volume from post-development runoff volume for the same storm (in acre-feet or cubic feet). That mode works with volumes from the companion <a href="/tools/tr55-runoff-calculator.html">TR-55 runoff calculator</a>, which uses the Natural Resources Conservation Service Technical Release 55 method and Curve Number (CN, an index of soil and land-cover runoff potential) [1]. Some local drainage standards require peak-rate detention, some require capturing the added runoff volume, and some require the larger of the two.</p>
 
             <details>
-                <summary>Why this is screening, not final design</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>A real outlet doesn't release the allowable rate at every stage &mdash; orifice and weir flow vary with head, so the basin fills faster early than the rectangular approximation assumes.</li>
-                    <li>Stage-storage comes from the actual grading; the last foot of a shallow basin holds far more than the first.</li>
-                    <li>The sweep can't see multi-storm criteria, drawdown-time limits (vector control is serious business in Southern California), freeboard, or spillway sizing. Routing through a real stage-storage-discharge relationship governs the final number.</li>
-                    <li>If the preliminary volume barely fits the footprint, it won't survive routing. Leave margin.</li>
+                    <li>This is a preliminary screening tool, not final basin design. Local county or city hydrology manuals specify the governing method, design storms, IDF coefficients, allowable release rates, and safety factors.</li>
+                    <li>A real outlet structure (such as an orifice opening or overflow weir) discharges less at low water depth (stage, or head) than at full depth, so assuming full <code>Q_allow</code> for the entire storm can underestimate required volume compared to full reservoir routing (simulating a time-varying inflow hydrograph through the basin's actual graded stage-storage curve and outlet rating curve) [2].</li>
+                    <li>This sweep does not check multi-storm performance (for example, 2-, 10-, and 100-year storms together), maximum drawdown time (how quickly the basin must drain after a storm), freeboard (extra vertical height above the design water surface), or emergency spillway capacity.</li>
                 </ul>
             </details>
 
-            <p>The tool's warnings carry the practical wisdom too: a max landing at the end of the sweep range means extend it (the true critical duration is longer still), and a never-exceeds-release result gets a &ldquo;check that Q_allow isn't in GPM&rdquo; nudge. Single file, vanilla JS, <code>localStorage</code> persistence [2][3].</p>
+            <p>The calculator runs in the browser and saves your last entered inputs in browser storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/detention-basin-estimator.html">Detention Basin Storage Estimator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The local county hydrology/drainage manual &mdash; governing method, storms, release rates, and drawdown requirements.</li>
-                <li>[2] NRCS TR-55 / TR-20 and reservoir routing texts &mdash; hydrograph methods for final design.</li>
-                <li>[3] ASCE MOP 77 / WEF MOP FD-20 &mdash; urban stormwater detention design practice.</li>
+                <li>USDA Natural Resources Conservation Service (NRCS), <em>Urban Hydrology for Small Watersheds</em>, Technical Release 55 (TR-55), 2nd ed., 1986.</li>
+                <li>ASCE and Water Environment Federation (WEF), <em>Design and Construction of Urban Stormwater Management Systems</em>, ASCE Manuals and Reports of Engineering Practice No. 77 / WEF Manual of Practice FD-20, 1992.</li>
             </ol>
         </article>
     </main>

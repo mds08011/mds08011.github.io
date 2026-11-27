@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydrotest Makeup Water and the 148,000 vs 133,200 Divisor | Blog | MDS</title>
+    <title>Hydrotest Makeup Water Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Hydrotest Makeup Water and the 148,000 vs 133,200 Divisor</h1>
+                <h1>Hydrotest Makeup Water Calculator</h1>
                 <time datetime="2026-07-09">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Pressure-testing a gasketed-joint water main, you fill it, pump it up to the test pressure, and hold. A little water always goes in over the hold &mdash; trapped air dissolving, gaskets seating &mdash; and the spec gives you an allowance for it. The formula is short: <code>Q = S &middot; D &middot; &radic;P / 148,000</code> gallons per hour, length times diameter times the square root of pressure over a constant. What sent me down a small rabbit hole was that constant, because I kept seeing <code>133,200</code> in older specs and I wanted to know whether someone was wrong.</p>
+            <p>During a hydrostatic pressure test (hydrotest) on a gasketed-joint water main (a pressure pipe assembled with rubber-gasketed joints), the pipe is filled with water, pressurized, and held for a specified duration. A small volume of makeup water (also called the testing allowance) is commonly permitted to maintain test pressure as trapped air dissolves and rubber gaskets seat. This calculator computes the allowable makeup rate, the total allowance over the test duration, the rate per 1,000 ft of pipe, and an optional pass/fail check against measured makeup water.</p>
 
-            <h2>The Approach</h2>
-            <p>The tool takes the length tested, the nominal diameter, the average test pressure, and the duration, and returns the allowable makeup rate and the total over the test, plus a convenience per-1,000-foot number. Enter the makeup you actually measured and it renders a pass/fail with the margin. As a sanity check on the arithmetic: 1,000 feet of 12-inch at 150 psi average is <code>1000 &middot; 12 &middot; &radic;150 / 148,000 &asymp; 0.993 gal/hr</code>, about 1.99 gallons over a two-hour test &mdash; a genuinely small number, which is the whole point.</p>
+            <p>The standard length-based testing allowance formula used in American Water Works Association (AWWA) standards C600 (ductile-iron pipe) and C605 (polyvinyl chloride, or PVC, pipe) is [1][2]:</p>
+            <p><code>Q = (S &middot; D &middot; &radic;P) / 148,000</code> and <code>V_allow = Q &middot; t</code></p>
+            <p>Here <code>Q</code> is the allowable makeup rate in gallons per hour (gal/hr), <code>S</code> is the length of pipe tested in feet (ft), <code>D</code> is the nominal (designated) pipe diameter in inches (in), <code>P</code> is the average test pressure in pounds per square inch (psi), <code>t</code> is the test duration in hours (hr), and <code>V_allow</code> is the total allowable makeup volume in gallons (gal). For example, 1,000 ft of 12-inch pipe held at 150 psi average pressure gives <code>Q = (1,000 &middot; 12 &middot; &radic;150) / 148,000 = 0.993 gal/hr</code>, or <code>1.99 gal</code> over a 2-hour hold. If you enter an actual measured makeup volume <code>V_meas</code> (gal), the tool reports pass/fail and the margin <code>V_allow &minus; V_meas</code>.</p>
+
+            <p>Some older specifications use <code>133,200</code> as the divisor instead of <code>148,000</code>. Both constants come from the joint-count form of the same equation, <code>Q = (N &middot; D &middot; &radic;P) / 7,400</code>, where <code>N</code> is the number of joints in the test section [1][2]. For 20-ft laying lengths (standard pipe stick length between joints), <code>N = S / 20</code> and <code>20 &times; 7,400 = 148,000</code>. For 18-ft laying lengths, <code>N = S / 18</code> and <code>18 &times; 7,400 = 133,200</code>, which gives about 11% more allowable makeup per foot. The calculator lets you select either divisor. Although AWWA C605 includes the same testing allowance formula [2], some project specifications require zero makeup water for gasketed PVC mains, so the calculator also provides a zero-allowance checkbox.</p>
 
             <figure>
-                <img src="/blog/2026-07-09/hydrotest-makeup-water-calculator.png" alt="Calculator populated with 1000 ft of 12-inch at 150 psi over 2 hours, showing a 1.99-gallon allowance and a PASS verdict against 1.5 gallons measured" loading="lazy">
-                <figcaption>Figure 1: 1,000 ft of 12-inch at 150 psi &rarr; 1.99 gal allowable over two hours; 1.5 gal measured passes with 0.49 gal to spare.</figcaption>
+                <img src="/blog/2026-07-09/hydrotest-makeup-water-calculator.png" alt="Screenshot of the hydrotest makeup water calculator with 1,000 ft of 12-inch pipe at 150 psi over 2 hours, showing a 1.99-gallon allowance and a pass result for 1.5 gallons measured" loading="lazy">
+                <figcaption>Figure 1: Calculation for 1,000 ft of 12-inch pipe at 150 psi over 2 hours, showing 1.99 gal allowable makeup and a pass result at 1.5 gal measured.</figcaption>
             </figure>
 
-            <h3>Where 133,200 comes from</h3>
-            <p>Neither divisor is wrong &mdash; they're the same formula written two ways. The current AWWA C600 testing allowance is expressed per foot of pipe, straight to <code>S &middot; D &middot; &radic;P / 148,000</code> [1]. Older editions and some specifications use the per-joint form, <code>N &middot; D &middot; &radic;P / 7,400</code>, where N is the number of joints. With standard 18-foot laying lengths, <code>N = S / 18</code>, so the per-joint form becomes <code>S &middot; D &middot; &radic;P / (18 &times; 7,400) = S &middot; D &middot; &radic;P / 133,200</code>. The 133,200 divisor is simply the older joint-count allowance re-expressed per foot, and it yields a slightly larger allowance. The tool lets you pick whichever the spec cites &mdash; and, because several owners set <em>zero</em> allowable makeup for gasketed PVC, it has a zero-allowance toggle that turns any measured makeup into a fail [2][3].</p>
+            <p>Project specifications govern the required test pressure, hold duration, divisor, and any zero-allowance rule. Inputs are saved in the browser's <code>localStorage</code> (local device storage) and the calculator runs offline.</p>
 
             <details>
-                <summary>Field notes on the hold</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The allowance covers absorbed air and gasket seating, not leaks. A joint weeping visibly fails even if the makeup is under the number &mdash; write it up and fix it.</li>
-                    <li>Temperature moves pressure. In a rigid, full line, roughly 1 psi per &deg;F is a workable rule of thumb; a test that quietly bleeds pressure over a hot afternoon may be losing temperature, not water. Log air and water temperature at start and end.</li>
-                    <li>Measure makeup with a calibrated container or a meter on the pump, not a guess off the tank stick. The numbers are small, so the measurement has to be at least as precise.</li>
-                    <li>Fill and stabilize before the clock starts, so trapped air has worked out before you're on the record.</li>
+                    <li>The testing allowance accounts for air absorption and gasket seating rather than active leaks. Under AWWA C600 and C605, any visible leak (such as a weeping joint) must be repaired and fails the test even if measured makeup is below the calculated limit [1][2].</li>
+                    <li>Water temperature changes affect pressure inside a full, closed pipeline (roughly on the order of 1 psi per &deg;F in a rigid line, depending on pipe material and restraint). Cooling drops pressure without water loss, while warming raises pressure and can mask a small leak. Recording water and ambient temperatures at the start and end of the hold helps interpret pressure changes.</li>
+                    <li>Because allowable makeup volumes are small, measure added water with a calibrated container or pump flow meter rather than estimating from a supply tank level gauge.</li>
+                    <li>Fill the pipe slowly, vent trapped air at high points, and let pressure stabilize before starting the timed hold.</li>
                 </ul>
             </details>
 
-            <p>Test pressure, duration, and the allowable makeup all come from the project specifications [3] &mdash; this just does the archaeology and the arithmetic so the number on the test report matches the standard the spec actually cites. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
-
-            <p>The tool: <a href="/tools/hydrotest-makeup-water-calculator.html">Hydrotest Makeup Water (Testing Allowance) Calculator</a>.</p>
+            <p>Tool: <a href="/tools/hydrotest-makeup-water-calculator.html">Hydrotest Makeup Water (Testing Allowance) Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] AWWA C600 &mdash; Installation of Ductile-Iron Mains and Their Appurtenances (hydrostatic testing and allowable leakage/makeup).</li>
-                <li>[2] AWWA C605 &mdash; Underground Installation of PVC and Molecularly Oriented PVC Pressure Pipe (testing provisions).</li>
-                <li>[3] Contract specifications &mdash; governing test pressure, duration, and allowable makeup, including any zero-allowance provision.</li>
+                <li>AWWA C600-17, <em>Installation of Ductile-Iron Mains and Their Appurtenances</em>, American Water Works Association (hydrostatic testing and testing allowance).</li>
+                <li>AWWA C605-21, <em>Underground Installation of Polyvinyl Chloride (PVC) and Molecularly Oriented Polyvinyl Chloride (PVCO) Pressure Pipe and Fittings</em>, American Water Works Association (hydrostatic testing and testing allowance).</li>
             </ol>
         </article>
     </main>

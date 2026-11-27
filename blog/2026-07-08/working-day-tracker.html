@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tracking Working-Day Contract Time with Computed Federal Holidays | Blog | MDS</title>
+    <title>Working-Day Contract Time Tracker | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,48 +31,43 @@
     <main>
         <article>
             <header>
-                <h1>Tracking Working-Day Contract Time with Computed Federal Holidays</h1>
+                <h1>Working-Day Contract Time Tracker</h1>
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>On a working-day contract, time isn't measured in calendar days &mdash; it's measured in charged working days, and the count is a running argument with the resident engineer. Weekends don't count. Holidays don't count. Weather days and suspensions don't count, <em>if</em> you logged them. Reconstruct that list at month nine and it's worth a fraction of a contemporaneous record. I wanted a tracker that walks the calendar honestly and keeps a persistent log of the no-work days as they happen.</p>
+            <p>On a working-day construction contract, allowed time is measured in chargeable workdays rather than calendar days. Weekends, specified holidays, and logged non-working days (such as weather delays or owner suspensions) are excluded from the count. This tracker lets you enter the notice-to-proceed (NTP, the formal date contract time begins) date, contract duration in working days, Day 1 convention (whether NTP counts as Day 1 or counting begins on the next working day), holiday toggle, and a dated list of no-work days with notes.</p>
 
-            <h2>The Approach</h2>
-            <p>The tracker walks day by day from notice-to-proceed to today. A date is charged if it's Monday&ndash;Friday, not an observed federal holiday (toggleable), and not in the no-work log. Days remaining is duration minus charged, and the projected completion date walks forward from today counting future weekdays until the remaining count runs out. It can't foresee future weather days, so the projected date honestly drifts later every time you log one &mdash; which is the correct behavior, not a bug.</p>
+            <p>The page steps through each calendar day from the start date to today. A date is charged if it falls Monday through Friday, is not an observed federal holiday (when that checkbox is enabled), and is not in the no-work log. From the contract duration <code>D</code> (working days) and charged days to date <code>C</code> (working days), it computes remaining time <code>R = D &minus; C</code> (working days) and percent used <code>(C / D) &times; 100</code>. To estimate a projected completion date, it steps forward from today counting future chargeable weekdays until <code>R</code> working days have been used. Because future weather days are unknown, adding a no-work day shifts the projected completion date later.</p>
 
-            <h3>Computing the holidays instead of hardcoding them</h3>
-            <p>The one implementation detail I'm a little proud of: there's no holiday lookup table to go stale. All eleven federal holidays are <em>generated</em> for any year the calendar walk touches. The fixed-date ones &mdash; New Year's, Juneteenth, Independence Day, Veterans Day, Christmas &mdash; get the standard observation shift (Saturday falls back to Friday, Sunday bumps to Monday). The floating ones are computed from their rule:</p>
+            <p>Rather than storing a fixed list of dates for specific years, the script computes all eleven U.S. federal holidays under 5 U.S.C. &sect; 6103 for any year spanned by the project [1]. Fixed-date holidays (New Year's Day, Juneteenth, Independence Day, Veterans Day, and Christmas Day) use standard observation shifts: a Saturday holiday is observed on Friday, and a Sunday holiday is observed on Monday [1]. Floating holidays are generated from their calendar rules:</p>
             <pre><code>MLK Day            3rd Monday in January
 Washington's Bday  3rd Monday in February
 Memorial Day       last Monday in May
 Labor Day          1st Monday in September
 Columbus Day       2nd Monday in October
 Thanksgiving       4th Thursday in November</code></pre>
-            <p>A multi-year job crossing 2026 into 2027 gets the right dates for both years with no maintenance, and a job that runs into 2030 will too [2].</p>
 
             <figure>
-                <img src="/blog/2026-07-08/working-day-tracker.png" alt="Tracker showing charged days, days remaining, projected completion date, and a log of non-charged weather days" loading="lazy">
-                <figcaption>Figure 1: Charged days and projected completion, with the running no-work log that drives the count.</figcaption>
+                <img src="/blog/2026-07-08/working-day-tracker.png" alt="Screenshot of the working-day tracker showing charged days, days remaining, projected completion date, and a table of logged no-work days" loading="lazy">
+                <figcaption>Figure 1: Charged working days, remaining time, projected completion date, and the log of non-charged days.</figcaption>
             </figure>
 
+            <p>All contract settings and no-work log entries are saved in the browser's <code>localStorage</code> (local device storage that stays on your browser between sessions). The page runs offline with no external scripts.</p>
+
             <details>
-                <summary>Why the day-of logging habit matters</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Weather-day disputes are won with contemporaneous records &mdash; your daily report, photos of standing water, and a log entry dated that day.</li>
-                    <li>If your count and the RE's diverge, the earlier you catch it the smaller the argument. Compare at every pay application.</li>
-                    <li>A weather day is usually only non-chargeable if it actually stopped the controlling operation. A rainout on a day you were doing interior electrical may still be charged &mdash; log the note field with what was prevented.</li>
+                    <li>The contract's General Conditions (standard administrative clauses) govern the exact definition of a working day, whether NTP is Day 1, and which holidays are excluded. Any state or local holidays not on the federal list can be added manually to the no-work log.</li>
+                    <li>The owner's official day count, usually maintained by the resident engineer (RE, the owner's on-site representative) on daily reports, is the contractual record. Comparing counts at each pay application (periodic contractor billing) helps catch differences early.</li>
+                    <li>Under most public works contracts, weather makes a day non-chargeable only when it prevents work on the controlling operation (the critical-path activity governing overall completion). Recording what work was delayed in the note field alongside daily reports and photos keeps the log verifiable.</li>
                 </ul>
             </details>
 
-            <p>The contract's General Conditions are still the governing document for what &ldquo;working day&rdquo; and &ldquo;chargeable&rdquo; mean and which holidays are in the list &mdash; this just does the arithmetic and remembers the log. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
-
-            <p>The tool: <a href="/tools/working-day-tracker.html">Working Day Contract Time Tracker</a>.</p>
+            <p>Tool: <a href="/tools/working-day-tracker.html">Working Day Contract Time Tracker</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Contract General Conditions &mdash; definition of working day, chargeable day, and the holiday list (governing document).</li>
-                <li>[2] 5 U.S.C. &sect; 6103 &mdash; federal holidays. <a href="https://www.law.cornell.edu/uscode/text/5/6103">https://www.law.cornell.edu/uscode/text/5/6103</a></li>
+                <li>5 U.S.C. &sect; 6103, <em>Holidays</em>, Legal Information Institute (Cornell Law School). <a href="https://www.law.cornell.edu/uscode/text/5/6103">https://www.law.cornell.edu/uscode/text/5/6103</a></li>
             </ol>
         </article>
     </main>

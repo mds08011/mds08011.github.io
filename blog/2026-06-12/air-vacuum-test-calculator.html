@@ -35,41 +35,37 @@
                 <time datetime="2026-06-12">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Acceptance testing a new gravity sewer means holding a low-pressure air test on the pipe and a vacuum test on the manholes, and both are pass/fail on <em>time</em>: pressurize, let it stabilize, and see whether the drop stays under the allowable for the required hold. The hold time isn't a fixed number &mdash; it scales with pipe diameter and length &mdash; and if there's groundwater over the pipe, every gauge pressure has to be bumped up to account for it. Getting that wrong means either failing tight pipe or passing leaky pipe.</p>
+            <p>This calculator computes required hold times and adjusted pressures for two acceptance tests on new gravity sewers (sewer pipes that drain by slope rather than pumps): low-pressure air testing on pipe runs and vacuum testing on concrete manholes. Switch between the Gravity Sewer Air Test and Manhole Vacuum Test tabs, enter the dimensions, and click Set from result to load the hold time into the built-in countdown timer (with Start, Pause, and Reset controls).</p>
 
-            <h2>The Approach</h2>
-            <p>The air-test time comes from the UNI-B-6 / ASTM F1417 method, based on an allowable loss of 0.0015 cfm per square foot of internal pipe surface for a 1.0 psig drop:</p>
-            <p><code>T = 0.085&middot;D&middot;K/Q</code> seconds, with <code>K = 0.000419&middot;D&middot;L</code> (floor of 1.0) and <code>Q = 0.0015</code></p>
-            <p>For short or small runs where K = 1, that collapses to the familiar <code>T = 56.7&middot;D</code> seconds &mdash; the &ldquo;minimum time&rdquo; column, 7 min 34 s for 8-inch pipe. Past the threshold length <code>L = 2387/D</code>, time grows with <code>D&sup2;&middot;L</code>. The half-psig method is exactly half those times [1][2].</p>
+            <p>The pipe air test follows ASTM F1417 [1] and Uni-Bell Recommended Practice UNI-B-6 [2], based on an allowable air loss rate of <code>0.0015</code> cfm (cubic feet per minute) per square foot of internal pipe surface for a 1.0 psig (pounds per square inch gauge, pressure above atmospheric pressure) drop from 3.5 to 2.5 psig. The minimum hold time is <code>T = 0.085 &middot; D &middot; K / Q</code> with <code>K = max(1.0, 0.000419 &middot; D &middot; L)</code>, where <code>T</code> is the minimum hold time in seconds, <code>D</code> is nominal pipe diameter in inches, <code>L</code> is test section length in feet, <code>K</code> is a dimensionless length factor (at least 1.0), and <code>Q = 0.0015</code> cfm/ft<sup>2</sup> is the allowable air loss rate. For short sections where <code>L &le; 2387 / D</code> ft, <code>K = 1.0</code> and the hold time depends only on diameter (<code>T = 56.67 &middot; D</code> seconds, or 7 min 34 s for an 8-inch pipe). Longer sections scale with <code>D&sup2; &middot; L</code>. Choosing the 0.5 psig drop option (3.5 to 3.0 psig) cuts all hold times in half [1][2].</p>
 
-            <p>Groundwater is handled as head: 0.433 psi per foot of water above the pipe crown, added to the pressurization, start, and fail pressures. There's a hard line the tool watches for &mdash; when the required adjusted test pressure creeps toward 9 psig, air testing gets dangerous (plug thrust) and generally isn't advised. Dewater or test another way.</p>
+            <p>When groundwater stands above the pipe crown (the top of the pipe), external water head (water-column pressure) pushes inward against escaping test air. The calculator adds <code>0.433 &middot; h_gw</code> psi to the pressurization (4.0 psig), start (3.5 psig), and fail pressures, where <code>h_gw</code> is average groundwater height above the pipe crown in feet. If the adjusted initial pressure exceeds 9 psig, the tool shows a warning because higher air pressure increases plug thrust (outward force on the test plugs), and dewatering (pumping down the groundwater) or an alternate test method is typically used instead.</p>
 
             <figure>
-                <img src="/blog/2026-06-12/air-vacuum-test-calculator.png" alt="The calculator showing required hold time and a running countdown timer for an 8-inch sewer air test" loading="lazy">
-                <figcaption>Figure 1: Computed hold time with the built-in countdown running against it.</figcaption>
+                <img src="/blog/2026-06-12/air-vacuum-test-calculator.png" alt="Calculator showing required hold time and countdown timer for an 8-inch gravity sewer air test" loading="lazy">
+                <figcaption>Figure 1: Required hold time and built-in countdown timer for a sewer air test.</figcaption>
             </figure>
 
-            <p>The manhole side reproduces the ASTM C1244 vacuum table: pull 10 in. Hg, and the manhole passes if it takes at least the tabulated time to drop to 9 in. Hg. Times scale with barrel volume, so the tool interpolates the published 8&ndash;30 ft depth by 30&ndash;72 in. diameter grid, rounds intermediate depths up to the next row, and extrapolates past 30 ft with a warning. I added a countdown timer to the whole thing because the actual field failure mode is starting a stopwatch and getting distracted [3].</p>
+            <p>The manhole tab looks up hold times from the ASTM C1244 vacuum test table [4]. A vacuum of 10 in. Hg (inches of mercury) is drawn on the sealed manhole, and the structure passes if it takes at least the tabulated time to drop to 9 in. Hg. Because a larger barrel volume (the interior shaft volume) holds more air, required times increase with manhole diameter (30 to 72 in.) and depth (8 to 30 ft). Intermediate depths are rounded up to the next 2-foot table row, and depths beyond 30 ft are linearly extrapolated with a warning. Inputs and the active tab are saved in browser <code>localStorage</code> (local storage on your device) and can be cleared with the Clear all inputs button.</p>
 
             <details>
-                <summary>Field notes worth remembering</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Let the air section stabilize at least 2 minutes &mdash; air equalizing with the pipe-wall temperature wanders in a way that looks like a leak. Bleed back to the start pressure before timing.</li>
-                    <li>On a hot day, wet the pipe interior if the spec allows; a hot dry pipe absorbing moisture from the compressed air can fail a section that is actually tight.</li>
-                    <li>A failed vacuum test usually leaks at the chimney/frame joint, a boot, or an unplugged lift hole &mdash; soap the suspects before condemning the barrel.</li>
+                    <li>Standard air-test practice allows at least 2 minutes for compressed air temperature to stabilize with the pipe wall before bleeding back to start pressure and beginning the timer [1][2].</li>
+                    <li>In hot weather, wetting the interior of dry pipe (where specifications allow) helps avoid pressure drops caused by warm dry walls cooling or absorbing moisture from test air.</li>
+                    <li>Common manhole vacuum leak locations include the frame-to-chimney joint (where the top frame and grade rings meet the manhole cone), flexible rubber pipe boots, and unplugged precast lifting holes [4].</li>
+                    <li>ASTM F1417 applies to plastic pipe. Vitrified clay and concrete sewer lines use companion low-pressure air test standards ASTM C828 and ASTM C924 [3]. Where contract specifications include a test table, the contract table governs.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, inputs and timer state persisted in <code>localStorage</code>.</p>
 
             <p>The tool: <a href="/tools/air-vacuum-test-calculator.html">Sewer Air Test &amp; Manhole Vacuum Test Timer</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ASTM F1417 &mdash; Installation Acceptance of Plastic Non-pressure Sewer Lines Using Low-Pressure Air. <a href="https://www.astm.org/">https://www.astm.org/</a></li>
-                <li>[2] Uni-Bell UNI-B-6 &mdash; Recommended Practice for Low-Pressure Air Testing of Installed Sewer Pipe. <a href="https://www.uni-bell.org/">https://www.uni-bell.org/</a></li>
-                <li>[3] ASTM C1244 &mdash; Concrete Sewer Manholes by the Negative Air Pressure (Vacuum) Test. (See also ASTM C828 / C924 for clay and concrete air tests.)</li>
+                <li>ASTM F1417, <em>Standard Practice for Installation Acceptance of Plastic Non-pressure Sewer Lines Using Low-Pressure Air</em>.</li>
+                <li>Uni-Bell PVC Pipe Association, <em>UNI-B-6: Recommended Practice for Low-Pressure Air Testing of Installed Sewer Pipe</em>.</li>
+                <li>ASTM C828, <em>Standard Test Method for Low-Pressure Air Test of Vitrified Clay Pipe Lines</em>, and ASTM C924, <em>Standard Practice for Testing Concrete Pipe Sewer Lines by Low-Pressure Air Test Method</em>.</li>
+                <li>ASTM C1244, <em>Standard Test Method for Concrete Sewer Manholes by the Negative Air Pressure (Vacuum) Test</em>.</li>
             </ol>
         </article>
     </main>

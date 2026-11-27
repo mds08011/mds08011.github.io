@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Hammer Quick-Checks: Joukowsky and the 2L/a Trap | Blog | MDS</title>
+    <title>Water Hammer (Surge) Quick-Check Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,46 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Water Hammer Quick-Checks: Joukowsky and the 2L/a Trap</h1>
+                <h1>Water Hammer (Surge) Quick-Check Calculator</h1>
                 <time datetime="2026-07-02">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>&ldquo;Can we just close this valve, or does it need to be slow?&rdquo; is a question that comes up during every startup and every bypass, and the honest answer requires two numbers: how much pressure a velocity change can generate, and how fast is actually <em>fast</em> for this particular line. People's intuition is calibrated on garden hoses; pipelines are worse in a very specific way.</p>
+            <p>Rapidly changing the water velocity in a pressurized pipeline produces a transient pressure spike known as water hammer or hydraulic surge. This calculator gives a screening estimate of the peak pressure rise from an instantaneous velocity change, adds it to the normal working pressure, compares the total to the pipe's pressure rating (the rated maximum allowable pressure for the pipe class), and computes the critical valve closure time for the pipeline length.</p>
 
-            <h2>The Approach</h2>
-            <p>The peak transient from an instantaneous velocity change is the Joukowsky rise:</p>
-            <p><code>&Delta;H = a&middot;&Delta;V / g</code> &nbsp;(ft of head) &nbsp;&rarr;&nbsp; <code>&Delta;P = 0.433&middot;&Delta;H</code> &nbsp;(psi)</p>
-            <p>With a wave speed around 4,000 ft/s in iron pipe, every 1 ft/s of velocity destroyed instantly costs about 124 ft of head &mdash; 54 psi. That's the whole reason surge control exists: velocity is cheap to create and expensive to stop. The tool stacks the rise on the operating pressure and checks the total against the pipe's rating, with material presets since wave speed varies enormously (HDPE is far more forgiving than steel or DIP) [2].</p>
+            <p>The maximum surge from an instantaneous velocity change is given by the Joukowsky equation in US customary units: <code>&Delta;H = a &middot; &Delta;V / g</code> and <code>&Delta;P = 0.433 &middot; &Delta;H</code>, where <code>&Delta;H</code> is surge head rise in feet of water head (pressure expressed as the height of a column of water), <code>&Delta;P</code> is surge pressure rise in pounds per square inch (psi), <code>a</code> is pressure wave speed in the pipe (ft/s), <code>&Delta;V</code> is velocity change (ft/s), <code>g = 32.174 ft/s&sup2;</code> is gravitational acceleration, and <code>0.433 psi/ft</code> converts feet of water head to psi [3]. At a typical wave speed of <code>4,000 ft/s</code> in ductile iron pipe (DIP), stopping <code>1 ft/s</code> of flow instantaneously produces about <code>124 ft</code> of head (<code>54 psi</code>). The calculator includes typical wave-speed presets for ductile iron, steel, concrete pressure pipe, polyvinyl chloride (PVC), and high-density polyethylene (HDPE), since stiffer pipe walls carry faster pressure waves.</p>
 
-            <h3>The 2L/a trap</h3>
-            <p>The part that catches experienced people is the <em>critical closure time</em>. The pressure wave runs to the nearest free surface and reflects back in <code>t_c = 2L/a</code>. Any closure faster than that is instantaneous as far as the pipe is concerned &mdash; full Joukowsky, no credit for your careful hand on the wheel. Closures much slower let the reflection relieve pressure as you go, and a practical field rule is at least ~10&times; critical time for a controlled closure.</p>
-            <p>Here's the trap in numbers: a &ldquo;slow&rdquo; 30-second closure on a 5-mile forcemain, where <code>t_c &asymp; 13 s</code> for DIP, is barely 2&times; critical &mdash; not actually slow at all. Length is the variable intuition ignores, and it's the one that matters most. The tool prints both numbers side by side so the comparison is unavoidable.</p>
+            <p>The critical closure time is <code>t_c = 2L / a</code> (in seconds), where <code>L</code> is the pipeline length (ft) from the closing valve or pump to the nearest free water surface (such as a tank, reservoir, or wet well) and <code>a</code> is wave speed (ft/s) [3]. Because <code>t_c</code> is the round-trip travel time for a pressure wave to reflect back from the free surface, any valve closure completed in <code>t_c</code> seconds or less behaves as instantaneous and produces the full Joukowsky rise [3]. Slower closures allow returning relief waves to reduce the peak, and the calculator displays <code>10 &middot; t_c</code> alongside <code>t_c</code> as a conservative slow-closure reference. For example, on a 5-mile (<code>26,400 ft</code>) ductile iron forcemain (a pressurized sewer pipeline) with <code>a = 4,000 ft/s</code>, <code>t_c</code> is about <code>13.2 s</code>, so a 30-second closure is just over <code>2 &middot; t_c</code>.</p>
 
             <figure>
-                <img src="/blog/2026-07-02/surge-quick-check.png" alt="Calculator showing Joukowsky pressure rise, critical closure time, and total pressure against the pipe rating" loading="lazy">
-                <figcaption>Figure 1: Joukowsky rise and the critical closure time for the line length &mdash; the two numbers that answer the valve question.</figcaption>
+                <img src="/blog/2026-07-02/surge-quick-check.png" alt="Surge calculator output showing Joukowsky pressure rise, total pressure against pipe rating, and critical valve closure time" loading="lazy">
+                <figcaption>Figure 1: Joukowsky surge pressure rise, total pressure compared against pipe rating, and critical valve closure time.</figcaption>
             </figure>
 
             <details>
-                <summary>Material notes worth knowing</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li><strong>HDPE</strong> is forgiving twice over: low wave speed, and PE4710 ratings allow occasional surge to 2.0&times; and recurring surge to 1.5&times; the pressure class &mdash; a materially different acceptance basis than rigid pipe.</li>
-                    <li><strong>PVC</strong> is fatigue-sensitive: recurring surge on a PVC forcemain is a design issue, not just a peak-pressure issue.</li>
-                    <li><strong>Negative surge</strong> matters too: the down-swing after a pump trip can pull high points below atmospheric &mdash; column separation &mdash; and the rejoin slam can exceed the initial rise. That's what vacuum relief at high points is for.</li>
-                    <li>Check valve slam is the everyday version: a check that closes <em>after</em> reverse flow establishes converts that reverse velocity to surge.</li>
+                    <li><strong>HDPE pipe:</strong> HDPE has a low wave speed (roughly <code>900 ft/s</code> preset), and PE4710 (a standard high-density polyethylene pipe designation) allows occasional surges up to <code>2.0</code> times the pressure class and recurring surges up to <code>1.5</code> times the pressure class under Plastics Pipe Institute (PPI) design guidance [2].</li>
+                    <li><strong>PVC pipe:</strong> PVC is sensitive to cyclic pressure fatigue, so recurring surges on a PVC forcemain require checking cyclic fatigue limits in addition to peak pressure.</li>
+                    <li><strong>Negative surge and column separation:</strong> After a pump trip (a sudden loss of power or shutdown), a low-pressure wave can pull pipeline high points below atmospheric pressure down to vapor pressure, creating a vapor pocket (column separation). When the separated water columns rejoin, the resulting pressure spike can exceed the initial Joukowsky rise. Air and vacuum relief valves at high points are used to admit air and limit negative pressures [1].</li>
+                    <li><strong>Check valve slam:</strong> A check valve that closes after reverse flow has already developed abruptly stops that reverse velocity and generates a surge spike.</li>
+                    <li><strong>Screening scope:</strong> The Joukowsky equation covers a single velocity change in a simple pipeline. Systems with air valves, surge tanks, multiple branches, or column separation require a full hydraulic transient analysis [3].</li>
                 </ul>
             </details>
 
-            <p>It's a screening tool &mdash; when the quick check fails or the system has air valves, tanks, and multiple paths, that's transient-analysis territory, not spreadsheet territory [3]. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs in the browser and saves inputs in browser local storage (<code>localStorage</code>, a built-in browser store on the current device) until cleared.</p>
 
             <p>The tool: <a href="/tools/surge-quick-check.html">Surge (Water Hammer) Quick-Check Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] AWWA M51 &mdash; Air Valves: Air-Release, Air/Vacuum, and Combination. <a href="https://www.awwa.org/">https://www.awwa.org/</a></li>
-                <li>[2] Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> &mdash; HDPE surge allowances. <a href="https://plasticpipe.org/">https://plasticpipe.org/</a></li>
-                <li>[3] Wylie &amp; Streeter, <em>Fluid Transients in Systems</em> &mdash; the real analysis when the screen fails.</li>
+                <li>American Water Works Association (AWWA), <em>AWWA M51: Air-Release, Air/Vacuum, and Combination Air Valves</em>, 2nd Edition (2016).</li>
+                <li>Plastics Pipe Institute (PPI), <em>Handbook of Polyethylene Pipe</em>, 2nd Edition (2009), Chapter 6.</li>
+                <li>E. Benjamin Wylie and Victor L. Streeter, <em>Fluid Transients in Systems</em> (Prentice-Hall, 1993).</li>
             </ol>
         </article>
     </main>

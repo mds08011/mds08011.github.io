@@ -35,42 +35,40 @@
                 <time datetime="2026-05-27">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Whether a crane pick needs a full critical-lift plan or just standard pre-lift paperwork usually comes down to one ratio: gross load over the chart capacity at the working radius. The math is division. The reason picks go wrong is never the division &mdash; it's that the gross load quietly grows and the chart capacity quietly shrinks, and the person doing it in their head lands on a comfortable number that isn't real.</p>
+            <h2>Overview</h2>
+            <p>Before lifting equipment with a mobile crane, lift planners compare the total suspended weight (gross load) against the rated capacity listed on the crane's load chart at the working radius [1][2]. Working radius is the horizontal distance from the crane's center of rotation to the hook. This calculator sums the gross load components, computes percent of chart capacity at both the pick radius (where the load is lifted) and the set radius (where it is placed), and checks the governing ratio against a user-chosen critical-lift threshold.</p>
 
-            <h2>The Approach</h2>
-            <p>The whole calculation is honest bookkeeping:</p>
-            <p><code>Gross load = load + rigging + block/ball + other deductions</code><br>
-            <code>% of capacity = gross load / chart capacity at radius &times; 100</code></p>
-            <p>An &ldquo;18,000 lb pump&rdquo; that's 18,000 lb dry, plus a 900 lb spreader, 400 lb of slings and shackles, and a 1,200 lb headache ball, checked at the <em>set</em> radius instead of the pick radius, is a completely different lift than the one in your head. The tool forces each of those into its own line so nothing gets left off, and asks for capacity at both the pick and set radii because the load swings out to the larger radius to reach the set point [1][2].</p>
+            <h2>Formulas</h2>
+            <p>The calculation sums the weight components and divides by the chart capacity at the governing radius:</p>
+            <p><code>W_gross = W_load + W_rigging + W_block + W_deductions</code><br>
+            <code>Pct_cap = (W_gross / C_chart) &times; 100</code></p>
+            <p>Here <code>W_gross</code> is total gross load in pounds (lb), <code>W_load</code> is the equipment or material weight in lb (including any shipping skids lifted with it), <code>W_rigging</code> is the weight of slings, shackles, and any spreader bar (lifting beam) in lb, <code>W_block</code> is the weight of the hook block or headache ball (weighted overhaul ball on the hoist line) in lb, <code>W_deductions</code> covers other chart deductions such as a stowed or erected jib in lb, <code>C_chart</code> is the crane's rated chart capacity at the working radius in lb, and <code>Pct_cap</code> is percent of chart capacity in percent. Because crane capacity decreases as radius increases, the tool checks both pick and set radii (entered in feet) and reports whichever gives the higher percentage.</p>
 
             <figure>
-                <img src="/blog/2026-05-27/crane-pick-checker.png" alt="Checker summing gross load and reporting percent of chart capacity at pick and set radii, flagging critical-lift threshold" loading="lazy">
-                <figcaption>Figure 1: Gross load rolled up and checked against chart capacity, with the critical-lift threshold flagged.</figcaption>
+                <img src="/blog/2026-05-27/crane-pick-checker.png" alt="Crane pick calculator summing gross load and computing percent of chart capacity at pick and set radii against the critical-lift threshold" loading="lazy">
+                <figcaption>Figure 1: Gross load total and percent of chart capacity at the pick and set radii compared against the critical-lift threshold.</figcaption>
             </figure>
 
-            <p>Above the contract's threshold &mdash; commonly 75% of chart capacity, or any two-crane pick, or picks over energized lines or occupied facilities &mdash; most specs require a written critical lift plan. The tool draws that line and tells you which side of it you're on, but it's a screening check, not the plan. And percent of capacity is meaningless if an outrigger is about to punch through soft ground &mdash; ground bearing is its own separate problem.</p>
+            <p>Project specifications and safety programs commonly require a formal written critical-lift plan above a set threshold (often 75% of chart capacity), as well as for two-crane lifts or lifts over energized power lines or occupied buildings. This tool only screens the capacity ratio and does not replace a lift plan or a qualified lift director's review. The governing document for any lift is always the manufacturer's load chart in the cab of the specific crane, including its General Notes and deduction tables [1][2].</p>
 
             <details>
-                <summary>Common ways this check goes wrong in the field</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Reading the chart for the wrong configuration &mdash; full vs. reduced counterweight, outriggers full vs. intermediate, over-the-rear vs. 360&deg;.</li>
-                    <li>Radius measured to the wrong point. It's from the center of rotation to the hook, not from the outrigger or the tracks &mdash; and it grows as the boom deflects under load.</li>
-                    <li>Forgetting the load swings to a larger radius to reach the set point.</li>
-                    <li>Weights from memory. Get the bill of lading, the submittal, or weigh it.</li>
-                    <li>Soft ground under one float &mdash; matting and ground bearing are their own check.</li>
+                    <li>Chart capacities depend on the exact crane configuration, including boom length, counterweight (ballast installed on the crane), outrigger extension (full versus intermediate stabilizing beams), and swing zone (such as over-the-rear versus 360 degrees).</li>
+                    <li>Working radius is measured from the crane's center of rotation to the hook rather than from the outriggers or tracks, and increases slightly as the boom deflects under load.</li>
+                    <li>Equipment weights should be verified from shipping papers (bill of lading), manufacturer submittals (equipment data sheets), or a scale rather than estimated from memory.</li>
+                    <li>This tool does not check ground bearing pressure under the outrigger floats (pads) or crane matting (timber or steel pads used to spread loads on soft soil), nor does it evaluate wind limits, rigging capacity, or multi-crane lifts.</li>
                 </ul>
             </details>
 
-            <p>The governing document is always the load chart in the cab of the specific crane, including its General Notes. This tool just keeps the inputs honest. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs offline in a single HTML file using plain JavaScript with no external libraries, and saves your inputs in your browser's local storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/crane-pick-checker.html">Crane Pick Percent-of-Capacity Checker</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] OSHA 29 CFR 1926 Subpart CC &mdash; Cranes and Derricks in Construction. <a href="https://www.osha.gov/">https://www.osha.gov/</a></li>
-                <li>[2] ASME B30.5 &mdash; Mobile and Locomotive Cranes. <a href="https://www.asme.org/">https://www.asme.org/</a></li>
-                <li>[3] The load chart in the cab of the specific crane, including its General Notes &mdash; the actual governing document.</li>
+                <li>OSHA 29 CFR 1926 Subpart CC, Cranes and Derricks in Construction.</li>
+                <li>ASME B30.5, Mobile and Locomotive Cranes (American Society of Mechanical Engineers).</li>
             </ol>
         </article>
     </main>

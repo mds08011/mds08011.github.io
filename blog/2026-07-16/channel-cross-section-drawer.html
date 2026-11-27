@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drawing a Channel Cross-Section in SVG, and the 94% Quirk | Blog | MDS</title>
+    <title>Channel Cross-Section Drawer (Manning's Equation) | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,38 @@
     <main>
         <article>
             <header>
-                <h1>Drawing a Channel Cross-Section in SVG, and the 94% Quirk</h1>
+                <h1>Channel Cross-Section Drawer (Manning's Equation)</h1>
                 <time datetime="2026-07-16">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>The <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a> already does the hydraulics &mdash; area, wetted perimeter, velocity, flow. What it doesn't do is show you the channel. A row of numbers that says the hydraulic radius is 1.6 feet is correct and forgettable; a drawing of a trapezoid with the water shaded to depth, the top width called out, and the side slopes visible is something you can sanity-check at a glance. So this is the visual companion: same math, plus the picture.</p>
+            <p>This calculator computes open-channel flow using Manning's equation and draws the channel cross-section to scale as an inline SVG (Scalable Vector Graphics) diagram with the water area shaded and dimensions labeled. It is a visual companion to the text-only <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a>. To use it, choose either a trapezoidal channel (entering bottom width <code>b</code> in ft and side slope <code>Z</code> as horizontal-to-vertical ratio, H:1V) or a circular pipe (entering inside diameter <code>D</code> in inches), enter Manning's roughness <code>n</code> and longitudinal slope <code>S</code> (in percent or ft/ft), and either provide a flow depth <code>y</code> to calculate flow or provide a design flow <code>Q</code> to solve for normal depth (the steady, uniform flow depth).</p>
 
-            <h2>The Approach</h2>
-            <p>You pick a trapezoidal or circular section, give it a flow depth (or a design flow to solve normal depth for), and the tool draws the section to scale in inline SVG &mdash; the channel bed as a stroked path, the water area shaded, the water-surface line drawn, and the dimensions labeled. The hydraulic geometry, Manning's velocity and flow, and the Froude regime come out beside it. Critically, it reuses the exact geometry and the same bisection solver as the Manning's calculator, so the two tools agree by construction rather than by coincidence &mdash; the drawing is the only thing that's new.</p>
+            <p>In US customary units, Manning's equation is <code>V = (1.486 / n) &middot; R^(2/3) &middot; S^(1/2)</code> and <code>Q = V &middot; A</code> [1]. Here <code>V</code> is average velocity (ft/s), <code>n</code> is Manning's roughness coefficient (dimensionless, representing surface resistance), <code>R = A / P</code> is hydraulic radius (ft), <code>A</code> is cross-sectional flow area (ft&sup2;), <code>P</code> is wetted perimeter (ft, the length of channel boundary touching water), <code>S</code> is channel slope (ft/ft), and <code>Q</code> is flow rate in cubic feet per second (cfs, also converted to gallons per minute, gpm). For a trapezoid, <code>A = (b + Z &middot; y) &middot; y</code>, <code>P = b + 2 &middot; y &middot; &radic;(1 + Z&sup2;)</code>, and top width <code>T = b + 2 &middot; Z &middot; y</code>. For a circular pipe with diameter <code>D</code> (ft) and central angle <code>&theta; = 2 &middot; arccos(1 &minus; 2 &middot; y / D)</code> (radians), <code>A = (D&sup2; / 8) &middot; (&theta; &minus; sin &theta;)</code>, <code>P = D &middot; &theta; / 2</code>, and <code>T = D &middot; sin(&theta; / 2)</code> [1].</p>
 
             <figure>
-                <img src="/blog/2026-07-16/channel-cross-section-drawer.png" alt="A trapezoidal channel drawn to scale with water shaded to 2.5 ft depth, labeled bottom width, top width, and 2:1 side slopes, beside the hydraulic geometry table" loading="lazy">
-                <figcaption>Figure 1: A 6-ft-bottom, 2:1 trapezoid flowing 2.5 ft deep &mdash; Fr 0.77, subcritical, and the geometry matches the Manning's tool exactly.</figcaption>
+                <img src="/blog/2026-07-16/channel-cross-section-drawer.png" alt="Scaled cross-section of a trapezoidal channel with water shaded to 2.5 ft depth, labeled bottom width, top width, and 2:1 side slopes, above the hydraulic output table" loading="lazy">
+                <figcaption>Figure 1: Cross-section and hydraulic outputs for a trapezoidal channel with a 6 ft bottom width, 2:1 side slopes, and 2.5 ft flow depth (Froude number 0.77, subcritical).</figcaption>
             </figure>
 
-            <h3>The 94% quirk, made visible</h3>
-            <p>The reason a drawing earns its keep is the circular pipe. Everyone learns that a pipe's capacity is its full-flow capacity, and everyone who has run the numbers knows that's not quite true: discharge in a circular section <em>peaks near d/D &asymp; 0.94</em> and then decreases toward full, because the last sliver of depth near the crown adds wetted perimeter faster than it adds area. A &ldquo;full&rdquo; pipe actually carries slightly <em>less</em> than a 94%-full one. As a sentence it's a curiosity; as a picture &mdash; the shaded segment at maximum discharge visibly not reaching the crown &mdash; it finally sticks. The solver knows it too, searching only up to the peak and reporting a design flow above it as exceeding gravity capacity.</p>
+            <p>The tool also calculates the Froude number, <code>Fr = V / &radic;(g &middot; A / T)</code>, where <code>g = 32.174 ft/s&sup2;</code> is gravitational acceleration [1]. Flow is subcritical (slower and deeper) when <code>Fr &lt; 1</code>, critical near <code>Fr = 1</code>, and supercritical (faster and shallower) when <code>Fr &gt; 1</code>. Because Manning's equation cannot be solved directly for depth in closed form, design-flow mode uses a bisection search (repeatedly halving a depth interval until computed flow matches the target). In a circular pipe under gravity flow, calculated discharge reaches its maximum near a depth-to-diameter ratio <code>d/D = 0.938</code> (about 94% full) rather than at 100% full, because the last increment of depth near the crown (inside top of the pipe) adds wetted perimeter faster than flow area [1]. The solver stops at <code>d/D = 0.938</code> and flags higher design flows as exceeding gravity capacity, meaning the pipe would surcharge (run under pressure).</p>
 
             <details>
-                <summary>Drawing to scale in vanilla SVG</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The geometry is computed in feet, then a single scale factor maps world units to the viewBox, chosen so the section fits the width with a little freeboard above the water line. The viewBox height adapts to the section, so a wide shallow channel doesn't leave half the frame empty.</li>
-                    <li>The trapezoid is one stroked path (two banks and a bottom); the water is a four-point polygon; the circular water segment is a polygon sampled along the wetted arc, which sidesteps the SVG elliptical-arc flag arithmetic entirely.</li>
-                    <li>Strokes and fills are CSS custom properties, so the whole thing flips to dark mode with the page and never ships a second color scheme.</li>
-                    <li>Everything redraws on every keystroke &mdash; there's no animation, just a full re-render of a few hundred bytes of SVG, which is instant.</li>
+                    <li><strong>Steady, uniform flow:</strong> Manning's equation assumes constant discharge, constant slope, and a prismatic channel (unchanging cross-section along its length). Channels with bends, transitions, or downstream backwater require a gradually varied flow profile instead [2].</li>
+                    <li><strong>Roughness uncertainty:</strong> Concrete and smooth pipe linings have narrow <code>n</code> ranges, while vegetated or natural channels vary with grass height, season, and depth [3].</li>
+                    <li><strong>Supercritical flow and freeboard:</strong> When <code>Fr &gt; 1</code>, standing waves, hydraulic jumps, and required freeboard (extra wall height above the water surface) need separate evaluation beyond a uniform-flow check [2], [3].</li>
+                    <li><strong>Local storage:</strong> Inputs are stored locally in the browser via <code>localStorage</code> and can be cleared with the reset button.</li>
                 </ul>
             </details>
-
-            <p>Manning's still assumes steady, uniform flow in a prismatic channel, and <code>n</code> is still where the real uncertainty lives &mdash; the drawing doesn't make the assumptions any truer, it just makes the section legible. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/channel-cross-section-drawer.html">Channel Cross-Section Drawer</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a> &mdash; same equation and section geometry, without the drawing.</li>
-                <li>[2] Chow, <em>Open-Channel Hydraulics</em> &mdash; Manning's equation, section geometry, and flow regime.</li>
-                <li>[3] FHWA HDS-3 (highway hydraulics) and HEC-15 (design of roadside channels with flexible linings).</li>
+                <li>Ven Te Chow, <em>Open-Channel Hydraulics</em>, McGraw-Hill, 1959 (Manning's equation, trapezoidal and circular geometry, and Froude flow regimes).</li>
+                <li>Federal Highway Administration (FHWA), <em>Introduction to Highway Hydraulics</em>, Hydraulic Design Series No. 4 (HDS-4), FHWA-NHI-08-090, 2008.</li>
+                <li>Federal Highway Administration (FHWA), <em>Design of Roadside Channels with Flexible Linings</em>, Hydraulic Engineering Circular No. 15 (HEC-15), 3rd ed., FHWA-NHI-05-114, 2005.</li>
             </ol>
         </article>
     </main>

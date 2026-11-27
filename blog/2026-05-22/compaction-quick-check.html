@@ -35,41 +35,42 @@
                 <time datetime="2026-05-22">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A nuclear density gauge reads wet density and moisture. What the spec wants is percent compaction &mdash; dry density as a fraction of the Proctor maximum. The conversion is two lines of arithmetic, but standing over the gauge you also want the answer to the next question the roller operator is going to ask: <em>if it's short, what wet density do I need to hit?</em> This tool does both, plus the moisture check that a lot of quick calcs skip.</p>
+            <h2>Overview</h2>
+            <p>A nuclear density gauge measures the in-place wet density and moisture content of compacted soil [2]. Project specifications generally require a minimum relative compaction (percent compaction), defined as the in-place dry density divided by the laboratory Proctor maximum dry density from a Standard Proctor (ASTM D698) or Modified Proctor (ASTM D1557) test [1]. This calculator converts a wet or dry gauge reading into percent compaction, compares field moisture against the laboratory optimum moisture content, and computes the wet density needed to pass at the current moisture content.</p>
 
-            <h2>The Approach</h2>
-            <p>Strip the water out of the wet reading to get dry density, then compare to the lab max:</p>
-            <p><code>&gamma;_dry = &gamma;_wet / (1 + w/100)</code> &nbsp;&nbsp; <code>RC = &gamma;_dry / &gamma;_dry,max &times; 100</code></p>
-            <p>And solved the other way, the wet density that lands you on the required compaction at the current moisture &mdash; the number to hand the operator:</p>
-            <p><code>&gamma;_wet,req = (RC_req/100) &times; &gamma;_dry,max &times; (1 + w/100)</code></p>
+            <h2>Formulas</h2>
+            <p>From a wet density reading and moisture content, dry density and relative compaction are:</p>
+            <p><code>&gamma;_dry = &gamma;_wet / (1 + w / 100)</code><br>
+            <code>RC = (&gamma;_dry / &gamma;_dry,max) &times; 100</code></p>
+            <p>Solving in reverse gives the required wet density at the current moisture content:</p>
+            <p><code>&gamma;_wet,req = (RC_req / 100) &times; &gamma;_dry,max &times; (1 + w / 100)</code></p>
+            <p>Here <code>&gamma;_dry</code> is field dry density in pounds per cubic foot (pcf), <code>&gamma;_wet</code> is field wet density in pcf, <code>w</code> is moisture content in percent, <code>RC</code> is relative compaction in percent, <code>&gamma;_dry,max</code> is the laboratory Proctor maximum dry density in pcf, <code>RC_req</code> is the specified minimum compaction in percent, and <code>&gamma;_wet,req</code> is the required wet density in pcf. The tool also accepts dry density directly if the gauge displays it.</p>
 
             <figure>
-                <img src="/blog/2026-05-22/compaction-quick-check.png" alt="Calculator showing dry density, percent compaction, moisture deviation from optimum, and required wet density" loading="lazy">
-                <figcaption>Figure 1: A passing density with the moisture deviation and target wet density called out alongside.</figcaption>
+                <img src="/blog/2026-05-22/compaction-quick-check.png" alt="Compaction calculator showing dry density, percent compaction, moisture deviation from optimum, and required wet density" loading="lazy">
+                <figcaption>Figure 1: Compaction calculation showing dry density, percent compaction, moisture deviation from optimum, and target wet density.</figcaption>
             </figure>
 
-            <p>The moisture piece is what earns the tool its keep. A lift can pass density today and still be a problem: wet of optimum in a clay, it may pump under the next lift or the pipe zone tomorrow; dry of optimum, some clays hit density in a brittle, high-suction state that collapses when it finally gets wet under a slab. The tool shows the deviation from optimum so a passing density with bad moisture doesn't get waved through [1].</p>
+            <p>Moisture content is reported alongside density because a compacted soil layer (lift) can pass the density requirement and still perform poorly if its moisture is far from optimum. Clay compacted wet of optimum (above the laboratory optimum moisture content) can flex or pump under later lifts or inside a pipe zone (the backfill around a buried pipe). Clay compacted dry of optimum can reach high density in a stiff, high-suction state that later settles or collapses if it becomes wet under a slab or structure. Showing the moisture offset from optimum makes it straightforward to check both density and moisture against the project specification.</p>
 
             <details>
-                <summary>When percent compaction comes back over 100%</summary>
-                <p>Not impossible &mdash; field energy can beat the standard Proctor &mdash; but over about 102&ndash;103% deserves suspicion before celebration:</p>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Wrong Proctor curve for the material actually in the hole. The most common cause by far.</li>
-                    <li>Oversize particles reading dense. Past ~5% retained on the &frac34;-in. sieve, an oversize correction (ASTM D4718) applies and the raw comparison is invalid.</li>
-                    <li>Standard (D698) vs. modified (D1557) Proctor mix-up &mdash; modified maxes run several pcf higher.</li>
+                    <li>This calculator checks arithmetic only. It assumes the correct laboratory Proctor curve has been selected for the soil being tested, the gauge is properly calibrated, and any required oversize correction has already been applied. The testing agency's report is the official record.</li>
+                    <li>Relative compaction above 100% is physically possible when field compaction energy exceeds the laboratory effort, but values above roughly 102% to 103% warrant checking for a mismatched Proctor curve, a mix-up between Standard (ASTM D698) and Modified (ASTM D1557) Proctor tests where Modified maximum densities run several pcf higher [1], or oversize gravel and cobbles raising the gauge reading.</li>
+                    <li>When more than 5% of the soil by weight is retained on the oversize sieve (typically the 3/4-inch or No. 4 sieve depending on the Proctor method), an oversize particle correction under ASTM D4718 applies [3].</li>
                 </ul>
             </details>
 
-            <p>It's a quick-check, not a lab report &mdash; it assumes you have the right Proctor for the material and that any oversize correction has already been handled. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
+            <p>The calculator runs offline in a single HTML file using plain JavaScript with no external libraries, and saves your inputs in your browser's local storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/compaction-quick-check.html">Compaction Quick-Check Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ASTM D698 / D1557 &mdash; Standard and Modified Proctor laboratory compaction. <a href="https://www.astm.org/">https://www.astm.org/</a></li>
-                <li>[2] ASTM D6938 &mdash; In-place density and water content by nuclear methods.</li>
-                <li>[3] ASTM D4718 &mdash; Correction of unit weight and water content for soils containing oversize particles.</li>
+                <li>ASTM D698 and ASTM D1557, Standard Test Methods for Laboratory Compaction Characteristics of Soil Using Standard Effort and Modified Effort.</li>
+                <li>ASTM D6938, Standard Test Methods for In-Place Density and Water Content of Soil and Soil-Aggregate by Nuclear Methods (Shallow Depth).</li>
+                <li>ASTM D4718, Standard Practice for Correction of Unit Weight and Water Content for Soils Containing Oversize Particles.</li>
             </ol>
         </article>
     </main>

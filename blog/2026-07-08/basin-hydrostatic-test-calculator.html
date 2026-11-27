@@ -35,41 +35,36 @@
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A water-tightness test on a concrete basin sounds simple: fill it, wait, measure the drop. The catch is that the water surface drops for reasons that have nothing to do with leaks. A big open basin evaporates measurably every day, rain adds water back, and new concrete <em>drinks</em> for its first several days full. Run the test naively and you'll fail a tight basin in August or pass a leaky one in a drizzle. ACI 350.1 structures the test so the number you compute is actually leakage [1].</p>
+            <p>This calculator checks volumetric liquid loss during a hydrostatic (water-tightness) test of a concrete basin, tank, or channel using the American Concrete Institute (ACI) 350.1 method [1]. You enter the basin shape and dimensions (or water surface area and volume directly), the measured water surface drop, the test duration, the evaporation and rainfall correction, and the specified allowable loss rate (commonly 0.05% or 0.10% of test volume per 24 hours). The calculator reports the corrected leakage drop, volume lost, 24-hour loss rate, pass/fail status, and the pre-test allowable drop for the planned duration.</p>
 
-            <h2>The Approach</h2>
-            <p>The correction comes first. The elegant version is the evaporation pan: float a calibrated pan of water in the basin, and it sees the same evaporation and rainfall as the basin surface, so the difference isolates leakage:</p>
-            <p><code>&Delta;h = drop_basin &minus; &Delta;h_pan</code></p>
-            <p>Or measure the terms separately: <code>&Delta;h = drop_basin &minus; evaporation + rainfall</code>. The corrected drop converts to volume and normalizes to the standard 24-hour basis:</p>
-            <p><code>%/24hr = V_lost / V_test &times; (24 / t_hr) &times; 100</code></p>
-            <p>checked against the allowable percentage of volume per 24 hours from the spec. The tool also inverts the whole chain into the pre-test planning number: the allowable drop in inches over <em>your</em> test duration, so the crew knows before the test starts what reading means pass.</p>
+            <p>Water surface elevation changes from evaporation and rainfall must be removed before computing leakage. With a floating evaporation pan (an open calibrated pan floated in the basin so it experiences the same evaporation and rainfall as the basin surface), the corrected leakage drop is <code>&Delta;h = drop_basin &minus; &Delta;h_pan</code>, where <code>&Delta;h</code> is the net leakage drop (in), <code>drop_basin</code> is the measured basin water surface drop (in), and <code>&Delta;h_pan</code> is the pan water surface change (in, positive for a drop and negative for a rise). When evaporation and rainfall are estimated separately, the corrected drop is <code>&Delta;h = drop_basin &minus; E + P</code>, where <code>E</code> is evaporation (in) and <code>P</code> is rainfall (in) over the test period.</p>
+
+            <p>The corrected drop converts to leakage volume by <code>V_lost = (&Delta;h / 12) &times; A &times; 7.4805</code>, where <code>V_lost</code> is leakage volume (gal), <code>A</code> is water surface area at the test water level (ft<sup>2</sup>, equal to length times width for a rectangle or <code>&pi; &times; D<sup>2</sup> / 4</code> for a circle of inside diameter <code>D</code> in ft), <code>12</code> converts inches to feet, and <code>7.4805</code> converts cubic feet to US gallons. The 24-hour loss rate is <code>L_24 = (V_lost / V_test) &times; (24 / t_hr) &times; 100</code>, where <code>L_24</code> is percent of test volume lost per 24 hours, <code>V_test</code> is the initial water volume at test level (gal), and <code>t_hr</code> is the test duration (hr). Solving in reverse gives the pre-test allowable drop: <code>&Delta;h_allow = (allow% / 100) &times; (V_test / (A &times; 7.4805)) &times; 12 &times; (t_hr / 24)</code>, where <code>&Delta;h_allow</code> is the maximum allowable corrected drop (in) and <code>allow%</code> is the specified allowable loss (% of volume per 24 hr).</p>
 
             <figure>
-                <img src="/blog/2026-07-08/basin-hydrostatic-test-calculator.png" alt="Calculator showing pan-corrected drop, volume lost, percent per 24 hours, and the allowable drop for the test duration" loading="lazy">
-                <figcaption>Figure 1: The pan-corrected loss rate against the ACI 350.1 allowable, with the pre-test allowable drop in inches.</figcaption>
+                <img src="/blog/2026-07-08/basin-hydrostatic-test-calculator.png" alt="Basin hydrostatic test calculator showing corrected drop, volume lost, 24-hour loss rate, and allowable drop" loading="lazy">
+                <figcaption>Figure 1: Pan-corrected leakage loss rate compared against the ACI 350.1 allowable limit and the allowable drop for the test duration.</figcaption>
             </figure>
 
-            <p>Two protocol points do most of the work of making the number defensible. First, <strong>stabilization</strong>: ACI 350.1 requires the basin sit full for a stabilization period (commonly 3 days) before the measured test starts, or an early &ldquo;failure&rdquo; is just absorption. Second, <strong>measurement precision governs duration</strong>: with a good hook gauge you can resolve about 1/16 in., so if the allowable drop over 24 hours is smaller than that, extend the test &mdash; the standard allows it for exactly this reason, and the tool flags allowable drops under a quarter inch.</p>
+            <p>Two parts of the ACI 350.1 procedure directly affect whether a test measurement is valid [1]. First, dry concrete absorbs water after filling, so ACI 350.1 specifies a stabilization period (commonly 3 days for unlined concrete) before the measured test period begins. Second, with a hook gauge (a precision depth gauge with a vernier scale) or fixed staff, practical reading resolution is around 1/16 in (0.0625 in). When the allowable drop over 24 hours is very small, ACI 350.1 allows extending the test duration so the allowable drop can be resolved reliably, and the calculator flags allowable drops under 0.25 in.</p>
 
             <details>
-                <summary>Running the test so the numbers mean something</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>Measure from fixed reference points at multiple locations, at the same time of day &mdash; thermal expansion of the water is real over a big surface.</li>
-                    <li>Valves and bulkheads count as leaks: a weeping plug valve fails the basin on paper. Isolate and verify them before blaming the concrete.</li>
-                    <li>Most specs distinguish acceptable exterior dampness from unacceptable flowing water regardless of the volumetric result &mdash; walk the walls, don't just read the gauge.</li>
+                    <li>Measure water levels from fixed reference points at multiple locations and at the same time of day to reduce error from wind setup and thermal expansion of the water.</li>
+                    <li>Verify isolation valves (such as plug valves) and temporary bulkheads (watertight barriers blocking pipe openings) before testing. Any leakage past an isolation device adds to the measured basin loss.</li>
+                    <li>Exterior wall inspection is separate from the volumetric calculation. Project specifications typically distinguish acceptable surface dampness from unacceptable flowing water regardless of the calculated loss rate [1].</li>
+                    <li>Contract specifications govern the exact acceptance criterion, stabilization period, test duration, and retest procedure. For circular prestressed concrete tanks (cylindrical tanks compressed with tensioned wire or strands), American Water Works Association (AWWA) standards D110 and D115 specify separate tightness-testing rules [2].</li>
+                    <li>The tool is a single HTML page written in plain JavaScript that runs offline and stores inputs in browser <code>localStorage</code> (local storage in the browser on your device).</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The contract spec governs the criterion, stabilization period, and retest provisions; AWWA D110/D115 have their own tightness provisions for circular prestressed tanks [2][3].</p>
 
             <p>The tool: <a href="/tools/basin-hydrostatic-test-calculator.html">Basin Hydrostatic Test Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ACI 350.1 &mdash; Specification for Tightness Testing of Environmental Engineering Concrete Containment Structures. <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
-                <li>[2] AWWA D110 / D115 &mdash; tightness testing provisions for circular prestressed tanks, where applicable.</li>
-                <li>[3] Contract specifications &mdash; governing criterion, stabilization period, and retest provisions.</li>
+                <li>ACI 350.1, <em>Specification for Tightness Testing of Environmental Engineering Concrete Containment Structures</em>, American Concrete Institute (edition referenced in the contract specifications).</li>
+                <li>AWWA D110, <em>Wire- and Strand-Wound, Circular, Prestressed Concrete Water Tanks</em>, and AWWA D115, <em>Tendon-Prestressed Concrete Water Tanks</em>, American Water Works Association.</li>
             </ol>
         </article>
     </main>

@@ -35,45 +35,32 @@
                 <time datetime="2026-07-08">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A telemetry gateway sits at 192.168.17.1. The site router hands out 10.215.113.x. Neither device is broken, the cable is fine, and nothing will ever ping &mdash; and the civil engineer standing between them ends up texting screenshots of a command prompt to IT to learn why. The why is one bitwise operation, and it's checkable on a phone with no signal.</p>
+            <p>This tool takes the Internet Protocol version 4 (IPv4) address and subnet mask of two devices, such as a telemetry gateway or programmable logic controller (PLC) and a laptop or site router, and checks whether both belong to the same local subnet. An IPv4 address is a 32-bit number written as four decimal octets separated by dots (dotted-decimal notation, such as <code>192.168.17.1</code>). A subnet mask splits those 32 bits into a network portion (1-bits) and a host portion (0-bits), and can be written either in dotted-decimal form (<code>255.255.255.0</code>) or Classless Inter-Domain Routing (CIDR) prefix form (<code>/24</code>, meaning 24 leading 1-bits). On a computer, you can read the current IP address and subnet mask in a terminal by running <code>ipconfig</code> on Windows, <code>ip addr</code> on Linux, or <code>ifconfig</code> on macOS.</p>
 
-            <h2>The Approach</h2>
-            <p>An IP address is 32 bits, and the subnet mask splits it into a network part and a host part. Two devices can talk directly only if their network numbers match. The math is a single AND per device:</p>
-            <p><code>network = IP &amp; mask</code></p>
-            <p>So <code>192.168.17.1 &amp; 255.255.255.0 = 192.168.17.0</code>, while <code>10.215.113.50 &amp; 255.255.255.0 = 10.215.113.0</code>. Different networks &mdash; the tool flashes red and says so in plain words: <em>the devices are invisible to each other; they need a router, or one of them needs an address in the other's network</em>. Matching networks flash green, with the honest caveat that matching addresses on separate switches or VLANs still won't talk &mdash; this answers the addressing question only.</p>
+            <p>Two devices can communicate directly on the same local link only if they share the same network address, computed with a bitwise AND operation: <code>network = IP &amp; mask</code>, where <code>IP</code> is the 32-bit unsigned device address, <code>mask</code> is the 32-bit unsigned subnet mask, <code>&amp;</code> keeps a bit as 1 only where both inputs have a 1, and <code>network</code> is the resulting 32-bit network address. For example, <code>192.168.17.1 &amp; 255.255.255.0 = 192.168.17.0</code>, while <code>10.215.113.50 &amp; 255.255.255.0 = 10.215.113.0</code>. Because the network addresses differ, the devices cannot reach each other (a connectivity check such as <code>ping</code> will fail) unless a router forwards traffic between the two subnets or one device is readdressed into the other subnet.</p>
 
             <figure>
-                <img src="/blog/2026-07-08/subnet-clash-detector.png" alt="Two device IP and mask inputs with computed network addresses and a red Subnet Mismatch verdict panel" loading="lazy">
-                <figcaption>Figure 1: The mismatch case &mdash; both computed network addresses shown, so the verdict is explainable in a text to IT.</figcaption>
+                <img src="/blog/2026-07-08/subnet-clash-detector.png" alt="Two device IP and subnet mask inputs with computed network addresses and a Subnet Mismatch result" loading="lazy">
+                <figcaption>Figure 1: Subnet mismatch output showing the computed network address for each device.</figcaption>
             </figure>
 
-            <p>Masks are accepted as dotted decimal or CIDR (<code>/24</code> and <code>255.255.255.0</code> are the same statement), non-contiguous masks get flagged as the typos they almost always are, and both computed network addresses display under the inputs &mdash; because &ldquo;my device is on 192.168.17.0/24, yours is 10.215.113.0/24&rdquo; is a much better opening line with IT than a screenshot of <code>ipconfig</code>.</p>
+            <p>The tool accepts masks in dotted-decimal or CIDR format, displays the computed network address under each device, warns if the two masks differ, and flags non-contiguous masks (masks with 0-bits mixed among the 1-bits, which usually indicate a typing error). A matching result only confirms IPv4 addressing compatibility. Devices with matching subnets still cannot communicate if they are connected to separate physical network switches or separate Virtual Local Area Networks (VLANs, logically isolated network segments).</p>
 
             <details>
-                <summary>A JavaScript footnote on the bitwise part</summary>
-                <p>JS bitwise operators work on <em>signed</em> 32-bit integers, so an address like 192.168.17.1 (high bit set) goes negative the moment you AND it. Every operation in the tool is followed by <code>&gt;&gt;&gt; 0</code>, the unsigned right-shift by zero, which is the idiomatic way to coerce back to an unsigned 32-bit value:</p>
-                <pre><code>var network = (ip &amp; mask) &gt;&gt;&gt; 0;</code></pre>
-                <p>The mask sanity check is a bit-trick worth knowing: a valid mask is 1-bits then 0-bits, so its inverse must be of the form 2&#8319;&minus;1, and <code>((inv + 1) &amp; inv) === 0</code> tests exactly that.</p>
-            </details>
-
-            <details>
-                <summary>The usual field fix</summary>
+                <summary>Notes and limits</summary>
                 <ul>
-                    <li>Fastest: give the laptop a <em>second</em> static IP in the device's subnet &mdash; most OSes allow multiple addresses on one adapter, so you keep the site network and reach the device.</li>
-                    <li>Right long-term: IT adds a route or puts the device VLAN behind the router. Their call, not a field improvisation [2].</li>
-                    <li>10.x, 172.16&ndash;31.x, and 192.168.x are private ranges &mdash; normal for industrial gear, never directly reachable from the internet [1].</li>
+                    <li><strong>Private address ranges:</strong> RFC 1918 reserves <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code> (<code>172.16.x.x</code> through <code>172.31.x.x</code>), and <code>192.168.0.0/16</code> for private networks [1]. Plant and telemetry equipment typically uses these ranges, which are not directly routable on the public internet.</li>
+                    <li><strong>Resolving mismatches:</strong> For temporary direct access from a laptop, most operating systems allow assigning a second static IP address (a manually configured address) on the same network adapter in the target device's subnet (under IPv4 Advanced settings in Windows, Network settings on macOS, or via <code>ip addr add</code> on Linux). Permanent routing changes or VLAN reassignments should be made by the site's Information Technology / Operational Technology (IT/OT) network administrator.</li>
+                    <li><strong>JavaScript bitwise details:</strong> JavaScript bitwise operators operate on signed 32-bit integers, so any IPv4 address whose first octet is 128 or higher (high bit set to 1, such as <code>192.168.17.1</code>) turns negative after <code>&amp;</code>. Following each operation with <code>&gt;&gt;&gt; 0</code> (unsigned right shift by zero bits) converts the value back to an unsigned 32-bit integer: <code>var network = (ip &amp; mask) &gt;&gt;&gt; 0;</code>. To check that a mask is contiguous (all 1-bits followed by all 0-bits), the tool computes the bitwise inverse <code>var inv = (~mask) &gt;&gt;&gt; 0;</code> and verifies <code>((inv + 1) &amp; inv) === 0</code>, which holds only when <code>inv</code> is of the form 2<sup>n</sup> &minus; 1.</li>
+                    <li><strong>Offline use and storage:</strong> The tool is a single HTML page written in plain JavaScript and saves inputs in browser <code>localStorage</code> (local storage in the browser on your device). To use it offline without cell service, load the page once while online or save the HTML file locally and open it in a browser.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, inputs persisted in <code>localStorage</code>, fully offline &mdash; which matters, because the moment you need this tool is precisely the moment the network doesn't work.</p>
 
             <p>The tool: <a href="/tools/subnet-clash-detector.html">Industrial Subnet Clash Detector</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] RFC 1918 &mdash; Address Allocation for Private Internets. <a href="https://www.rfc-editor.org/rfc/rfc1918">https://www.rfc-editor.org/rfc/rfc1918</a></li>
-                <li>[2] The site's IT/OT network administrator &mdash; the governing authority for anything beyond reading addresses.</li>
+                <li>RFC 1918, <em>Address Allocation for Private Internets</em>, Internet Engineering Task Force (IETF), February 1996. <a href="https://www.rfc-editor.org/rfc/rfc1918">https://www.rfc-editor.org/rfc/rfc1918</a></li>
             </ol>
         </article>
     </main>

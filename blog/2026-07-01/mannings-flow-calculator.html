@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solving Manning's Normal Depth by Bisection Client-Side | Blog | MDS</title>
+    <title>Manning's Open-Channel Flow and Normal Depth Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,49 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Solving Manning's Normal Depth by Bisection Client-Side</h1>
+                <h1>Manning's Open-Channel Flow and Normal Depth Calculator</h1>
                 <time datetime="2026-07-01">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Manning's equation is the workhorse of gravity-flow hydraulics: give it a channel section, a slope, and a roughness and it hands back flow and velocity. Going that direction &mdash; depth to flow &mdash; is a plug-and-chug. Going the other direction &mdash; <em>design flow to the depth it runs at</em> &mdash; is the question you actually have standing at a manhole, and it has no closed-form answer for a partially full pipe. That is the gap this tool fills.</p>
+            <p>This calculator applies Manning's equation to steady, uniform gravity flow in partially full circular pipes, rectangular channels, and trapezoidal channels [1]. In forward mode, it calculates discharge and velocity from a given water depth. In reverse mode, it solves for normal depth (the steady uniform flow depth on a constant slope) from a target design flow.</p>
 
-            <h2>The Approach</h2>
-            <p>Forward, it is just Manning's in customary units:</p>
-            <p><code>Q = (1.486/n)&middot;A&middot;R^(2/3)&middot;S^(1/2)</code></p>
-            <p>with velocity <code>V = Q/A</code>. The geometry is where the bookkeeping lives. For a circular pipe at depth <code>y</code> and diameter <code>D</code>, the central angle is <code>&theta; = 2&middot;acos(1 &minus; 2y/D)</code>, and from there <code>A = (D&sup2;/8)(&theta; &minus; sin&theta;)</code>, wetted perimeter <code>P = D&theta;/2</code>, hydraulic radius <code>R = A/P</code>. Rectangular and trapezoidal sections are handled too.</p>
+            <p>In US customary units, Manning's equation is <code>Q = (1.486 / n) &middot; A &middot; R^(2/3) &middot; S^(1/2)</code> with mean velocity <code>V = Q / A</code>, where <code>Q</code> is flow rate in cubic feet per second (cfs), <code>n</code> is Manning's roughness coefficient (dimensionless), <code>A</code> is cross-sectional flow area in square feet (ft&sup2;), <code>R = A / P</code> is hydraulic radius in feet (ft), <code>P</code> is wetted perimeter (the boundary length in contact with water) in feet (ft), <code>S</code> is channel slope in ft/ft, and <code>V</code> is average velocity in ft/s [1]. Results are also reported in gallons per minute (GPM) and million gallons per day (MGD). For a circular pipe of inside diameter <code>D</code> (ft) flowing at depth <code>d</code> (ft), the central angle in radians is <code>&theta; = 2 &middot; acos(1 &minus; 2d / D)</code> (with <code>acos</code> returning radians), giving <code>A = (D&sup2; / 8)(&theta; &minus; sin&theta;)</code>, <code>P = D &middot; &theta; / 2</code>, and water-surface top width <code>T = D &middot; sin(&theta; / 2)</code> [1].</p>
 
-            <h3>The bisection solver</h3>
-            <p>Because <code>Q(y)</code> can't be inverted for depth in these sections, the reverse mode brackets the answer and bisects: evaluate flow at the midpoint of a depth interval, compare to the target, and halve toward it. Forty iterations gets you to machine precision in a few microseconds &mdash; there is no reason to be clever about it. Bisection is bulletproof here because <code>Q(y)</code> is monotonic over the range the solver searches.</p>
-
-            <p>That last qualifier matters, and it is the one genuinely interesting wrinkle. In a circular pipe, discharge does <em>not</em> increase all the way to full &mdash; it peaks at about d/D &asymp; 0.94 and then falls off, because that last sliver of depth adds wetted perimeter faster than it adds area. So the solver only searches up to the peak; ask for a flow above it and the tool reports that you have exceeded gravity capacity and the pipe would surcharge, rather than quietly returning a bogus near-full depth [1][3].</p>
+            <p>Because Manning's equation has no closed-form algebraic solution for depth <code>d</code> in partially full pipes or trapezoidal channels, reverse mode uses bisection (repeatedly evaluating <code>Q(d)</code> at the midpoint of a bracket and halving the interval over 60 iterations). In a circular pipe, gravity discharge peaks near <code>d/D = 0.938</code> and then decreases slightly toward full flow because wetted perimeter grows faster than flow area near the top of the pipe [1]. The solver searches only up to <code>d/D = 0.938</code>, where <code>Q(d)</code> increases monotonically (strictly upward with depth). If the entered flow exceeds that gravity peak, the calculator reports that the pipe will surcharge (fill completely and operate under pressure). The calculator also computes the dimensionless Froude number <code>Fr = V / &radic;(g &middot; A / T)</code>, where <code>g = 32.174 ft/s&sup2;</code> is gravitational acceleration and <code>A / T</code> is hydraulic depth (ft), to classify the flow regime as subcritical (<code>Fr &lt; 1</code>, slower tranquil flow) or supercritical (<code>Fr &gt; 1</code>, rapid flow) [3]. Between roughly <code>Fr = 0.9</code> and <code>1.1</code>, the water surface becomes wavy and unstable, so the tool flags readings in that range [3].</p>
 
             <figure>
-                <img src="/blog/2026-07-01/mannings-flow-calculator.png" alt="Reverse-mode output showing the solved normal depth, d/D ratio, velocity, and Froude number for a design flow" loading="lazy">
-                <figcaption>Figure 1: Normal-depth solver output &mdash; design flow in, depth, d/D, velocity, and flow regime out.</figcaption>
+                <img src="/blog/2026-07-01/mannings-flow-calculator.png" alt="Manning's calculator output showing normal depth, d/D ratio, flow area, velocity, and Froude number for a circular pipe" loading="lazy">
+                <figcaption>Figure 1: Normal-depth solver output for a circular pipe, showing flow depth, d/D ratio, velocity, and flow regime.</figcaption>
             </figure>
 
-            <p>It also reports the Froude number, <code>Fr = V/&radic;(g&middot;A/T)</code>, and flags subcritical vs. supercritical flow. The band between about 0.9 and 1.1 is where the water surface goes unstable and wavy, and the tool calls that out &mdash; depth readings in that range are unreliable and designers avoid it.</p>
-
             <details>
-                <summary>Field notes the tool bakes in</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Most sewer specs want &ge;2.0 ft/s at design flow for self-cleansing (Ten-State). The tool flags anything slower.</li>
-                    <li>Measure depth off the invert, not the top of a grit or grease layer &mdash; and if there's a layer, your effective geometry isn't the design geometry.</li>
-                    <li>Use the constructed invert slope between structures, not the ground surface.</li>
-                    <li>Manning's off a single depth reading is &plusmn;10&ndash;20% at best &mdash; good enough to catch a pump running or an I&amp;I problem, not good enough to bill anyone.</li>
+                    <li>Manning's equation assumes steady, uniform flow on a constant slope, away from drops, bends, gates, junctions, or downstream backwater.</li>
+                    <li>Sanitary sewer design standards such as the Ten-State Standards generally require a minimum self-cleansing velocity (velocity sufficient to limit solids deposition) of at least <code>2.0 ft/s</code> at design flow, and often mandate a design <code>n</code> value (commonly <code>0.013</code>) regardless of pipe material [2]. The calculator flags velocities below <code>2.0 ft/s</code>.</li>
+                    <li>Flow depth is referenced from the pipe invert (the lowest interior point of the pipe). Accumulated grit, sediment, or grease reduces the effective flow section compared with the nominal diameter.</li>
+                    <li>Use the constructed invert slope between structures rather than ground surface slope.</li>
+                    <li>Estimating flow from a single depth reading with Manning's equation is approximate (often within 10% to 20% at best). It is useful for rough checks such as screening for inflow and infiltration (I&amp;I, stormwater or groundwater entering a sanitary sewer), rather than billing or formal flow metering.</li>
                 </ul>
             </details>
 
-            <p>Single file, vanilla JS, no dependencies, inputs persisted in <code>localStorage</code>.</p>
+            <p>The calculator runs in the browser and saves inputs in browser local storage (<code>localStorage</code>, a built-in browser store on the current device) until cleared.</p>
 
             <p>The tool: <a href="/tools/mannings-flow-calculator.html">Manning's Open-Channel Flow Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Chow, <em>Open-Channel Hydraulics</em> &mdash; Manning's equation and section geometry.</li>
-                <li>[2] Recommended Standards for Wastewater Facilities (&ldquo;Ten-State Standards&rdquo;) &mdash; minimum velocity and design n. <a href="https://www.broadagencyannouncement.com/ten-states-standards/">https://www.broadagencyannouncement.com/ten-states-standards/</a> (verify current host)</li>
-                <li>[3] FHWA HDS-4, <em>Introduction to Highway Hydraulics</em> &mdash; normal depth and Froude number reference.</li>
+                <li>Ven Te Chow, <em>Open-Channel Hydraulics</em> (McGraw-Hill, 1959), Chapters 5 and 6.</li>
+                <li>Great Lakes&ndash;Upper Mississippi River Board of State and Provincial Public Health and Environmental Managers, <em>Recommended Standards for Wastewater Facilities</em> (&ldquo;Ten-State Standards&rdquo;), Chapter 30.</li>
+                <li>Federal Highway Administration (FHWA), <em>Introduction to Highway Hydraulics</em>, Hydraulic Design Series No. 4 (HDS-4), FHWA-NHI-08-090 (2008).</li>
             </ol>
         </article>
     </main>

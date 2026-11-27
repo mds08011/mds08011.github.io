@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Earned Value S-Curve, CPI Stability, and the 90% Syndrome | Blog | MDS</title>
+    <title>Earned Value S-Curve Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,38 @@
     <main>
         <article>
             <header>
-                <h1>The Earned Value S-Curve, CPI Stability, and the 90% Syndrome</h1>
+                <h1>Earned Value S-Curve Calculator</h1>
                 <time datetime="2026-06-25">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Earned value is a small amount of arithmetic wrapped around one hard question: how complete is the work, really? Get that number honestly and the three curves &mdash; planned value, earned value, actual cost &mdash; tell you whether you're ahead or behind and over or under, in a picture anyone can read. Get it from a gut percentage and you've built a very official-looking way to lie to yourself. I wanted a calculator that draws the picture and computes the standard metrics, so the only thing left to argue about is the input that deserves the argument.</p>
+            <p>This calculator plots a cumulative Earned Value Management (EVM) S-curve (a graph of cumulative project value over time, named for its typical S-shape as spending starts slowly, accelerates, and tapers off) and computes standard schedule and cost performance metrics. You enter the Budget at Completion (BAC, total planned project budget in dollars) and per-period dollar amounts for Planned Value (PV, budgeted cost of work scheduled), Earned Value (EV, budgeted cost of work completed), and Actual Cost (AC, actual money spent). The page accumulates each series and evaluates performance at the data date (the last period containing an EV entry) [1].</p>
 
-            <h2>The Approach</h2>
-            <p>You enter a budget at completion and, period by period, the planned value, earned value, and actual cost for that period. The tool accumulates and works at the data date &mdash; the last period with an EV entry. From the cumulative figures it computes the variances (<code>SV = EV &minus; PV</code>, <code>CV = EV &minus; AC</code>), the indices (<code>SPI = EV / PV</code>, <code>CPI = EV / AC</code>), and the forecast (<code>EAC = BAC / CPI</code>, then <code>ETC</code> and <code>VAC</code>). The S-curve draws planned value the full length of the job and earned and actual cost through the data date, with a marker on that date so the gap between plan and progress is literally the horizontal distance you can see.</p>
+            <p>Using cumulative <code>PV</code>, <code>EV</code>, and <code>AC</code> through the data date (all in dollars), the calculator computes Schedule Variance <code>SV = EV &minus; PV</code> (dollars) and Cost Variance <code>CV = EV &minus; AC</code> (dollars), where positive values indicate ahead-of-schedule or under-budget performance [1]. The dimensionless performance indices are Schedule Performance Index <code>SPI = EV / PV</code> and Cost Performance Index <code>CPI = EV / AC</code>, where <code>1.00</code> is on plan, values above <code>1.00</code> are favorable, and values below <code>1.00</code> are unfavorable (the table highlights indices below 0.95 in red and between 0.95 and 1.00 in amber). Percent complete is <code>EV / BAC</code>.</p>
+
+            <p>For cost forecasting, the tool uses the standard CPI-based chain: Estimate at Completion <code>EAC = BAC / CPI</code> (projected final cost in dollars, assuming current cost efficiency continues), Estimate to Complete <code>ETC = EAC &minus; AC</code> (projected remaining cost in dollars), and Variance at Completion <code>VAC = BAC &minus; EAC</code> (projected final underrun or overrun in dollars) [1][2].</p>
 
             <figure>
-                <img src="/blog/2026-06-25/earned-value-s-curve.png" alt="Three cumulative curves — planned, earned, and actual — with a data-date marker, above a metrics panel showing SPI, CPI, EAC, and variances" loading="lazy">
-                <figcaption>Figure 1: Planned value runs the full length; earned and actual cost stop at the data date. SPI 0.94 and CPI 0.92 flag in the fail tone.</figcaption>
+                <img src="/blog/2026-06-25/earned-value-s-curve.png" alt="Earned value S-curve chart showing cumulative planned value, earned value, and actual cost through the data date, with summary metrics below" loading="lazy">
+                <figcaption>Figure 1: Cumulative planned value, earned value, and actual cost curves with a vertical marker at the data date and computed EVM metrics below.</figcaption>
             </figure>
 
-            <h3>CPI is a forecast, not a blip</h3>
-            <p>The detail worth internalizing isn't in the code, it's in the numbers the code produces: the cost performance index is remarkably stable once a project passes roughly 20% complete [1]. A CPI of 0.92 at the quarter pole is not a bad month you'll claw back &mdash; it is, empirically, close to the number you'll finish at, which is why the tool colors it red rather than shrugging. The schedule index behaves differently and more treacherously: SPI drifts back toward 1.0 near the end of any job, late or not, because planned value catches up to earned value as the plan runs out. That's why schedule is better judged on the actual dates than on a terminal SPI.</p>
-
             <details>
-                <summary>The 90% syndrome, and choosing an EAC formula</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>A project that reports 90% complete for months has an EV <em>basis</em> problem, not a productivity problem. If EV came from quantities in place it would keep moving; if it came from a percentage nobody wants to defend, it stalls at 90.</li>
-                    <li>Earn value on the same basis you planned it. If PV was loaded by unit rates, earn EV by units installed &mdash; mixing bases makes the schedule variance meaningless.</li>
-                    <li><code>EAC = BAC / CPI</code> is the most common forecast but not the only one. When schedule and cost both hurt, <code>AC + (BAC &minus; EV) / (CPI &times; SPI)</code> is harsher and sometimes contractually required [2]; late in the job a bottom-up ETC beats any index.</li>
-                    <li>Use whatever formula your contract or PMO mandates for the report of record. This tool shows the textbook chain so you can see how the pieces move.</li>
+                    <li>Empirical EVM studies show that cumulative CPI tends to stabilize after roughly 20% project completion, so early cost overruns are generally a strong indicator of final cost performance [1][2].</li>
+                    <li>SPI converges back toward <code>1.00</code> near project completion even on a late project, because cumulative EV eventually equals BAC once all planned work is finished. Late-stage schedule status should be checked against actual milestone dates rather than SPI alone [1].</li>
+                    <li>EVM results depend on how EV is measured. Earning value from physical quantities in place (installed units multiplied by budgeted unit rates) keeps EV consistent with PV, whereas subjective percent-complete estimates can stall near 90% while actual costs continue to climb.</li>
+                    <li>The calculator implements <code>EAC = BAC / CPI</code>. Other methods, such as the composite formula <code>EAC = AC + (BAC &minus; EV) / (CPI &times; SPI)</code> or a bottom-up ETC (re-estimating remaining work item by item), may be required by contract or a Project Management Office (PMO) for official reporting [2].</li>
+                    <li>The page runs offline in the browser and stores entered periods in <code>localStorage</code> (browser-side local storage).</li>
                 </ul>
             </details>
-
-            <p>The percent-complete basis is the whole ballgame, and it lives in your quantity tracking, not in this page &mdash; the calculator just does the arithmetic honestly once you've fed it honest numbers. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/earned-value-s-curve.html">Earned Value S-Curve Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] PMI &mdash; <em>The Standard for Earned Value Management</em> (index behavior, variances, and forecasting).</li>
-                <li>[2] AACE International &mdash; recommended practices on earned value and estimate-at-completion methods (e.g. 17R-97).</li>
+                <li>Project Management Institute (PMI), <em>The Standard for Earned Value Management</em> (2019).</li>
+                <li>AACE International, Recommended Practice 80R-13, <em>Estimate at Completion (EAC)</em> (2014).</li>
             </ol>
         </article>
     </main>

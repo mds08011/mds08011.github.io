@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sizing a Thrust Block, and When to Stop and Use Restraint | Blog | MDS</title>
+    <title>Thrust Block Sizing Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Sizing a Thrust Block, and When to Stop and Use Restraint</h1>
+                <h1>Thrust Block Sizing Calculator</h1>
                 <time datetime="2026-08-06">August 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Pressurize a pipe and every change of direction tries to fly apart. A bend, a tee, a dead end, a reducer &mdash; each has an unbalanced force where the pressure isn't cancelled by pipe on the far side, and something has to hold it: a block of concrete bearing against the trench wall, or restrained joints carrying it in the pipe. Getting the block size wrong is how mains blow apart during the hydrostatic test. I wanted the force and the bearing area on one screen, with the honest reminder of when a block is the wrong answer.</p>
+            <p>When a pressurized water main (a primary distribution pipe) changes direction, branches, ends at a cap, or changes size, internal water pressure creates an unbalanced outward force at the fitting. Common fittings that carry this thrust include bends, tees (T-shaped branch connections), dead ends, and reducers (fittings that step down to a smaller pipe diameter). That force has to be resisted either by a concrete thrust block pushing against the undisturbed trench wall or by restrained joints (mechanical locking joints that transfer the load into friction along the buried pipe). This calculator computes the unbalanced thrust force and the required concrete bearing area for horizontal thrust blocks [1][2].</p>
 
-            <h2>The Approach</h2>
-            <p>Internal pressure acts on the pipe's full bore, <code>A = π/4 &middot; OD&sup2;</code>, and the unbalanced thrust depends on the fitting: a bend is <code>2 &middot; P &middot; A &middot; sin(θ/2)</code>, a dead end or tee branch is <code>P &middot; A</code>, a reducer is <code>P &middot; (A&#8321; &minus; A&#8322;)</code>. Because pounds per square inch times square inches is pounds, the thrust comes straight out in pounds. The block's face area is then <code>A<sub>b</sub> = T &middot; SF / S<sub>b</sub></code> against the soil's safe bearing value. The tool draws the required face to scale, bearing against undisturbed soil, with the thrust pushing into it.</p>
+            <p>The calculator uses the pipe's cross-sectional area based on its outside diameter (<code>OD</code>), <code>A = (&pi; / 4) &times; OD&sup2;</code>, where <code>OD</code> is in inches (in) and <code>A</code> is in square inches (in&sup2;). Thrust design uses <code>OD</code> rather than the inside pipe bore because internal pressure acts out to the gasket seal at the joint, which is close to the outside diameter [1]. From the hydrostatic test pressure <code>P</code> in pounds per square inch (psi), the unbalanced thrust force <code>T</code> in pounds (lb) is <code>T = 2 &times; P &times; A &times; sin(&theta; / 2)</code> for a bend of deflection angle <code>&theta;</code> (in degrees), <code>T = P &times; A</code> for a dead end, cap, or tee branch, and <code>T = P &times; (A<sub>1</sub> &minus; A<sub>2</sub>)</code> for a reducer between larger area <code>A<sub>1</sub></code> and smaller area <code>A<sub>2</sub></code> (both in in&sup2;). The required block bearing area <code>A<sub>b</sub></code> in square feet (ft&sup2;) is <code>A<sub>b</sub> = (T &times; SF) / S<sub>b</sub></code>, where <code>SF</code> is the dimensionless safety factor (default 1.5) and <code>S<sub>b</sub></code> is the soil's safe horizontal bearing value in pounds per square foot (psf) [2][3]. If you enter an optional vertical height <code>H</code> (ft), the tool solves the required width <code>W = A<sub>b</sub> / H</code> (ft). Leaving height blank sizes a square face and draws the block to scale.</p>
 
             <figure>
-                <img src="/blog/2026-08-06/thrust-block-calculator.png" alt="The thrust block calculator: a 90-degree 12-inch bend at 150 psi produces 29,030 lb of thrust, needing a 21.8 square-foot block face, drawn bearing against undisturbed soil" loading="lazy">
-                <figcaption>Figure 1: A 90° 12-inch bend at 150 psi throws 29,030 lb (14½ tons) &mdash; a 5.4&nbsp;ft × 4&nbsp;ft block face against 2,000 psf sand.</figcaption>
+                <img src="/blog/2026-08-06/thrust-block-calculator.png" alt="Screenshot of the thrust block sizing calculator showing a 90-degree 12-inch bend at 150 psi producing 29,030 lb of thrust and requiring a 21.8 square-foot concrete bearing face against undisturbed soil" loading="lazy">
+                <figcaption>Figure 1: Example calculation for a 90° 12-inch bend at 150 psi test pressure (29,030 lb thrust), requiring a 5.4 ft by 4.0 ft bearing face against 2,000 psf sand.</figcaption>
             </figure>
 
-            <h3>The block is only as good as the soil &mdash; know when to switch</h3>
-            <p>The whole calculation hangs on one number the calculator can't give you: the soil's safe bearing value. The presets are textbook starting points, but a thrust block bears against <em>undisturbed</em> soil poured against the trench wall &mdash; never backfill &mdash; and in saturated, organic, or disturbed ground that value collapses toward zero. Watch what that does: as the safe bearing shrinks, the required face grows without bound, and you end up drawing a block the size of a car. That's not a sizing problem, it's a signal. When the soil won't carry the thrust, the answer isn't a bigger block; it's <em>restrained joints</em>, which carry the force in the pipe wall over a calculated restrained length and don't care what the soil face can bear. The tool makes the collapse explicit: pick the muck/peat preset and it stops giving you an area and tells you to restrain instead.</p>
+            <p>The required bearing area depends directly on the soil's safe bearing value <code>S<sub>b</sub></code>. The soil presets in the tool are general textbook values for undisturbed native soil along the trench wall, not loose backfill placed back into the trench after excavation. In soft clay, saturated ground, organic soils such as muck or peat, or disturbed fill, safe bearing capacity drops sharply and the required block face becomes impractically large. Selecting the muck/peat preset (0 psf) in the calculator stops reporting a block area and recommends restrained joints instead, which carry the thrust along a calculated restrained pipe length rather than relying on the trench wall [1][3].</p>
 
             <details>
-                <summary>Blocking field notes</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Size for <em>test</em> pressure, not working pressure &mdash; the joint sees its highest load during the hydrostatic test, and that's the case that has to hold.</li>
-                    <li>The thrust acts along the bisector of the bend, outward; the block goes on the outside of the bend, poured against the undisturbed wall.</li>
-                    <li>Keep concrete off the joint and bolts. The fitting has to stay accessible and repairable &mdash; bear on the body, wrap the joint.</li>
-                    <li>Vertical bends that lift need a weight block or restraint, not a bearing block &mdash; this sizes the horizontal bearing case.</li>
-                    <li>At larger sizes, price the block against restrained joints anyway; restraint is often cheaper, more reliable, and doesn't need a geotech to bless a bearing value.</li>
+                    <li>Size blocks for the hydrostatic test pressure (the elevated water pressure applied during leakage testing), not the lower normal working pressure, because the fitting experiences its peak load during testing.</li>
+                    <li>Thrust at a bend acts outward along the bisector of the bend (the line splitting the bend angle in half). Concrete blocks must be poured on the outside of the bend against undisturbed trench wall, never against backfill.</li>
+                    <li>Keep concrete off the pipe joints, gaskets, and bolts by wrapping the joint (for example, with polyethylene sheeting) and bearing the block against the fitting body so the joint stays accessible for repair.</li>
+                    <li>This calculator covers horizontal bearing blocks only. Vertical bends that push upward require a concrete gravity (weight) block sized to resist uplift or restrained joints [2].</li>
+                    <li>Confirm site-specific soil bearing values with a geotechnical engineer, especially when required bearing areas are large or trench conditions are uncertain.</li>
                 </ul>
             </details>
 
-            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+            <p>The calculator runs in the web browser with no external scripts and stores your inputs locally in browser storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/thrust-block-calculator.html">Thrust Block Sizing Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] DIPRA &mdash; Thrust Restraint Design for Ductile Iron Pipe.</li>
-                <li>[2] AWWA M41 (ductile iron) and Uni-Bell PVC design guidance &mdash; thrust blocking and restraint.</li>
+                <li>Ductile Iron Pipe Research Association (DIPRA), <em>Thrust Restraint Design for Ductile Iron Pipe</em>.</li>
+                <li>American Water Works Association (AWWA), <em>AWWA M41: Ductile-Iron Pipe and Fittings</em>.</li>
+                <li>Uni-Bell PVC Pipe Association, <em>Handbook of PVC Pipe: Design and Construction</em>.</li>
             </ol>
         </article>
     </main>

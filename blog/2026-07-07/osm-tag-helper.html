@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tagging Water Infrastructure in OSM, and Where the Line Is | Blog | MDS</title>
+    <title>OpenStreetMap Water Infrastructure Tags and Overpass Query Builder | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,41 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Tagging Water Infrastructure in OSM, and Where the Line Is</h1>
+                <h1>OpenStreetMap Water Infrastructure Tags and Overpass Query Builder</h1>
                 <time datetime="2026-07-07">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>This one is pure hobby, and it's the capstone of the mapping set. Once you spend your days around hydrants, manholes, and pump stations, you start noticing how little of it is mapped in OpenStreetMap &mdash; and how easy it is to tag <em>wrong</em>, because water infrastructure has a pile of specific conventions and one genuinely important rule about not breaking waterway connectivity. I wanted a cheat sheet for the tags a water/wastewater engineer actually meets on the street, plus a small Overpass query builder to see what's already there.</p>
+            <p>This page combines a reference table of common OpenStreetMap (OSM) tags for surface-visible water and wastewater infrastructure with a query builder for Overpass QL (Overpass Query Language, the query language used to search OSM data) [1][2]. In OpenStreetMap, map features are stored as nodes (points), ways (lines or polygons), or relations (groups of objects) and described with <code>key=value</code> tags. The reference covers fire hydrants, sewer and storm manholes, surface-visible valves, water towers, pumping stations, treatment plants, open ditches, culverts, and retention or detention basins.</p>
 
-            <h2>The Approach</h2>
-            <p>A tagging reference for the surface-visible infrastructure &mdash; fire hydrants, sewer and storm manholes, pumping stations, treatment plants, basins &mdash; with lifecycle prefixes, changeset etiquette, and the culvert rule (tag the culvert on the <em>waterway</em>, never break the waterway line to do it). Paired with an Overpass QL builder that takes a tag and a bounding box (straight from the <a href="/tools/tile-zoom-calculator.html">tile calculator's</a> S,W,N,E output) and writes the query [1][3].</p>
+            <p>The reference also summarizes standard OSM editing conventions [1]. Lifecycle prefixes (<code>construction:*</code>, <code>disused:*</code>, <code>abandoned:*</code>, <code>demolished:*</code>) keep inactive or unbuilt facilities from appearing as active assets. Changeset comments (short notes attached to a batch of edits) record what was mapped and the source, such as <code>source=survey</code>. Where a stream or ditch passes through a culvert under a road, the convention is to keep the waterway line continuous and tag the underground section with <code>tunnel=culvert</code> and <code>layer=-1</code> rather than breaking the waterway.</p>
 
             <figure>
-                <img src="/blog/2026-07-07/osm-tag-helper.png" alt="Tag reference table for water infrastructure with an Overpass QL query builder output below" loading="lazy">
-                <figcaption>Figure 1: The tag cheat sheet, with the Overpass builder generating a ready-to-run query for a bbox.</figcaption>
+                <img src="/blog/2026-07-07/osm-tag-helper.png" alt="Tag reference table for water infrastructure and Overpass QL query builder" loading="lazy">
+                <figcaption>Figure 1: Water infrastructure tag reference and Overpass QL query builder.</figcaption>
             </figure>
 
-            <p>The query it generates is the template worth memorizing: <code>nwr[key=value](bbox);out geom;</code> &mdash; nodes, ways, and relations with the tag inside the box, returned with geometry. Paste it into Overpass Turbo and run.</p>
+            <p>Given a tag preset (or custom <code>key=value</code>) and a geographic bounding box (<code>bbox</code>), the builder outputs a standard Overpass QL query: <code>[out:json][timeout:25]; nwr["key"="value"](S,W,N,E); out geom;</code>. Here <code>nwr</code> searches nodes, ways, and relations, <code>["key"="value"]</code> filters for matching tags (such as <code>emergency=fire_hydrant</code>), <code>(S,W,N,E)</code> specifies the bounding box in decimal degrees (south latitude, west longitude, north latitude, east longitude), and <code>out geom;</code> returns matching features with their coordinates. You can copy an <code>S,W,N,E</code> bounding box from the <a href="/tools/tile-zoom-calculator.html">tile calculator</a>, or use the map extent directly in Overpass Turbo [2]. To run the query, open Overpass Turbo [2], paste the text into the left-hand code editor, and click <strong>Run</strong> (the <strong>Wizard</strong> button can also draft simple queries from plain-text keywords).</p>
 
-            <h3>Where the line is</h3>
-            <p>This tool is disclaimer-forward in a way the calculators aren't, and deliberately so. Mapping hydrants has real emergency-response value, and manhole covers are honest, surveyable, surface-visible facts &mdash; a mapped pattern of sewer manholes is a legitimate public record assembled from what anyone can see from the sidewalk. But there's a bright line: <strong>surface-visible features observed in person are fair game; buried alignments, depths, and anything from restricted as-builts or licensed GIS are not.</strong> That's partly a licensing question &mdash; you can't launder proprietary data into OSM &mdash; and partly a professional-judgment one, because publishing detailed utility data you hold in a professional capacity is a decision to make carefully before it's a mapping task at all. The OSM wiki governs every tag, taginfo shows real-world usage before any mass edit, and organized-editing guidelines are required reading before anything bulk [1][2][4].</p>
+            <p>Only surface-visible features observed in person or derived from OSM-compatible open sources should be added to OpenStreetMap. Do not copy buried pipe alignments, depths, or asset attributes from proprietary maps, restricted geographic information system (GIS) datasets, or as-built drawings (construction record drawings showing installed underground utilities) without explicit permission to publish under OSM's license. Before bulk edits or imports, verify current tag definitions on the OSM wiki [1], check actual tag usage counts on taginfo [3], and follow the OSM organized editing and import guidelines [4].</p>
 
             <details>
-                <summary>Overpass QL beyond the builder</summary>
-                <p>Variations on the template: <code>["key"~"regex"]</code> for pattern matching, multiple filter brackets AND together, <code>around:50,lat,lon</code> instead of a bbox for proximity, and <code>out count;</code> when you just want numbers. The Overpass Turbo wizard writes decent queries from plain English when the syntax fights back.</p>
+                <summary>Notes and limits</summary>
+                <ul>
+                    <li><strong>Overpass QL variations:</strong> Use <code>["key"~"regex"]</code> to match tag values with a regular expression (pattern match). Placing multiple <code>[...]</code> filter brackets next to each other combines them with logical AND (all conditions must match). Replace <code>(S,W,N,E)</code> with <code>(around:50,lat,lon)</code> to search within a 50-meter radius of a point, or replace <code>out geom;</code> with <code>out count;</code> to return only feature counts.</li>
+                    <li><strong>Browser storage:</strong> The tool is a single HTML page written in plain JavaScript that runs offline and saves query builder inputs in browser <code>localStorage</code> (local storage in the browser on your device).</li>
+                </ul>
             </details>
-
-            <p>Single file, vanilla JS, the query builder persisted in <code>localStorage</code>.</p>
 
             <p>The tool: <a href="/tools/osm-tag-helper.html">OSM Water Infrastructure Tag Reference &amp; Overpass Query Builder</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] OSM wiki &mdash; the governing documentation for every tag (check before mass edits). <a href="https://wiki.openstreetmap.org/">https://wiki.openstreetmap.org/</a></li>
-                <li>[2] taginfo &mdash; real-world tag usage statistics. <a href="https://taginfo.openstreetmap.org/">https://taginfo.openstreetmap.org/</a></li>
-                <li>[3] Overpass Turbo. <a href="https://overpass-turbo.eu/">https://overpass-turbo.eu/</a></li>
-                <li>[4] OSM organized editing &amp; import guidelines &mdash; required reading before anything bulk.</li>
+                <li>OpenStreetMap Wiki, <em>Map Features</em> (governing documentation for water infrastructure tags, culverts, and lifecycle prefixes). <a href="https://wiki.openstreetmap.org/wiki/Map_features">https://wiki.openstreetmap.org/wiki/Map_features</a></li>
+                <li>Overpass Turbo (web interface for running Overpass QL queries). <a href="https://overpass-turbo.eu/">https://overpass-turbo.eu/</a></li>
+                <li>OpenStreetMap taginfo (real-world tag usage statistics). <a href="https://taginfo.openstreetmap.org/">https://taginfo.openstreetmap.org/</a></li>
+                <li>OpenStreetMap Wiki, <em>Organised Editing Guidelines</em> (<a href="https://wiki.openstreetmap.org/wiki/Organised_Editing_Guidelines">https://wiki.openstreetmap.org/wiki/Organised_Editing_Guidelines</a>) and <em>Import/Guidelines</em> (<a href="https://wiki.openstreetmap.org/wiki/Import/Guidelines">https://wiki.openstreetmap.org/wiki/Import/Guidelines</a>).</li>
             </ol>
         </article>
     </main>

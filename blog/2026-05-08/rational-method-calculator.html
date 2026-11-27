@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peak Flow by the Rational Method with a TR-55 Tc Builder | Blog | MDS</title>
+    <title>Rational Method Peak Flow Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,45 +31,42 @@
     <main>
         <article>
             <header>
-                <h1>Peak Flow by the Rational Method with a TR-55 Tc Builder</h1>
+                <h1>Rational Method Peak Flow Calculator</h1>
                 <time datetime="2026-05-08">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p><code>Q = CiA</code> is the first equation anyone learns for storm drainage, and it's deceptively easy: a runoff coefficient, a rainfall intensity, an area, multiply. The catch is the intensity. The Rational Method assumes the peak happens when the whole watershed is contributing at once &mdash; when the storm has lasted exactly as long as the time of concentration &mdash; so you read intensity off the IDF curve <em>at Tc</em>. Get Tc wrong and everything downstream of it is wrong, and Tc is the input people hand-wave.</p>
+            <p>The Rational Method estimates peak stormwater runoff from a small drainage area (watershed) using <code>Q = C &times; i &times; A</code>, where <code>Q</code> is peak discharge in cubic feet per second (cfs), <code>C</code> is a dimensionless runoff coefficient representing the fraction of rainfall that becomes runoff (0 to 1), <code>i</code> is average rainfall intensity in inches per hour (in/hr), and <code>A</code> is drainage area in acres (ac). One acre-inch per hour equals 1.008 cfs, which is conventionally taken as 1.0. The <a href="/tools/rational-method-calculator.html">Rational Method Peak Flow Calculator</a> combines a sub-area runoff coefficient table with a segmented travel-time calculator to evaluate <code>Q</code>.</p>
 
-            <h2>The Approach</h2>
-            <p>The tool has two builders feeding the one equation. A composite-C builder takes line-item sub-areas (roof, pavement, gravel, lawn presets that prefill an editable C) and area-weights them: <code>C = &Sigma;C&middot;A / &Sigma;A</code>. And a Tc builder that sums TR-55 travel-time segments along the flow path, because that's where the real error lives [1]:</p>
+            <p>To compute a composite runoff coefficient for mixed surfaces, add sub-area rows (roof, pavement, gravel, lawn, or custom) and enter each area in acres. The tool computes the area-weighted average <code>C = &Sigma;(C_k &times; A_k) / &Sigma;A_k</code>, where <code>C_k</code> and <code>A_k</code> are the runoff coefficient and area (ac) of each sub-area. Next, build the time of concentration (<code>Tc</code>, the travel time in minutes from the hydraulically most distant point in the watershed to the outlet) by adding flow-path segments following Natural Resources Conservation Service (NRCS) Technical Release 55 (TR-55) and National Engineering Handbook (NEH) Part 630 Chapter 15 methods [1]:</p>
             <ul>
-                <li><strong>Sheet flow</strong> (first &le;100 ft): <code>Tt = 0.007&middot;(nL)^0.8 / (P&#8322;^0.5 &middot; s^0.4)</code>, with the sheet-flow roughness n and the 2-year 24-hour rainfall P&#8322; from Atlas 14 [2].</li>
-                <li><strong>Shallow concentrated flow:</strong> <code>V = 20.328&radic;s</code> paved or <code>16.135&radic;s</code> unpaved, then <code>Tt = L/(3600V)</code>.</li>
-                <li><strong>Channel flow:</strong> you enter V &mdash; and if you want it honestly, compute it in the <a href="/tools/mannings-flow-calculator.html">Manning's calculator</a> for the actual section. The two tools are a natural pair.</li>
+                <li><strong>Sheet flow</strong> (shallow overland flow at the start of the path, limited to 100 ft under current NRCS NEH Part 630 Chapter 15 guidance, reduced from 300 ft in the original 1986 TR-55 [1]): <code>Tt = 0.007 &times; (n &times; L)^0.8 / (P&#8322;^0.5 &times; s^0.4)</code>, where <code>Tt</code> is travel time in hours (converted to minutes in the tool), <code>n</code> is the dimensionless sheet-flow roughness coefficient, <code>L</code> is flow length in feet (ft), <code>s</code> is land slope in ft/ft, and <code>P&#8322;</code> is the 2-year 24-hour rainfall depth in inches (in), looked up by site location on the National Oceanic and Atmospheric Administration (NOAA) Atlas 14 Precipitation Frequency Data Server [2].</li>
+                <li><strong>Shallow concentrated flow:</strong> average velocity is <code>V = 20.328 &times; &radic;s</code> (ft/s) on paved surfaces or <code>V = 16.135 &times; &radic;s</code> (ft/s) on unpaved surfaces, where <code>s</code> is slope in ft/ft, and travel time is <code>Tt = L / (3600 &times; V)</code> in hours (with <code>L</code> in ft and 3600 converting seconds to hours) [1].</li>
+                <li><strong>Channel or pipe flow:</strong> travel time is <code>Tt = L / (3600 &times; V)</code> in hours, where <code>L</code> is segment length in ft and <code>V</code> is average velocity in ft/s (which can be calculated separately using the <a href="/tools/mannings-flow-calculator.html">Manning's flow calculator</a>).</li>
             </ul>
-            <p>Intensity comes either straight off your IDF curve or from the power-law fit <code>i = a/(Tc+b)^n</code> with jurisdiction coefficients, auto-evaluated at the computed Tc. It warns past the method's area applicability limit and when composite C climbs above 0.95.</p>
+
+            <p>The Rational Method assumes peak flow occurs when storm duration equals <code>Tc</code>, so rainfall intensity <code>i</code> is read at <code>Tc</code> for the required storm return period. In the Intensity section, either enter <code>i</code> (in/hr) directly from a local Intensity-Duration-Frequency (IDF) curve or NOAA Atlas 14 intensity table [2], or select the power-law IDF equation <code>i = a / (Tc + b)^n</code>, where <code>Tc</code> is in minutes and <code>a</code>, <code>b</code>, and <code>n</code> are curve-fit constants from the local drainage manual (this exponent <code>n</code> is distinct from the sheet-flow roughness coefficient). All calculations run offline in the browser, and inputs are saved on your device in browser <code>localStorage</code>.</p>
 
             <figure>
-                <img src="/blog/2026-05-08/rational-method-calculator.png" alt="Composite C builder and TR-55 segment table summing to a time of concentration and a peak flow" loading="lazy">
-                <figcaption>Figure 1: Sub-areas compositing to C, flow-path segments summing to Tc, and the resulting Q = CiA.</figcaption>
+                <img src="/blog/2026-05-08/rational-method-calculator.png" alt="Rational method calculator showing sub-area runoff coefficients, travel time segments, and resulting peak flow" loading="lazy">
+                <figcaption>Figure 1: Composite runoff coefficient table, flow-path travel-time segments, and resulting peak flow.</figcaption>
             </figure>
 
             <details>
-                <summary>The reviewer's-eye failure modes</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The single most common Rational Method error is a Tc path that isn't the hydraulically longest one &mdash; walking the site beats tracing the obvious swale on the plan.</li>
-                    <li>An absurdly short Tc (all pipe, steep site) drives intensity and Q way up. That's the model working correctly, and it's why criteria floor Tc (default 5 min here).</li>
-                    <li>For pre- vs. post-development, keep the same method, storm, and IDF source on both sides or the comparison is meaningless.</li>
+                    <li><strong>Watershed area limit:</strong> the Rational Method applies to small watersheds without significant ponding or detention. Most drainage manuals cap applicability around 100 to 200 acres (the calculator warns above 100 acres and 200 acres, and if composite <code>C</code> exceeds 0.95). Larger basins require a hydrograph method.</li>
+                    <li><strong>Minimum Tc floor:</strong> very short travel times on steep or fully paved sites yield very high rainfall intensities, so local criteria typically impose a minimum <code>Tc</code> floor (commonly 5 to 10 minutes, with a default of 5 minutes in the calculator).</li>
+                    <li><strong>Flow path selection:</strong> <code>Tc</code> should represent the hydraulically longest path (longest travel time to the outlet), which is not always the geographically longest path.</li>
+                    <li><strong>Local criteria and comparisons:</strong> local city or county hydrology manuals govern runoff coefficients, <code>Tc</code> procedures (including modified Rational procedures used by some jurisdictions), and IDF curves. When comparing pre-development and post-development runoff, use the same method, return period, and IDF source for both cases.</li>
                 </ul>
             </details>
-
-            <p>One code note from building it: the Tc table used to re-render on every keystroke, which stole focus mid-edit. Length/slope/velocity changes now update only the affected computed cell in place. Single file, vanilla JS, <code>localStorage</code> persistence. Southern California counties mostly run their own Modified Rational procedures &mdash; the county manual governs [3].</p>
 
             <p>The tool: <a href="/tools/rational-method-calculator.html">Rational Method Peak Flow Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] NRCS TR-55 &mdash; Urban Hydrology for Small Watersheds (travel time methods). <a href="https://www.nrcs.usda.gov/">https://www.nrcs.usda.gov/</a></li>
-                <li>[2] NOAA Atlas 14 &mdash; Precipitation-Frequency Data Server. <a href="https://hdsc.nws.noaa.gov/pfds/">https://hdsc.nws.noaa.gov/pfds/</a></li>
-                <li>[3] The local county hydrology manual &mdash; governing C values, Tc method, IDF data, and applicability limits.</li>
+                <li>USDA Natural Resources Conservation Service (NRCS), <em>Urban Hydrology for Small Watersheds</em> (TR-55, 1986) and <em>National Engineering Handbook</em>, Part 630, Chapter 15: Time of Concentration (2010).</li>
+                <li>NOAA National Weather Service, <em>Atlas 14 Precipitation Frequency Data Server (PFDS)</em>. <a href="https://hdsc.nws.noaa.gov/pfds/">https://hdsc.nws.noaa.gov/pfds/</a></li>
             </ol>
         </article>
     </main>

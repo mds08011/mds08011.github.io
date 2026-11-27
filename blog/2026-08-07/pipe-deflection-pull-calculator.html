@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Curving a Pipeline with Joint Deflection Instead of Fittings | Blog | MDS</title>
+    <title>Pipe Joint Deflection and Pull Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Curving a Pipeline with Joint Deflection Instead of Fittings</h1>
+                <h1>Pipe Joint Deflection and Pull Calculator</h1>
                 <time datetime="2026-08-07">August 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Alignments curve; pipe comes straight. To follow a road bend or dodge an unexpected utility, you can drop in bends &mdash; each of which then needs thrust restraint &mdash; or you can let each joint deflect a degree or two and walk the straight pipe around the curve. Every push-on joint has an allowable deflection, and a run of them approximates an arc. The field question is simple: how sharp a curve can I make, and how many joints does the turn cost me?</p>
+            <p>Buried pipelines often need to follow a curved road alignment (planned path) or route around an existing utility. Instead of installing angled bends, which each require thrust restraint (concrete blocks or locking joints to resist internal pressure forces), gasketed push-on joints can be deflected by a small angle at each joint so straight lengths of pipe approximate a circular curve. A push-on joint connects the plain end (spigot) of one pipe into the flared socket end (bell) of the next. This calculator computes the curve radius, lateral offset, number of joints, and available axial pull-out for a deflected run of pipe [1][3].</p>
 
-            <h2>The Approach</h2>
-            <p>Each pipe is a chord of the curve, kinked at the joint by the deflection angle <code>θ</code>. A chord of length <code>L</code> on a circle of radius <code>R</code> is <code>L = 2R &middot; sin(θ/2)</code>, so the minimum radius from an allowable deflection is <code>R = L / (2 sin(θ/2))</code>, and the deflection a target radius needs is <code>θ = 2 &middot; asin(L / 2R)</code>. From there the tool gives the lateral offset each pipe gains (<code>L &middot; sin θ</code>), the joints to turn a total angle, the pipe length that takes, and &mdash; since gasketed joints also pull axially &mdash; the total pull available across those joints. It draws the deflected run so you can see the straight pipes bending into the arc.</p>
+            <p>Each straight pipe of laying length <code>L</code> (in feet, ft) acts as a chord (a straight segment connecting two points on an arc) on a circle of radius <code>R</code> (ft), angled at each joint by the deflection angle <code>&theta;</code> (in degrees). From chord geometry, <code>L = 2 &times; R &times; sin(&theta; / 2)</code>. Solving for the minimum curve radius from an allowable joint deflection gives <code>R = L / (2 &times; sin(&theta; / 2))</code>. Solving in reverse for the deflection angle required by a target radius gives <code>&theta; = 2 &times; arcsin(L / (2 &times; R))</code>, where <code>arcsin</code> is the inverse sine function returning degrees (with <code>2 &times; R</code> as the full denominator). The sideways shift, or lateral offset, gained by one pipe length relative to the previous pipe is <code>offset = L &times; sin(&theta;)</code> (ft, also shown in inches). For a total direction change <code>&Delta;</code> (degrees), the number of joints needed is <code>N = ceil(&Delta; / &theta;)</code> (rounded up to a whole joint) over a pipe length of <code>N &times; L</code> (ft). If you enter an allowable axial pull-out <code>p</code> (in inches per joint, meaning slight lengthwise withdrawal of the spigot from the bell), the total available pull across the curve is <code>N &times; p</code> (in).</p>
 
             <figure>
-                <img src="/blog/2026-08-07/pipe-deflection-pull-calculator.png" alt="The calculator: 18-ft pipe at 5 degrees per joint makes a 206-ft radius, 18.8-inch offset per joint, 18 joints and 324 ft to turn 90 degrees, with a drawn deflected pipeline" loading="lazy">
-                <figcaption>Figure 1: 18-ft pipe at 5° per joint curves to a 206-ft radius &mdash; and turning a full 90° costs 18 joints and 324 ft of pipe.</figcaption>
+                <img src="/blog/2026-08-07/pipe-deflection-pull-calculator.png" alt="Screenshot of the pipe joint deflection calculator showing 18-ft pipe at 5 degrees per joint giving a 206-ft curve radius, 18.8-inch lateral offset per joint, and 18 joints over 324 ft to turn 90 degrees, with a diagram of the deflected pipeline" loading="lazy">
+                <figcaption>Figure 1: Example calculation for 18-ft pipe deflected 5° per joint, producing a 206-ft radius and requiring 18 joints (324 ft of pipe) for a 90° turn.</figcaption>
             </figure>
 
-            <h3>Deflect the joint, not the barrel &mdash; and mind what it costs</h3>
-            <p>The number the calculator can't invent is the allowable deflection: it belongs to the manufacturer, for that exact joint, size, and pressure class, and it shrinks fast as pipe gets bigger or more restrained. A 5° push-on 8-inch is generous; a restrained 24-inch might give you a degree. The deflection has to happen <em>at the joint</em> &mdash; pulling the spigot to one side of the bell &mdash; not by bowing the barrel, which over-stresses the pipe and isn't what the allowable covers. And on a pressure line it isn't free: every degree of deflection and every bit of axial pull eats into the joint's margin against separation, so the thrust and restraint still have to be designed for the deflected run &mdash; which is where the <a href="/tools/thrust-block-calculator.html">thrust block</a> and restraint calcs come back in. Used within the manufacturer's limits, though, deflecting joints is the clean way to follow a curve without a single fitting to restrain.</p>
+            <p>Allowable joint deflection and pull-out values come from the pipe manufacturer's tables for the specific pipe diameter, joint type, and pressure class (rated wall thickness and pressure capacity), and they generally decrease as pipe diameter increases or when restrained joints (locking joints) are used. This calculator models deflection at the joint only, where the spigot is angled inside the bell while the pipe barrel (body) remains straight, which is the standard practice for ductile iron (DI) pipe under AWWA C600 [1][3]. For smaller-diameter polyvinyl chloride (PVC) pipe, AWWA C605 also permits controlled longitudinal bending of the pipe barrel within the manufacturer's minimum bending radius [2], which is a separate method not modeled here. On a pressure line (a pipe flowing full under internal pressure), deflecting or pulling a joint reduces spigot engagement in the bell, so thrust restraint calculations such as the <a href="/tools/thrust-block-calculator.html">thrust block calculator</a> still apply to the deflected curve.</p>
 
             <details>
-                <summary>Layout field notes</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Spread the deflection evenly &mdash; equal small angles at many joints, not the full allowable at a few. It rides better and keeps every joint inside its margin.</li>
-                    <li>Vertical curves use the same math; just remember a gravity sewer still has to hold its grade tolerance while it deflects.</li>
-                    <li>Pulling joints to gain a little length to hit a structure is legitimate, but distribute it &mdash; one joint pulled to its limit is a leak risk.</li>
-                    <li>If the required radius needs more than the allowable, the honest options are shorter pipe (more joints), a larger radius, or fittings &mdash; not forcing the joint past its rating.</li>
+                    <li>Always use the pipe manufacturer's published limits for the exact pipe size, joint style, and pressure class rather than general rules of thumb.</li>
+                    <li>Distribute joint deflection evenly across multiple joints rather than concentrating the maximum allowable angle at a few joints.</li>
+                    <li>The same chord formulas apply to vertical curves, but gravity sewers (pipes flowing downhill by gravity) must still stay within their specified slope and grade tolerances (allowable deviations from design slope).</li>
+                    <li>Small amounts of axial joint pull-out are sometimes used to adjust total pipe length to meet a manhole or fitting, but pull-out should be spread across several joints so no single joint is pulled near its sealing limit.</li>
+                    <li>If a target curve radius requires more deflection than the joint allows, options include increasing the curve radius, using shorter pipe lengths (more joints per unit distance), or installing manufactured bends.</li>
                 </ul>
             </details>
 
-            <p>Single static file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+            <p>The calculator runs in the web browser with no external scripts and stores your inputs locally in browser storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/pipe-deflection-pull-calculator.html">Pipe Joint Deflection &amp; Pull Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Pipe manufacturer's installation guide &mdash; allowable joint deflection and pull-out by size, joint, and pressure class (governing).</li>
-                <li>[2] AWWA C600 / C605 (ductile iron and PVC installation) and DIPRA installation guidance.</li>
+                <li>American Water Works Association (AWWA), <em>ANSI/AWWA C600: Installation of Ductile-Iron Mains and Their Appurtenances</em>.</li>
+                <li>American Water Works Association (AWWA), <em>ANSI/AWWA C605: Underground Installation of Polyvinyl Chloride (PVC) and Molecularly Oriented Polyvinyl Chloride (PVCO) Pressure Pipe and Fittings</em>.</li>
+                <li>Ductile Iron Pipe Research Association (DIPRA), <em>Installation Guide for Ductile Iron Pipe</em>.</li>
             </ol>
         </article>
     </main>

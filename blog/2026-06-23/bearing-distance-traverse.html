@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Walking a Metes-and-Bounds Traverse, with Closure Diagnostics | Blog | MDS</title>
+    <title>Bearing and Distance Traverse Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,45 +31,38 @@
     <main>
         <article>
             <header>
-                <h1>Walking a Metes-and-Bounds Traverse, with Closure Diagnostics</h1>
+                <h1>Bearing and Distance Traverse Calculator</h1>
                 <time datetime="2026-06-23">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A deed describes a parcel as a chain of calls: &ldquo;thence N 45&deg;00'00&quot; E, 100.00 feet, thence S 45&deg;00'00&quot; E&hellip;&rdquo; To know whether it closes &mdash; whether the last call lands back on the point of beginning &mdash; you convert each quadrant bearing to an azimuth, walk the coordinates, and see how far off you end up. It's rote, error-prone, and exactly what you want a page to do while you read calls off a scanned deed.</p>
+            <p>This calculator checks a metes-and-bounds land description (a boundary written as a chain of directional segments, called calls, starting from a point of beginning, or POB). Each leg is entered as a quadrant bearing (northeast NE, southeast SE, southwest SW, or northwest NW, in degrees, minutes, and seconds from 0&deg; to 90&deg;) and a distance in feet. The page computes the running northing (N, north-south coordinate in feet) and easting (E, east-west coordinate in feet) at each corner, the closure error (the straight-line gap between the final point and the starting point), the precision ratio, and the enclosed area in square feet (sf) and acres (ac).</p>
 
-            <h2>The Approach</h2>
-            <p>A leg table in deed form &mdash; quadrant (NE/SE/SW/NW), degrees/minutes/seconds, distance &mdash; with running coordinates computed per leg so you watch the traverse walk as you type. Each quadrant bearing becomes an azimuth (NE&rarr;&theta;, SE&rarr;180&minus;&theta;, SW&rarr;180+&theta;, NW&rarr;360&minus;&theta;), then <code>&Delta;N = d&middot;cos(az)</code>, <code>&Delta;E = d&middot;sin(az)</code>. Closure error is the straight-line miss from the final point back to start; precision is perimeter &divide; closure as 1:X; area is the shoelace formula on the closed polygon [1].</p>
+            <p>Each quadrant bearing angle <code>&theta;</code> (in degrees) is converted to a clockwise azimuth <code>az</code> measured from north: <code>az = &theta;</code> for NE, <code>180&deg; &minus; &theta;</code> for SE, <code>180&deg; + &theta;</code> for SW, and <code>360&deg; &minus; &theta;</code> for NW [1]. Each leg then advances the coordinates by <code>&Delta;N = d &middot; cos(az)</code> and <code>&Delta;E = d &middot; sin(az)</code>, where <code>d</code> is the leg length in feet and <code>&Delta;N</code> and <code>&Delta;E</code> are the northing and easting increments in feet [1]. Closure error is <code>e = &radic;(&Delta;N<sub>close</sub>&sup2; + &Delta;E<sub>close</sub>&sup2;)</code> in feet, where <code>&Delta;N<sub>close</sub></code> and <code>&Delta;E<sub>close</sub></code> are the coordinate gaps from the final corner back to the POB, and the precision ratio is <code>P = L / e</code> (reported as <code>1:P</code>), where <code>L</code> is the total perimeter in feet [1]. Polygon area is computed on the closed vertex list using the planar shoelace formula <code>A = 0.5 &middot; |&Sigma;(E<sub>i</sub> &middot; N<sub>i+1</sub> &minus; E<sub>i+1</sub> &middot; N<sub>i</sub>)|</code> in square feet [1].</p>
+
+            <p>If a geographic anchor latitude (<code>&phi;</code>, degrees) and longitude (degrees) are entered for the POB, the calculator maps the planar offsets to geographic coordinates on a local tangent plane using <code>&Delta;lat = &Delta;N<sub>m</sub> / M(&phi;)</code> and <code>&Delta;lon = &Delta;E<sub>m</sub> / (N(&phi;) &middot; cos(&phi;))</code> (in radians, then converted to degrees), where <code>&Delta;N<sub>m</sub></code> and <code>&Delta;E<sub>m</sub></code> are offsets from the POB in meters converted using the US survey foot (<code>1200 / 3937</code> m/ft), <code>M(&phi;)</code> is the meridional radius of curvature in meters, and <code>N(&phi;)</code> is the prime vertical radius of curvature in meters on the GRS80 (Geodetic Reference System 1980) ellipsoid [2]. The resulting polygon can be copied as GeoJSON (a JSON format for geographic features) or WKT (Well-Known Text, a plain-text geometry format) for viewing in desktop mapping tools such as QGIS, OpenStreetMap editors such as JOSM, or the <a href="/tools/geojson-wkt-converter.html">GeoJSON and WKT Converter</a>.</p>
 
             <figure>
-                <img src="/blog/2026-06-23/bearing-distance-traverse.png" alt="Leg table with quadrant bearings and distances, running coordinates, and closure error with precision ratio" loading="lazy">
-                <figcaption>Figure 1: Calls in deed form on the left, closure error and precision ratio out the bottom.</figcaption>
+                <img src="/blog/2026-06-23/bearing-distance-traverse.png" alt="Bearing and distance traverse calculator showing quadrant bearings, distances, running northing and easting coordinates, closure error, precision ratio, and area" loading="lazy">
+                <figcaption>Figure 1: Leg table with quadrant bearings and distances, running coordinates, closure error, and precision ratio.</figcaption>
             </figure>
 
-            <h3>Closure as a debugging tool</h3>
-            <p>The precision ratio isn't just a quality score &mdash; it's a diagnostic. Modern boundary surveys close 1:10,000 and better; older deeds check out around 1:5,000; and worse than about 1:3,000 almost always means a <em>transcription</em> error rather than sloppy original surveying &mdash; a transposed digit, a dropped leg, or a bearing read from the wrong quadrant. The tool encodes the folklore fix in its warnings: when a description won't close, flip the quadrant on the most suspicious leg first. NE mis-keyed as SE is the single most common deed-entry typo, and it produces a distinctive, large misclosure that the ratio catches immediately.</p>
-
-            <h3>The work-hobby crossover: anchored export</h3>
-            <p>Give it the point of beginning's lat/lon and the planar traverse maps to geographic coordinates via the local ellipsoidal radii &mdash; <code>&Delta;lat = &Delta;N/M(&phi;)</code>, <code>&Delta;lon = &Delta;E/(N(&phi;)&middot;cos&phi;)</code>, GRS80, US survey foot &mdash; and exports GeoJSON or WKT. At parcel scale that's accurate to well under a centimeter, and the polygon drops straight into QGIS, JOSM, or the <a href="/tools/geojson-wkt-converter.html">GeoJSON/WKT inspector</a>. The anchor's own accuracy governs, though: a phone-GPS point of beginning puts the whole parcel within phone-GPS accuracy of reality.</p>
-
             <details>
-                <summary>How I verified the traverse math</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>A rotated square (N45E / S45E / S45W / N45W, 100 ft each) closes to exactly zero with exactly 10,000 sf.</li>
-                    <li>An axis-aligned rectangle via due bearings closes exactly at 20,000 sf.</li>
-                    <li>A deliberately flipped quadrant produces 141 ft of misclosure at 1:3 precision &mdash; and the warning fires as designed.</li>
-                    <li>The lat/lon export round-trips 1,000 ft north and east to a millionth of a foot.</li>
+                    <li>In standard surveying practice, modern boundary traverses commonly close at 1:10,000 or better, while older deeds often close around 1:5,000 [1]. A precision ratio worse than about 1:3,000 frequently indicates a transcription mistake such as a transposed digit, a skipped leg, or an inverted quadrant.</li>
+                    <li>This calculator checks arithmetic only and is not a land survey. The governing deed or record map and its basis-of-bearings note (which defines whether bearings refer to grid north, true north, or a record line) control legal orientation.</li>
+                    <li>Curved boundary segments are not modeled directly. Entering a curve by its chord bearing and chord distance closes the endpoints correctly, but understates perimeter length and alters the computed area slightly.</li>
+                    <li>The local tangent-plane conversion is accurate to well under a centimeter over typical parcel extents (roughly a mile or less), so exported map placement depends mainly on the accuracy of the anchor coordinates entered.</li>
+                    <li>The tool runs offline in the browser and saves the current traverse in <code>localStorage</code> (browser-side local storage).</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The deed or record map (and its basis-of-bearings note) governs [2].</p>
 
             <p>The tool: <a href="/tools/bearing-distance-traverse.html">Bearing &amp; Distance Traverse Tool</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Ghilani &amp; Wolf, <em>Elementary Surveying</em> &mdash; traverse computation, closure, and precision standards.</li>
-                <li>[2] The deed or record map being walked &mdash; the governing description and its basis of bearings.</li>
+                <li>Charles D. Ghilani and Paul R. Wolf, <em>Elementary Surveying: An Introduction to Geomatics</em>, 14th ed. (Pearson, 2015), Chapters 10 and 12 (traverse computation, closure, precision, and coordinate area).</li>
+                <li>Helmut Moritz, &ldquo;Geodetic Reference System 1980,&rdquo; <em>Journal of Geodesy</em> 74 (2000): 128&ndash;162 (GRS80 ellipsoid parameters and local radii of curvature).</li>
             </ol>
         </article>
     </main>

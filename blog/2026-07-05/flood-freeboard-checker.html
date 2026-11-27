@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flood Freeboard Checks and the NGVD29/NAVD88 Datum Trap | Blog | MDS</title>
+    <title>Flood Elevation and Freeboard Checker | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,41 +31,42 @@
     <main>
         <article>
             <header>
-                <h1>Flood Freeboard Checks and the NGVD29/NAVD88 Datum Trap</h1>
+                <h1>Flood Elevation and Freeboard Checker</h1>
                 <time datetime="2026-07-05">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Flood compliance is subtraction: is the proposed elevation above the base flood elevation plus the required freeboard? A middle-schooler can do the arithmetic. The reason the check goes wrong in practice is never the subtraction &mdash; it's that the two elevations being subtracted are measured from <em>different vertical datums</em>, and the difference between them is bigger than the freeboard you're checking against.</p>
+            <p>This calculator checks proposed building and utility elevations (such as a finished floor, electrical service, generator pad, or pump-station wet well rim) against a required flood protection elevation. In Federal Emergency Management Agency (FEMA) flood zones, the required minimum elevation is based on the Base Flood Elevation (BFE, the 1%-annual-chance flood water surface) or a published shallow flood depth from the effective Flood Insurance Rate Map (FIRM) and Flood Insurance Study (FIS) [1], plus any required freeboard (an extra vertical safety margin set by local floodplain ordinances).</p>
 
-            <h2>The Approach</h2>
-            <p>The tool is a line-item table: finished floor, electrical service, generator pad, wet well rim &mdash; each checked as <code>margin = proposed &minus; (BFE + freeboard)</code> for AE/numbered-A zones, or <code>proposed &minus; (highest adjacent grade + depth number + freeboard)</code> for depth-based AO zones. The arithmetic is trivial by design; the value is in structuring the inputs and carrying the warnings [1][3].</p>
+            <p>For Zone AE and numbered A zones (1%-annual-chance flood zones with a published BFE), the tool calculates:</p>
+            <p><code>E_req = BFE + F</code> &nbsp; and &nbsp; <code>M = E_prop &minus; E_req</code></p>
+            <p>For Zone AO (shallow sheet-flow flood zones with a published flood depth rather than a BFE), the tool calculates:</p>
+            <p><code>E_req = HAG + D + F</code> &nbsp; and &nbsp; <code>M = E_prop &minus; E_req</code></p>
+            <p>Here <code>E_req</code> is the required minimum elevation (ft), <code>BFE</code> is the base flood elevation (ft), <code>F</code> is the required freeboard (ft), <code>HAG</code> is the highest adjacent grade at the structure (ft), <code>D</code> is the published AO depth number (ft), <code>E_prop</code> is the proposed elevation of each line item (ft), and <code>M</code> is the resulting margin (ft, where zero or positive passes and negative fails).</p>
 
-            <h3>The datum trap</h3>
-            <p>Here's the headline. NGVD29 and NAVD88 are two different vertical datums, and in Southern California they differ by roughly <strong>2 to 2.5 feet</strong> &mdash; more than most freeboard requirements. An older FIRM or FIS profile may publish BFE in NGVD29 while your surveyor shot the site in NAVD88 (the modern standard). Mix them and the check flips: a compliant design reads as failing, or worse, a non-compliant one reads as passing. The tool carries a standing datum warning and points at NOAA's VDatum for the conversion, because this single mistake has cost real projects real money [4].</p>
+            <p>Every elevation entered in the check must reference the same vertical datum (the zero-elevation reference surface used by a survey or map). Older FEMA FIRMs and FIS profiles sometimes publish BFEs on the National Geodetic Vertical Datum of 1929 (NGVD29), while modern site surveys typically use the North American Vertical Datum of 1988 (NAVD88). In Southern California, NGVD29 and NAVD88 differ by roughly 2 to 2.5 ft, which exceeds typical 1 to 2 ft freeboard requirements. Mixing datums produces an incorrect pass or fail result. Datum conversions can be checked with the National Geodetic Survey (NGS) VDatum tool and published benchmark datasheets [3].</p>
 
             <figure>
-                <img src="/blog/2026-07-05/flood-freeboard-checker.png" alt="Line-item elevation table checking finished floor and equipment against BFE plus freeboard, with a datum warning banner" loading="lazy">
-                <figcaption>Figure 1: Equipment line items checked against BFE + freeboard, with the datum-mismatch warning standing guard over all of it.</figcaption>
+                <img src="/blog/2026-07-05/flood-freeboard-checker.png" alt="Screenshot of the Flood Elevation and Freeboard Checker showing a 125 ft BFE with 1 ft freeboard, a line-item table for finished floor, electrical service, and generator pad, and a summary showing two passing items and one failing item." loading="lazy">
+                <figcaption>Figure 1: Sample Zone AE check with a 125 ft BFE and 1 ft required freeboard, showing pass and fail margins for finished floor, electrical service, and generator pad elevations.</figcaption>
             </figure>
 
-            <p>It also flags margins thinner than 0.3 ft &mdash; below the combined survey-plus-construction tolerance, a &ldquo;passing&rdquo; number that thin isn't really passing.</p>
-
             <details>
-                <summary>Why utility equipment keeps failing this check</summary>
-                <p>Buildings get designed to the flood ordinance. The electrical gear, generators, and control panels get placed by whoever had room on the site plan &mdash; and NFIP and most ordinances require service equipment elevated or dry-floodproofed to the same standard as the lowest floor. A lift station whose motor control center goes underwater at the design event is a lift station that fails <em>exactly</em> when the wet-weather flows peak and it's needed most. This tool is for catching that while it's still a markup, before the elevation certificate documents it as built [2].</p>
+                <summary>Assumptions and limits</summary>
+                <ul>
+                    <li>Under National Flood Insurance Program (NFIP) criteria in 44 CFR &sect;60.3, electrical, heating, ventilation, plumbing, and other service equipment must be elevated or designed to prevent floodwater entry during the base flood, and many local ordinances hold utility equipment to the same elevation as the lowest floor [2]. Dry-floodproofing (sealing walls and openings to keep water out) is permitted only where allowed by the local ordinance for eligible non-residential structures. Checking equipment such as a sewage lift station motor control center, generator pad, or wet well rim (the top opening of the underground collection chamber) during design helps catch conflicts before as-built survey documentation on a FEMA Elevation Certificate.</li>
+                    <li>The tool displays a caution when the smallest passing margin is below 0.3 ft, because combined survey and construction grading tolerances can use up a thin margin.</li>
+                    <li>The effective FIRM panel, FIS profile [1], and the local community's floodplain ordinance govern flood zones, BFEs, freeboard, and special requirements (such as coastal Zone VE wave rules, which this tool does not cover).</li>
+                    <li>The calculator is a single offline HTML file with no external dependencies. Inputs are stored in browser <code>localStorage</code> (saved only on your device) until cleared.</li>
+                </ul>
             </details>
 
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The effective FIRM/FIS and the community's floodplain ordinance govern.</p>
-
-            <p>The tool: <a href="/tools/flood-freeboard-checker.html">Flood Elevation &amp; Freeboard Checker</a>.</p>
+            <p>Tool: <a href="/tools/flood-freeboard-checker.html">Flood Elevation &amp; Freeboard Checker</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Effective FIRM panel and Flood Insurance Study &mdash; BFE/depth, zone, and datum. <a href="https://msc.fema.gov/">https://msc.fema.gov/</a></li>
-                <li>[2] 44 CFR &sect;60.3 &mdash; NFIP floodplain management criteria.</li>
-                <li>[3] The community's floodplain ordinance &mdash; governing freeboard and equipment requirements.</li>
-                <li>[4] NGS VDatum &mdash; NGVD29 &harr; NAVD88 conversion where datums collide. <a href="https://vdatum.noaa.gov/">https://vdatum.noaa.gov/</a></li>
+                <li>FEMA Flood Map Service Center, Effective Flood Insurance Rate Map (FIRM) panels and Flood Insurance Studies (FIS): <a href="https://msc.fema.gov/">https://msc.fema.gov/</a></li>
+                <li>44 CFR &sect;60.3, Flood Plain Management Criteria for Flood-Prone Areas (National Flood Insurance Program): <a href="https://www.ecfr.gov/current/title-44/section-60.3">https://www.ecfr.gov/current/title-44/section-60.3</a></li>
+                <li>NOAA National Geodetic Survey (NGS), VDatum vertical datum transformation tool and datasheets: <a href="https://vdatum.noaa.gov/">https://vdatum.noaa.gov/</a></li>
             </ol>
         </article>
     </main>

@@ -35,44 +35,45 @@
                 <time datetime="2026-05-14">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Trench quantities are prism arithmetic — width times depth times length, minus the pipe. Nobody gets the prisms wrong. What goes wrong is that the same dirt is <em>three different volumes</em> depending on where it's sitting: in the ground, in the truck, or compacted back in the trench. Order bedding rock off the neat-line number and you run short; schedule haul-off trucks off the bank volume and you're a truck or two light every day; and the supplier's tickets are in tons while the inspector thinks in cubic yards.</p>
+            <p>Estimating earthwork for a pipeline trench starts with rectangular prism volumes and then converts those volumes across three soil states: in-ground bank cubic yards (CY, where 1 CY = 27 cubic feet), loose CY in haul trucks, and compacted CY placed back in the trench. The <a href="/tools/trench-quantities-calculator.html">Trench Excavation and Backfill Quantity Calculator</a> computes neat-line (theoretical rectangular trench) volumes for excavation, bedding (granular support below the pipe), pipe zone (fill around and immediately above the pipe), and upper backfill, then converts them into imported material tonnage, excess soil (spoil) haul-off volume, and truckload counts.</p>
 
-            <h2>The Approach</h2>
-            <p>The neat-line volumes are the easy part, all in bank measure:</p>
-            <p><code>Excavation = W &times; D &times; L</code> &nbsp;&nbsp; <code>Pipe zone = W &times; (OD + h_zone) &times; L &minus; V_pipe</code></p>
-            <p>where the pipe displaces <code>&pi;/4 &times; (OD/12)&sup2; &times; L</code>. The tool then converts each stream to the measure that matters for it [2]:</p>
+            <p>All neat-line volumes are computed in cubic feet (ft&sup3;) and divided by 27 to report bank CY:</p>
             <ul>
-                <li><strong>Bank CY</strong> — in the ground, undisturbed. The neat-line numbers.</li>
-                <li><strong>Loose CY</strong> — bank &times; (1 + swell). What the trucks haul, so what hauling gets priced and scheduled on.</li>
-                <li><strong>Compacted CY</strong> — what the delivered loose yard shrinks to at spec density, which is why import gets a compaction/waste allowance on top of neat-line.</li>
+                <li><strong>Total excavation:</strong> <code>V_exc = W &times; D &times; L</code>, where <code>W</code> is trench width in feet (ft), <code>D</code> is average trench depth in ft, and <code>L</code> is trench length in ft.</li>
+                <li><strong>Pipe displacement:</strong> <code>V_pipe = (&pi;/4) &times; (OD / 12)&sup2; &times; L</code>, where <code>OD</code> is actual pipe outside diameter in inches (in), divided by 12 to convert to feet.</li>
+                <li><strong>Bedding:</strong> <code>V_bed = W &times; (t_bed / 12) &times; L</code>, where <code>t_bed</code> is bedding depth below the pipe in inches (in).</li>
+                <li><strong>Pipe zone (net of pipe):</strong> <code>V_zone = W &times; ((OD + h_zone) / 12) &times; L &minus; V_pipe</code>, where <code>h_zone</code> is pipe-zone cover height above the top (crown) of the pipe in inches (in).</li>
+                <li><strong>Upper backfill above pipe zone:</strong> <code>V_upper = V_exc &minus; V_bed &minus; (V_zone + V_pipe)</code>.</li>
             </ul>
-            <p>It finishes the chain with import tonnage at the material's density and a truckload count, because that's the number the phone call to the yard actually needs.</p>
+
+            <p>Because soil expands when excavated and compacts when tamped back in place [1], the calculator separates ordering and hauling volumes from neat-line bank volumes:</p>
+            <ul>
+                <li><strong>Bank CY:</strong> undisturbed volume in the ground (the neat-line prism volumes above).</li>
+                <li><strong>Loose CY (spoil haul-off):</strong> excavated soil bulks in the truck, computed as <code>V_loose = V_bank &times; (1 + swell / 100)</code>, where <code>swell</code> is the percent swell factor (commonly 15% to 25% for typical soils) [1]. When native soil is reused above the pipe zone, bank spoil equals the volume displaced by the pipe, bedding, and pipe-zone import. When the upper zone is also imported, the entire excavation is hauled off.</li>
+                <li><strong>Import order volume (compacted-equivalent):</strong> delivered loose aggregate shrinks when compacted to specified density and includes some placement waste. The tool applies a compaction and waste allowance percentage (<code>compf</code>) to neat-line import volume: <code>V_order = V_import_neat &times; (1 + compf / 100)</code>.</li>
+            </ul>
+            <p>Finally, ordered import CY is multiplied by material density in tons per CY (commonly 1.35 to 1.5 tons/CY for crushed rock or sand) to give total tons, and both import and loose spoil volumes are divided by truck capacity (CY per load, rounded up) to estimate truckloads. The page runs offline with no external dependencies, and inputs persist on your device in browser <code>localStorage</code>.</p>
 
             <figure>
-                <img src="/blog/2026-05-14/trench-quantities-calculator.png" alt="Calculator output showing excavation, bedding, pipe zone, spoil with swell, import tonnage, and truckloads" loading="lazy">
-                <figcaption>Figure 1: One trench section carried through from neat-line prisms to tons and truckloads.</figcaption>
+                <img src="/blog/2026-05-14/trench-quantities-calculator.png" alt="Trench quantity calculator showing neat-line excavation, bedding, pipe zone, loose spoil with swell, import tonnage, and truckloads" loading="lazy">
+                <figcaption>Figure 1: Trench section quantities from neat-line bank volumes through import tonnage and truckload counts.</figcaption>
             </figure>
 
             <details>
-                <summary>Field notes that ride along</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Depth varies along a run on grade — use the average of station depths, or split into reaches and run the tool per reach.</li>
-                    <li>If a trench box sets the dig width, use the box width plus 6&ndash;12 in. of over-cut, not the spec minimum trench width.</li>
-                    <li>Unsuitable subgrade means over-excavation and extra bedding — a re-run with the deeper numbers is the change-order quantity backup, dated the day it happened.</li>
-                    <li>Keeping bank/loose/compacted straight on the daily report saves the argument at the pay application.</li>
+                    <li><strong>Rectangular prism geometry:</strong> the tool assumes vertical trench walls at a single average depth. Where depth varies along a sloped pipeline, use the average of measured station depths or split the run into separate segments (reaches). Sloped or benched excavations and structures such as manholes or valve vaults must be added separately.</li>
+                    <li><strong>Actual dig width and pipe OD:</strong> if a trench box (a steel shoring shield) controls the excavation width, enter the box width plus typical over-cut (often 6 to 12 in) instead of the minimum trench width. Use actual pipe outside diameters from manufacturer dimension tables rather than nominal pipe sizes.</li>
+                    <li><strong>Unsuitable subgrade:</strong> if soft soil at the trench bottom requires extra excavation and additional bedding rock, re-running the calculator with the deeper trench and bedding values provides the incremental volume for documentation.</li>
+                    <li><strong>Measurement and payment:</strong> contract specifications govern trench details, allowable materials, and payable quantities, while supplier scale tickets govern billed tonnage.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, inputs persisted in <code>localStorage</code>. Measurement-and-payment rules in the contract spec govern what's actually payable — this computes what's actually in the ground [1].</p>
 
             <p>The tool: <a href="/tools/trench-quantities-calculator.html">Trench Excavation &amp; Backfill Quantity Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Contract specifications &mdash; trench detail, bedding/zone materials, and measurement/payment rules (governing).</li>
-                <li>[2] Caterpillar Performance Handbook &mdash; swell/shrink factors by material type.</li>
-                <li>[3] Pipe manufacturer dimension tables &mdash; actual ODs by material and pressure class.</li>
+                <li>Caterpillar Inc., <em>Caterpillar Performance Handbook</em> (earthmoving swell and shrink factors by material type).</li>
             </ol>
         </article>
     </main>

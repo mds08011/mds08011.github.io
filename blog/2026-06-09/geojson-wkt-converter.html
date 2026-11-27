@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Converting GeoJSON, WKT, and CSV Geometry, with a Lat/Lon Swap Detector | Blog | MDS</title>
+    <title>Converting and Inspecting GeoJSON, WKT, and CSV Geometry | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,38 +31,37 @@
     <main>
         <article>
             <header>
-                <h1>Converting GeoJSON, WKT, and CSV Geometry, with a Lat/Lon Swap Detector</h1>
+                <h1>Converting and Inspecting GeoJSON, WKT, and CSV Geometry</h1>
                 <time datetime="2026-06-09">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Geometry arrives in whatever format the last tool spat out &mdash; GeoJSON from a web API, WKT from a database, a CSV of coordinates from a GPS export &mdash; and you need it in a different one, plus a quick sanity check: how many vertices, what's the bounding box, roughly how big is this thing. Pasting it into a public converter means shipping possibly-sensitive geometry to someone else's server. This does all three formats locally, and flags the one bug that bites everyone.</p>
+            <p>This utility converts geographic coordinates among GeoJSON (a JSON-based format defined by RFC 7946 [1]), WKT (Well-Known Text, a plain-text geometry format from the Open Geospatial Consortium Simple Features specification [2]), and CSV (comma-separated values, with one coordinate pair per line). It also reports the vertex count (number of corner points), bounding box (West, South, East, and North coordinate limits), and approximate spherical length and area. All parsing and math run locally in the browser without uploading coordinate data to a remote server.</p>
 
-            <h2>The Approach</h2>
-            <p>Three hand-rolled parsers, zero dependencies. GeoJSON (bare geometry, Feature, or FeatureCollection, with a note when it uses the first of several features and a warning on a legacy <code>crs</code> member). A tokenizing WKT parser for all seven simple-feature types, case-insensitive and whitespace-tolerant, that swallows Z/M values. And CSV with header auto-skip, selectable lon/lat vs lat/lon column order, and a choice of interpreting rows as a path, a polygon (auto-closed, with a note), or loose points. Parse errors surface as readable messages &mdash; with position info from the WKT tokenizer &mdash; instead of a blank screen [1][2].</p>
+            <p>The tool supports six standard 2D geometry types: <code>Point</code>, <code>MultiPoint</code>, <code>LineString</code>, <code>MultiLineString</code>, <code>Polygon</code>, and <code>MultiPolygon</code> (it does not support <code>GeometryCollection</code>). For GeoJSON input, it accepts a bare geometry object, a <code>Feature</code>, or a <code>FeatureCollection</code> (reading the first feature's geometry and noting when additional features were skipped), and warns if a deprecated <code>crs</code> coordinate-system member is present because RFC 7946 assumes WGS84 (World Geodetic System 1984) longitude and latitude in decimal degrees [1]. For WKT input, it parses coordinate lists case-insensitively and ignores extra numeric values such as elevation (Z) or measure (M) coordinates [2]. For CSV input, it skips a non-numeric header row, lets you choose <code>lon,lat</code> or <code>lat,lon</code> column order, and interprets rows as a line, an auto-closed polygon, or loose points.</p>
 
             <figure>
-                <img src="/blog/2026-06-09/geojson-wkt-converter.png" alt="Geometry pasted as WKT with GeoJSON output, vertex count, bounding box, and geodesic area inspection" loading="lazy">
-                <figcaption>Figure 1: WKT in, GeoJSON out, with vertex count, bbox, and geodesic length/area alongside.</figcaption>
+                <img src="/blog/2026-06-09/geojson-wkt-converter.png" alt="Screenshot of the geometry converter showing WKT input converted to GeoJSON with vertex count, bounding box, and spherical length and area" loading="lazy">
+                <figcaption>Figure 1: WKT input converted to GeoJSON alongside vertex count, bounding box, and spherical length and area.</figcaption>
             </figure>
 
-            <h3>The lat/lon swap detector</h3>
-            <p>Swapped axes is the most common geometry bug in existence, and it's insidious because the data still parses &mdash; it just plots your California parcel somewhere in the Arctic Ocean. GeoJSON and WKT are <strong>longitude-first</strong> by specification; spreadsheets, GPS apps, and human habit are <strong>latitude-first</strong>. So the two conventions collide constantly. The tool's heuristic: if a &ldquo;longitude&rdquo; magnitude never exceeds 90 while a &ldquo;latitude&rdquo; does exceed 90, that's the signature of lat,lon data being read as lon,lat &mdash; because latitude can't exceed 90&deg; but longitude routinely does. It names the problem instead of silently computing a nonsense area, and there's a whole details block on lon-first specs versus lat-first habits, because everyone gets bitten eventually.</p>
+            <p>GeoJSON and WKT both specify coordinates in longitude-first order (<code>lon, lat</code>) [1][2], whereas many spreadsheets and GPS exports list latitude first (<code>lat, lon</code>). Valid latitude stays within <code>&plusmn;90&deg;</code> while longitude ranges up to <code>&plusmn;180&deg;</code>, so reading latitude-first data as longitude-first often places a longitude magnitude over 90 into the latitude position (for example, swapping a California coordinate pair near <code>34&deg;, -118&deg;</code> produces an invalid latitude of <code>-118&deg;</code>). The tool checks whether any latitude exceeds <code>&plusmn;90&deg;</code> while all longitudes remain within <code>&plusmn;90&deg;</code> and prints a warning when coordinates appear swapped.</p>
 
             <details>
-                <summary>The length and area math</summary>
-                <p>Length is haversine great-circle distance summed over vertices (R = 6,371,008.8 m). Area is the spherical polygon formula with holes subtracted &mdash; the same Chamberlain &amp; Duquette approach most GIS &ldquo;geodesic area&rdquo; functions use on a sphere [3]. Both land within about 0.3% of ellipsoidal values at mid-latitudes: fine for a QA gut-check, not for a record boundary, and the tool says exactly that rather than implying survey precision.</p>
+                <summary>Assumptions and limits</summary>
+                <p>Line lengths and polygon perimeters are summed across consecutive vertices using the haversine great-circle distance formula (the shortest path on a sphere): <code>d = 2&middot;R&middot;atan2(&radic;a, &radic;(1 &minus; a))</code>, where <code>a = sin&sup2;((&phi;&#8322; &minus; &phi;&#8321;) / 2) + cos(&phi;&#8321;)&middot;cos(&phi;&#8322;)&middot;sin&sup2;((&lambda;&#8322; &minus; &lambda;&#8321;) / 2)</code>. Here <code>&phi;&#8321;, &phi;&#8322;</code> are latitudes in radians, <code>&lambda;&#8321;, &lambda;&#8322;</code> are longitudes in radians, and <code>R = 6,371,008.8 m</code> is the mean Earth radius from the International Union of Geodesy and Geophysics (IUGG) [4].</p>
+                <p>Polygon area uses the Chamberlain and Duquette spherical ring formula [3]: <code>A = (R&sup2; / 2) &middot; |&Sigma; (&lambda;&#8322; &minus; &lambda;&#8321;) &middot; (2 + sin &phi;&#8321; + sin &phi;&#8322;)|</code> in square meters, summed over consecutive ring edges with interior hole rings subtracted from the exterior ring. Spherical calculations typically stay within about 0.3% of ellipsoidal values at mid-latitudes, which is fine for quick inspection and quality-assurance checks, while survey or legal record boundaries require ellipsoidal calculations in Geographic Information System (GIS) or survey software.</p>
             </details>
 
-            <p>Single file, vanilla JS, input persisted in <code>localStorage</code>, copy buttons on all three output formats. It pairs naturally with the <a href="/tools/bearing-distance-traverse.html">traverse tool</a> (which exports here) and the <a href="/tools/coordinate-converter.html">coordinate converter</a>.</p>
+            <p>The page stores your last input in browser storage (<code>localStorage</code>) and provides copy buttons for all three output formats. It can also be used alongside the <a href="/tools/bearing-distance-traverse.html">bearing-distance traverse calculator</a> and the <a href="/tools/coordinate-converter.html">coordinate converter</a>.</p>
 
             <p>The tool: <a href="/tools/geojson-wkt-converter.html">GeoJSON / WKT / CSV Geometry Converter &amp; Inspector</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] RFC 7946 &mdash; The GeoJSON Format. <a href="https://datatracker.ietf.org/doc/html/rfc7946">https://datatracker.ietf.org/doc/html/rfc7946</a></li>
-                <li>[2] OGC Simple Features &mdash; WKT specification. <a href="https://www.ogc.org/standards/sfa">https://www.ogc.org/standards/sfa</a></li>
-                <li>[3] Chamberlain &amp; Duquette (JPL), <em>Some Algorithms for Polygons on a Sphere</em> &mdash; spherical area formula.</li>
+                <li>H. Butler, M. Daly, A. Doyle, S. Gillies, S. Hagen, and T. Schaub, <em>The GeoJSON Format</em>, IETF RFC 7946, August 2016. <a href="https://datatracker.ietf.org/doc/html/rfc7946">https://datatracker.ietf.org/doc/html/rfc7946</a></li>
+                <li>Open Geospatial Consortium (OGC), <em>Simple Feature Access, Part 1: Common Architecture</em> (WKT specification). <a href="https://www.ogc.org/standards/sfa">https://www.ogc.org/standards/sfa</a></li>
+                <li>R. G. Chamberlain and W. H. Duquette, <em>Some Algorithms for Polygons on a Sphere</em>, JPL Publication 07-3, Jet Propulsion Laboratory, 2007.</li>
+                <li>H. Moritz, <em>Geodetic Reference System 1980</em>, Journal of Geodesy, Vol. 74, pp. 128&ndash;133, 2000 (IUGG mean Earth radius <code>R = 6,371,008.8 m</code>).</li>
             </ol>
         </article>
     </main>

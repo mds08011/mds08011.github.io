@@ -35,39 +35,35 @@
                 <time datetime="2026-06-17">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Flexible sewer pipe &mdash; PVC, HDPE &mdash; deflects to whatever shape its bedding allows, which is why the mandrel pull exists: it's really a test of the embedment, not the pipe. The math is one line. The trap is in which diameter you multiply. An &ldquo;8-inch&rdquo; SDR 35 pipe doesn't have an 8-inch bore, and it doesn't have the nominal ID from the catalog either &mdash; the standard's <em>base ID</em> accounts for average walls and tolerances, and getting this wrong fails good pipe.</p>
+            <p>Flexible gravity sewer pipes such as PVC (polyvinyl chloride) and HDPE (high-density polyethylene) rely on surrounding bedding and embedment (granular material placed under and around the pipe) to hold their circular shape under soil loads. Acceptance specifications check installation quality by pulling a mandrel (a rigid cylindrical metal gauge, usually with 9 longitudinal legs) through the finished line to confirm ring deflection stays within an allowable limit. This calculator computes the required mandrel contact diameter from the pipe's standard base inside diameter (base ID), and also checks what deflection percentage an existing mandrel verifies.</p>
 
-            <h2>The Approach</h2>
-            <p><code>D_mandrel = base ID &times; (1 &minus; deflection/100)</code></p>
-            <p>and the inverse, for when a mandrel already exists and the question is what it actually proves: <code>deflection = (1 &minus; D_mandrel / base ID) &times; 100</code>.</p>
-            <p>The base ID is nominal OD minus two average walls, adjusted per the pipe standard &mdash; which is why an 8-inch D3034 SDR 35 mandrel at 5% is <strong>7.28 in.</strong>, not the 7.60 in. you'd get from a nominal ID. The tool carries the common D3034 SDR 35 base IDs (6 in. = 5.742, 8 in. = 7.665, up through 15 in. = 13.898) and takes a custom entry for F679 large-diameter, profile-wall, and HDPE, where the base ID has to come from the applicable standard or the submittal [1].</p>
+            <p>The required diameter is <code>D_mandrel = ID_base &times; (1 &minus; d / 100)</code>, and the inverse check is <code>d = (1 &minus; D_mandrel / ID_base) &times; 100</code>, where <code>D_mandrel</code> is the required or measured mandrel contact diameter in inches, <code>ID_base</code> is the pipe's standard base inside diameter in inches, and <code>d</code> is the allowable or verified ring deflection in percent (for example, <code>5</code> for 5%). Base ID is not the nominal pipe size. It is the average inside diameter defined by the pipe standard, calculated from the nominal outside diameter (OD) minus two average wall thicknesses with manufacturing tolerances applied. For 8-inch ASTM D3034 SDR 35 PVC pipe (Standard Dimension Ratio 35, where OD divided by minimum wall thickness equals 35), the base ID is 7.665 in., giving a 5% mandrel diameter of 7.282 in. [1]. Multiplying a nominal 8.00 in. diameter by 0.95 gives 7.60 in., which oversizes the mandrel and rejects pipe within tolerance.</p>
 
             <figure>
-                <img src="/blog/2026-06-17/mandrel-sizing-calculator.png" alt="Calculator showing base ID, deflection limit, and resulting mandrel diameter, with the inverse check mode" loading="lazy">
-                <figcaption>Figure 1: An 8-inch SDR 35 mandrel sized at 5% deflection from the D3034 base ID.</figcaption>
+                <img src="/blog/2026-06-17/mandrel-sizing-calculator.png" alt="Calculator showing base inside diameter, allowable deflection, required mandrel diameter, and optional on-hand mandrel check" loading="lazy">
+                <figcaption>Figure 1: Required mandrel diameter for 8-inch ASTM D3034 SDR 35 pipe at 5% deflection.</figcaption>
             </figure>
 
+            <p>To use the calculator, pick an ASTM D3034 SDR 35 preset (6 to 15 in.) from the Base ID menu [1], or leave it on custom entry and enter the base ID from the pipe standard or manufacturer submittal (product data sheet) for ASTM F679 large-diameter PVC [2], profile-wall pipe (ribbed or corrugated wall pipe), or HDPE. Choose the allowable deflection (5%, 7.5%, or Custom). To run the inverse check, type a measured diameter into the optional Actual mandrel diameter on hand field. The calculator reports the deflection percentage verified by that mandrel and warns if it is looser or stricter than the target limit. Inputs persist in browser <code>localStorage</code> (local storage on your device) and can be cleared with Clear all inputs.</p>
+
             <details>
-                <summary>Test rules that ride along with the size</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>The mandrel is rigid with an <strong>odd number of legs</strong> (typically 9), so two legs can't align across a single flat and read a deflected pipe as round.</li>
-                    <li>Pulled <strong>by hand</strong>, no winches. If it takes a comealong, the pipe fails.</li>
-                    <li>Most specs require the test no sooner than <strong>30 days</strong> after backfill, so initial deflection has developed before you measure it.</li>
-                    <li>Verify the mandrel against a proving ring before the pull &mdash; mandrels get dropped and legs get bent, and a bent leg tests a smaller pipe than the paperwork says.</li>
-                    <li>A failed segment usually means re-excavating and re-compacting the haunching &mdash; watching haunch compaction during installation is cheaper than any mandrel.</li>
+                    <li>Rigid mandrels typically have an odd number of legs (commonly 9) so two legs cannot sit directly opposite each other across a single flattened axis. Standard practice is to pull the mandrel by hand without winches or mechanical pulling equipment.</li>
+                    <li>Specifications commonly require waiting at least 30 days after final backfill (soil refilled over the trench) before deflection testing so initial embedment settlement and pipe deflection develop first [3].</li>
+                    <li>Checking the mandrel against a proving ring (a machined calibration ring) or micrometer before testing confirms that the legs are not bent out of tolerance.</li>
+                    <li>Failed pipe sections typically require excavating and re-compacting the embedment and haunching (the compacted material supporting the lower sides of the pipe) [3].</li>
+                    <li>Where contract specifications include a mandrel table, deflection limit, or wait period, the contract specifications govern over this calculator.</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence. The contract's mandrel table governs where one exists &mdash; this computes what the table should contain and what a given mandrel actually verifies [2][3].</p>
 
             <p>The tool: <a href="/tools/mandrel-sizing-calculator.html">Mandrel (Deflection) Test Sizing Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ASTM D3034 &mdash; Type PSM PVC Sewer Pipe and Fittings (dimension tables). <a href="https://www.astm.org/">https://www.astm.org/</a></li>
-                <li>[2] ASTM D2321 &mdash; Underground Installation of Thermoplastic Pipe (installation and deflection context).</li>
-                <li>[3] Contract specifications &mdash; governing mandrel table, deflection limit, and test timing.</li>
+                <li>ASTM D3034, <em>Standard Specification for Type PSM Poly(Vinyl Chloride) (PVC) Sewer Pipe and Fittings</em>.</li>
+                <li>ASTM F679, <em>Standard Specification for Poly(Vinyl Chloride) (PVC) Large-Diameter Plastic Gravity Sewer Pipe and Fittings</em>.</li>
+                <li>ASTM D2321, <em>Standard Practice for Underground Installation of Thermoplastic Pipe for Sewers and Other Gravity-Flow Applications</em>.</li>
             </ol>
         </article>
     </main>

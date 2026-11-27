@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detention Time and Disinfection CT with EPA Baffling Factors | Blog | MDS</title>
+    <title>Detention Time and Disinfection CT Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Detention Time and Disinfection CT with EPA Baffling Factors</h1>
+                <h1>Detention Time and Disinfection CT Calculator</h1>
                 <time datetime="2026-07-06">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Disinfection credit isn't earned by the <em>average</em> water molecule &mdash; it's earned by the fastest one. A clearwell might have a theoretical detention time of two hours, but if the inlet and outlet are close together, some water short-circuits through in a fraction of that, and the pathogens ride with it. That's why CT compliance runs on T10 &mdash; the time the fastest 10% of the water actually spends in the basin &mdash; not on the tank volume the drawings advertise.</p>
+            <p>This calculator estimates hydraulic retention time (HRT, the theoretical average time water spends in a tank or basin) and drinking-water disinfection CT (disinfectant concentration multiplied by contact time). In a clearwell (a finished-water storage and contact basin), some water short-circuits from inlet to outlet faster than the theoretical average. Under U.S. Environmental Protection Agency (EPA) Surface Water Treatment Rule (SWTR) guidance, disinfection credit is based on <code>T10</code>, the contact time exceeded by 90% of the water passing through the basin (meaning the fastest 10% exits in <code>T10</code> or less) [1].</p>
 
-            <h2>The Approach</h2>
-            <p>The chain is short:</p>
-            <p><code>HRT = V / Q</code> &nbsp;&nbsp; <code>T10 = HRT &times; BF</code> &nbsp;&nbsp; <code>CT = C_residual &times; T10</code></p>
-            <p>The baffling factor BF is the honesty coefficient, taken from the EPA Surface Water Treatment Rule guidance: 0.1 for an unbaffled basin with inlet and outlet close together, 0.3 poor, 0.5 average, 0.7 superior (serpentine baffles, perforated inlet, weir outlet), and 1.0 only for true plug flow &mdash; pipeline at least ~10 diameters long [1]. A tracer study can substantiate a better number; the custom entry is for that [2].</p>
+            <p>The calculator evaluates the following equations:</p>
+            <p><code>HRT = V / Q</code>, &nbsp; <code>T10 = HRT &times; BF</code>, &nbsp; <code>CT = C &times; T10</code>, &nbsp; <code>CT_ratio = CT / CT_req</code>, &nbsp; <code>Q_max = (V &times; BF &times; C) / CT_req</code></p>
+            <p>Here <code>V</code> is effective basin water volume in gallons (gal, entered directly or calculated from rectangular or circular dimensions in feet using <code>7.4805 gal/ft^3</code>), <code>Q</code> is flow rate in gallons per minute (GPM), <code>HRT</code> and <code>T10</code> are in minutes (min), <code>BF</code> is the dimensionless baffling factor (<code>T10 / HRT</code>), <code>C</code> is the disinfectant residual measured at the segment outlet in milligrams per liter (mg/L), <code>CT</code> and <code>CT_req</code> are achieved and required contact-time products in <code>mg&middot;min/L</code>, and <code>Q_max</code> is the maximum flow rate in GPM that still meets <code>CT_req</code> at the given volume, baffling factor, and residual.</p>
 
-            <p>The tool also inverts the chain into the number operators actually want pinned to the wall: <code>Q_max = V &times; BF &times; C / CT_req</code> &mdash; the maximum flow at which the segment still makes its required CT. During startup, low flows make CT trivially easy; the check that matters is at design peak, and the max-flow output is that operating envelope in one number.</p>
+            <p>The baffling condition dropdown provides the five standard EPA SWTR baffling factors: <code>0.1</code> for unbaffled or mixed basins, <code>0.3</code> for poor baffling, <code>0.5</code> for average baffling, <code>0.7</code> for superior baffling (perforated inlet, serpentine internal baffle walls that route water back and forth, and a weir or perforated launder outlet), and <code>1.0</code> for ideal plug flow (water moving uniformly through a pipeline with minimal mixing) [1]. State drinking water regulators that allow <code>BF = 1.0</code> for pipelines typically require a high length-to-diameter ratio (commonly 40:1 or greater). Choosing the &ldquo;Custom / tracer-study value&rdquo; option in the baffling dropdown lets you enter a site-specific <code>T10 / HRT</code> ratio measured with a chemical tracer study [2].</p>
 
             <figure>
-                <img src="/blog/2026-07-06/detention-ct-calculator.png" alt="Calculator showing HRT, T10 from the selected baffling factor, achieved CT, and the ratio against required CT" loading="lazy">
-                <figcaption>Figure 1: HRT knocked down to T10 by the baffling factor, with the CT ratio against the requirement.</figcaption>
+                <img src="/blog/2026-07-06/detention-ct-calculator.png" alt="Screenshot of the Detention Time and Disinfection CT Calculator for a 500,000 gal basin at 800 GPM with a 0.3 baffling factor, 1.0 mg/L residual, and 6 mg-min/L required CT, showing 187.5 mg-min/L achieved CT." loading="lazy">
+                <figcaption>Figure 1: Sample calculation for a 500,000 gal basin at 800 GPM and a 0.3 baffling factor, showing HRT, T10, achieved CT, CT ratio, and maximum flow.</figcaption>
             </figure>
 
             <details>
-                <summary>Field notes that keep the number honest</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Volume is the <em>effective</em> volume at the actual operating level &mdash; a clearwell run at half depth has half the CT the drawings imply.</li>
-                    <li>Residual decays through the segment; using the outlet residual is the conservative convention.</li>
-                    <li>Segments in series (basin + pipeline) each get their own CT and the credits sum &mdash; run the tool per segment.</li>
+                    <li>Use the effective water volume at the actual minimum operating water level rather than the full tank depth, because lower operating levels reduce <code>V</code> and <code>CT</code>.</li>
+                    <li>Checking CT at peak design flow is more conservative than checking at low flow, since higher <code>Q</code> shortens <code>HRT</code> and <code>T10</code>.</li>
+                    <li>Disinfectant residual decays across a basin, so using the residual measured at the segment outlet is standard regulatory practice.</li>
+                    <li>For multiple disinfection segments in series (such as a clearwell followed by a transmission pipeline), calculate each segment separately and sum the resulting credits or CT ratios.</li>
+                    <li>Required <code>CT</code> values depend on disinfectant type, water temperature, pH, and target log inactivation (for example, 3-log inactivation means 99.9% pathogen inactivation) from EPA CT tables [1]. The state primacy agency (the state regulator delegated to enforce federal drinking water rules) and the facility's operating permit govern compliance and any tracer-study requirements [2].</li>
+                    <li>The calculator is a single offline HTML file with no external dependencies. Inputs are saved in browser <code>localStorage</code> (local storage on your device) until cleared.</li>
                 </ul>
             </details>
 
-            <p>The required CT itself comes from the EPA tables for the target log inactivation at the water's temperature and pH &mdash; and the state primacy agency and the facility's permit govern [1][3]. Single file, vanilla JS, <code>localStorage</code> persistence.</p>
-
-            <p>The tool: <a href="/tools/detention-ct-calculator.html">Detention Time &amp; Disinfection CT Calculator</a>.</p>
+            <p>Tool: <a href="/tools/detention-ct-calculator.html">Detention Time &amp; Disinfection CT Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] US EPA &mdash; Surface Water Treatment Rule guidance manuals (CT tables, baffling factors). <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
-                <li>[2] EPA <em>Disinfection Profiling and Benchmarking Guidance Manual</em> &mdash; T10 determination and tracer studies.</li>
-                <li>[3] State primacy agency guidance and the facility's operations permit &mdash; governing requirements.</li>
+                <li>U.S. EPA, <em>Guidance Manual for Compliance with the Filtration and Disinfection Requirements for Public Water Systems Using Surface Water Sources</em> (March 1991), Appendix C (baffling factors) and Appendix E (CT tables), via EPA Surface Water Treatment Rules: <a href="https://www.epa.gov/dwreginfo/surface-water-treatment-rules">https://www.epa.gov/dwreginfo/surface-water-treatment-rules</a></li>
+                <li>U.S. EPA, <em>Disinfection Profiling and Benchmarking Guidance Manual</em> (EPA 815-R-99-013, August 1999; updated technical guidance EPA 815-R-20-003, 2020), T10 determination and tracer studies.</li>
             </ol>
         </article>
     </main>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building a Stage-Storage-Discharge Curve, the Input to Routing | Blog | MDS</title>
+    <title>Detention Basin Stage-Storage-Discharge Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,43 +31,41 @@
     <main>
         <article>
             <header>
-                <h1>Building a Stage-Storage-Discharge Curve, the Input to Routing</h1>
+                <h1>Detention Basin Stage-Storage-Discharge Calculator</h1>
                 <time datetime="2026-07-13">July 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Detention basin design has a preliminary-volume step and a final-routing step, and the thing that connects them is a table people rarely draw by hand anymore: the stage-storage-discharge relationship. At each water-surface elevation, how much water is stored and how much is leaving? Storage comes from the basin's geometry; discharge comes from the outlet hydraulics; and the routing software wants both, tabulated against stage. I wanted a tool that builds that table honestly and plots it, without pretending to be the routing itself.</p>
+            <p>A detention basin holds stormwater runoff temporarily and releases it at a controlled rate. Before routing a design storm through a basin, you need a stage-storage-discharge table that lists the stored volume and total outlet flow at each water-surface elevation (stage). This calculator builds that table from basin geometry and up to two outlets, plots both curves against elevation, and copies the result as CSV (comma-separated values) text for spreadsheets or hydrology software.</p>
 
-            <h2>The Approach</h2>
-            <p>Storage is built by the average-end-area (conic) method from a stage-area survey: between two elevations with surface areas <code>A1</code> and <code>A2</code> a distance <code>&Delta;h</code> apart, the incremental volume is <code>(A1 + A2)/2 &middot; &Delta;h</code>, accumulated from the bottom. Discharge is computed at each stage from up to two outlets &mdash; an orifice by <code>Cd&middot;A&middot;&radic;(2gh)</code>, a weir by <code>Cw&middot;L&middot;h^1.5</code> &mdash; each with its own invert, so it only contributes above its own elevation. The two curves plot side by side on a shared elevation axis, with the outlet inverts drawn as reference lines, and the table exports as CSV for the routing model.</p>
+            <p>Storage is entered either as a stage-area survey (water-surface area at each elevation) or as a rectangular prism with sloped sides. Between two adjacent stages with surface areas <code>A1</code> and <code>A2</code> (ft&sup2;) separated by an elevation step <code>&Delta;h</code> (ft), the tool computes incremental volume by the average-end-area method: <code>&Delta;V = ((A1 + A2) / 2) &middot; &Delta;h</code>, where <code>&Delta;V</code> is in cubic feet (ft&sup3;). Volumes are summed from the lowest elevation upward and reported in ft&sup3; and acre-feet (1 ac-ft = 43,560 ft&sup3;) [1].</p>
+
+            <p>Each outlet has an invert or crest elevation (the lowest elevation where water starts leaving) and contributes flow only when the water surface is above it. For a circular orifice (a submerged opening), free-discharge flow is <code>Q = Cd &middot; A &middot; &radic;(2 &middot; g &middot; h)</code>, where <code>Q</code> is discharge in cubic feet per second (cfs), <code>Cd</code> is the dimensionless discharge coefficient (default 0.60), <code>A</code> is the opening area (ft&sup2;, from diameter in inches), <code>g</code> is gravitational acceleration (32.174 ft/s&sup2;), and <code>h</code> is head from the water surface to the orifice centerline (ft) [3]. For a rectangular weir (a flat-crested barrier water spills over), flow is <code>Q = Cw &middot; L &middot; h^1.5</code>, where <code>Cw</code> is the weir coefficient (default 3.33 in US customary units), <code>L</code> is crest length (ft), and <code>h</code> is water depth above the crest (ft) [3]. A 90-degree V-notch weir option uses <code>Q = 2.49 &middot; h^2.48</code> with <code>h</code> in ft and <code>Q</code> in cfs [3].</p>
 
             <figure>
-                <img src="/blog/2026-07-13/detention-stage-storage-discharge.png" alt="Storage and discharge curves sharing an elevation axis, with outlet invert reference lines at 100 and 104, above the tabulated stage-storage-discharge table" loading="lazy">
-                <figcaption>Figure 1: A low orifice at 100 and an overflow weir at 104 &mdash; the discharge curve steps up sharply once the water crosses the weir crest.</figcaption>
+                <img src="/blog/2026-07-13/detention-stage-storage-discharge.png" alt="Side-by-side plots of storage and discharge against water-surface elevation, with dashed outlet invert lines at elevations 100 and 104, above the output table" loading="lazy">
+                <figcaption>Figure 1: Storage and discharge curves for a basin with a low orifice at elevation 100 ft and an overflow weir at elevation 104 ft.</figcaption>
             </figure>
 
-            <h3>The two-outlet step, and why this isn't routing</h3>
-            <p>The most instructive feature is the kink in the discharge curve. Below the weir crest at elevation 104, only the low orifice is flowing, and it grows slowly as the square root of head. Cross 104 and the weir opens up, discharge climbing as head to the 1.5 power, and the curve bends hard upward &mdash; the classic low-flow-orifice / high-flow-overflow pairing that keeps the small storms attenuated and passes the big ones safely. But notice what the tool does <em>not</em> do: it never routes an inflow hydrograph through this relationship. That's the storage-indication (modified Puls) step, which marches a storm through the <code>2S/&Delta;t + Q</code> function this table feeds. Building the relationship and routing it are two jobs, and conflating them is how people talk themselves into thinking a spreadsheet sized a basin.</p>
+            <p>In Figure 1, only the low orifice flows between elevations 100 ft and 104 ft, where discharge increases with <code>h^0.5</code>. Above elevation 104 ft, the overflow weir begins discharging at <code>h^1.5</code>, creating a visible slope change in the discharge curve. This table is an input to reservoir routing, not routing itself. Routing an inflow hydrograph (runoff flow rate over time) requires a separate method such as storage-indication (modified Puls) routing, which steps through time using <code>2S/&Delta;t + Q</code>, where <code>S</code> is storage (ft&sup3;), <code>&Delta;t</code> is the time step (s), and <code>Q</code> is outflow (cfs) [1], [2].</p>
 
             <details>
-                <summary>Where the accuracy actually lives</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Average-end-area slightly overestimates storage for a concave bowl &mdash; acceptable for planning, and the stage-area survey is the real accuracy limiter, not the integration method.</li>
-                    <li>The outlet equations assume free discharge. If downstream tailwater can rise above an outlet, it transitions from weir to orifice behavior and the free-discharge numbers overstate flow &mdash; the tool warns on outlet arrangements where that's a risk.</li>
-                    <li>Clogging is the unmodeled failure mode. Trash racks, a minimum orifice size, and a factor of safety on the primary outlet handle it &mdash; in the details, not the hydraulics.</li>
-                    <li>Pair this with the <a href="/tools/detention-basin-estimator.html">detention-basin-estimator</a> for the first-cut volume and the <a href="/tools/weir-orifice-flow-calculator.html">weir &amp; orifice tool</a> for a single-structure check.</li>
+                    <li><strong>Average-end-area vs. conic method:</strong> The average-end-area formula <code>((A1 + A2) / 2) &middot; &Delta;h</code> slightly overestimates volume for a sloped basin compared to the conic (frustum) formula <code>((A1 + A2 + &radic;(A1 &middot; A2)) / 3) &middot; &Delta;h</code>. Accuracy also depends directly on the surveyed stage-area elevations.</li>
+                    <li><strong>Free discharge only:</strong> The outlet equations assume water discharges freely to the atmosphere. If downstream tailwater (water level beyond the outlet) rises above a weir crest or orifice, submerged weir or submerged orifice flow reduces capacity below the values shown here [3].</li>
+                    <li><strong>Debris and local standards:</strong> Outlet clogging is not modeled. Check the governing local drainage manual for required discharge coefficients, minimum orifice diameters, trash racks (debris screens), and freeboard.</li>
+                    <li><strong>Related tools:</strong> Use the <a href="/tools/detention-basin-estimator.html">detention basin estimator</a> for a preliminary volume estimate and the <a href="/tools/weir-orifice-flow-calculator.html">weir and orifice flow calculator</a> for checking a single outlet structure.</li>
+                    <li><strong>Local storage:</strong> Inputs are saved in your browser's <code>localStorage</code> (stored locally on your device) and can be cleared with the reset button.</li>
                 </ul>
             </details>
-
-            <p>The output is the routing input table: stage, cumulative storage in cubic feet and acre-feet, and total discharge, ready to copy into the model. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
 
             <p>The tool: <a href="/tools/detention-stage-storage-discharge.html">Detention Basin Stage-Storage-Discharge Builder</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The <a href="/tools/detention-basin-estimator.html">detention-basin-estimator</a> (preliminary volume) and <a href="/tools/weir-orifice-flow-calculator.html">weir &amp; orifice flow</a> tools.</li>
-                <li>[2] The local hydrology / drainage design manual &mdash; governing outlet coefficients, freeboard, and routing requirements.</li>
-                <li>[3] Reservoir routing references &mdash; the storage-indication (modified Puls) method, e.g. NRCS TR-55 / TR-20 and HEC-HMS documentation.</li>
+                <li>USDA Natural Resources Conservation Service (NRCS), <em>Urban Hydrology for Small Watersheds</em>, Technical Release 55 (TR-55), 2nd ed., June 1986 (Chapter 6, Storage Volume for Detention Basins).</li>
+                <li>US Army Corps of Engineers, Hydrologic Engineering Center, <em>HEC-HMS Hydrologic Modeling System Technical Reference Manual</em> (Modified Puls / Storage-Indication Reservoir Routing).</li>
+                <li>Brater, E. F., King, H. W., Lindell, J. E., and Wei, C. Y., <em>Handbook of Hydraulics</em>, 7th ed., McGraw-Hill, 1996 (Orifice and Weir Discharge).</li>
             </ol>
         </article>
     </main>

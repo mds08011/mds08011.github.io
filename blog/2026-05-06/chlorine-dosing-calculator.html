@@ -35,43 +35,41 @@
                 <time datetime="2026-05-06">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Disinfecting a new water main or storage tank is a small arithmetic problem wrapped in a big consequences problem. AWWA C651 and C652 tell you the target dose &mdash; 25 mg/L continuous feed, 100 mg/L for a slug, 10 mg/L to fill a tank &mdash; but the number the crew actually needs is <em>how many gallons of bleach go in the tap</em>. Under-dose and the segment fails its bacteriological sample and you flush and start over. Over-dose and you have created a dechlorination and discharge headache that the SWPPP now cares about [1].</p>
+            <p>Disinfecting a new water main or storage tank requires converting a target chlorine concentration, given in milligrams per liter (mg/L, equivalent to parts per million in water), into a practical quantity of liquid bleach (sodium hypochlorite) or dry chlorine (calcium hypochlorite). The <a href="/tools/chlorine-dosing-calculator.html">Chlorine Dosing and Disinfection Calculator</a> handles this conversion across four tabs: Pipeline for water mains under American Water Works Association (AWWA) standard C651 [1], Tank / Structure for storage tanks under AWWA C652 [2], Batch Solution for mixing spray or swab solutions, and Dechlorination for sizing neutralizing chemicals before flushing water is discharged [1][3].</p>
 
-            <p>The conversion is not hard, but it is exactly the kind of thing that gets done wrong on a phone at the bottom of a trench with one bar of signal, from a formula half-remembered off a laminated card. I wanted a single page that does the whole chain &mdash; volume, chlorine mass, product quantity &mdash; and keeps my last inputs when the browser inevitably gets killed.</p>
+            <p>To use the tool, select a tab, choose the disinfection method, and enter the pipe dimensions or tank volume, target dose, and chemical strength. For pipelines, the calculator computes internal water volume in gallons (gal) from cylinder geometry: <code>V = (&pi;/4) &times; (d/12)&sup2; &times; L &times; 7.4805</code>, where <code>d</code> is the pipe inside diameter in inches (in), <code>L</code> is segment length in feet (ft), and <code>7.4805</code> converts cubic feet to gallons (equivalent to the common approximation <code>V &asymp; 0.0408 &times; d&sup2; &times; L</code>). It then applies the standard pounds formula to find required pounds of available chlorine (Cl&#8322;): <code>lb Cl&#8322; = V_MG &times; dose &times; 8.34</code>, where <code>V_MG</code> is water volume in million gallons (MG, equal to <code>V / 1,000,000</code>), <code>dose</code> is target concentration in mg/L, and <code>8.34</code> is the weight of water in pounds per gallon (lb/gal).</p>
 
-            <h2>The Approach</h2>
-            <p>Everything hangs off the &ldquo;pounds formula.&rdquo; A gallon of water weighs 8.34 lb, so dosing one part per million into a million gallons takes 8.34 lb of available chlorine:</p>
-            <p><code>lb Cl&#8322; = V (MG) &times; dose (mg/L) &times; 8.34</code></p>
-            <p>Pipe volume comes from the geometry, <code>V = (&pi;/4)(d/12)&sup2; &times; L &times; 7.4805</code> gal, which is the same thing as the field shortcut <code>V &asymp; 0.0408 &middot; d&sup2; &middot; L</code>. From the required chlorine mass you divide by the product strength to get gallons of liquid hypochlorite or pounds of granular cal-hypo. The one wrinkle worth stating out loud: 12.5% sodium hypochlorite delivered to the drum is not 12.5% by the time it has sat in the yard in July, so the tool lets you dial the real strength in.</p>
+            <p>From the required chlorine mass, product quantity depends on the chemical source and its percent available chlorine (<code>S</code>). For liquid sodium hypochlorite, <code>gal = lb Cl&#8322; / (8.34 &times; S / 100)</code>, where trade percent approximates pounds of available chlorine per gallon divided by 8.34 (for example, 12.5% strength supplies about 1.04 lb Cl&#8322; per gallon). For granular calcium hypochlorite, <code>lb product = lb Cl&#8322; / (S / 100)</code>, typically at 65% strength. For the C651 tablet method [1], the calculator counts standard 5-gram tablets at 65% strength (3.25 grams of available chlorine each), rounded up. On the pipeline tab, default doses match AWWA C651 continuous feed (25 mg/L), slug (100 mg/L concentrated plug moved through the pipe), and tablet (25 mg/L) methods [1]. On the tank tab, defaults match AWWA C652 Method 1 (full tank at 10 mg/L) and Method 3 (bottom 5% of tank volume at 50 mg/L), while Method 2 spray solutions (200 mg/L) can be mixed on the Batch Solution tab [2].</p>
 
             <figure>
-                <img src="/blog/2026-05-06/chlorine-dosing-calculator.png" alt="The pipeline tab of the calculator showing segment volume, available chlorine required, and gallons of sodium hypochlorite to inject" loading="lazy">
-                <figcaption>Figure 1: The pipeline (C651) tab converting a 12-inch main segment straight through to gallons of hypochlorite.</figcaption>
+                <img src="/blog/2026-05-06/chlorine-dosing-calculator.png" alt="Pipeline tab of the chlorine dosing calculator showing segment volume, available chlorine required, and gallons of sodium hypochlorite" loading="lazy">
+                <figcaption>Figure 1: Pipeline (AWWA C651) tab showing volume, required chlorine mass, and sodium hypochlorite quantity for a 12-inch main.</figcaption>
             </figure>
 
-            <p>It ended up as four tabs: pipeline (C651), tank (C652), a generic batch-solution mixer for spray and swab solutions, and a dechlorination tab that reproduces the C651 neutralization table so you can size the sulfite or thiosulfate for the flush water before it hits the ground [1][4].</p>
+            <p>The page runs offline as a single HTML file with no external libraries, and entered values are saved on your device using browser <code>localStorage</code> (local storage inside your web browser). Use the clear button to reset saved inputs.</p>
 
             <details>
-                <summary>The dechlorination rates baked in (lb chemical per mg/L residual per 100,000 gal)</summary>
+                <summary>Assumptions and limits</summary>
+                <p>The dechlorination tab uses the AWWA C651 neutralization table values (pounds of chemical per mg/L of chlorine residual per 100,000 gal of water) [1][3]:</p>
                 <pre><code>Sulfur dioxide          0.8 lb
 Sodium bisulfite        1.2 lb
 Sodium sulfite          1.4 lb
 Sodium thiosulfate      1.2 lb
 Ascorbic acid           2.1 lb</code></pre>
-                <p>These are stoichiometric. Thiosulfate in particular reacts slowly at low pH, so the field habit is to add some excess and confirm non-detect with a test kit before releasing &mdash; the tool sizes the theoretical minimum, not the field pour.</p>
+                <ul>
+                    <li>Dechlorination rates are stoichiometric (the exact theoretical chemical ratio). Because reaction rates vary (sodium thiosulfate reacts slowly at low pH), crews typically add modest excess and confirm zero measurable chlorine residual with a test kit before discharging flush water [3].</li>
+                    <li>Liquid sodium hypochlorite loses strength during storage and in warm weather. If tested strength is below the labeled trade percentage, enter the actual strength in the calculator.</li>
+                    <li>Project specifications, discharge permits, and the referenced AWWA standards govern contact times, end-of-hold residuals, flushing, and bacteriological water-quality testing [1][2].</li>
+                </ul>
             </details>
-
-            <p>The whole thing is a single HTML file with vanilla JS and no dependencies; inputs persist in <code>localStorage</code> and nothing leaves the browser. It is a field arithmetic aid, not the disinfection plan &mdash; the contract spec and the standard still govern contact time, residuals, and sampling.</p>
 
             <p>The tool: <a href="/tools/chlorine-dosing-calculator.html">Chlorine Dosing &amp; Disinfection Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] AWWA C651 &mdash; Disinfecting Water Mains. <a href="https://www.awwa.org/">https://www.awwa.org/</a></li>
-                <li>[2] AWWA C652 &mdash; Disinfection of Water-Storage Facilities.</li>
-                <li>[3] AWWA C653 &mdash; Disinfection of Water Treatment Plants.</li>
-                <li>[4] AWWA C655 &mdash; Field Dechlorination.</li>
+                <li>AWWA C651, <em>Disinfecting Water Mains</em>. American Water Works Association.</li>
+                <li>AWWA C652, <em>Disinfection of Water-Storage Facilities</em>. American Water Works Association.</li>
+                <li>AWWA C655, <em>Field Dechlorination</em>. American Water Works Association.</li>
             </ol>
         </article>
     </main>

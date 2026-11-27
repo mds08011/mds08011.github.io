@@ -35,41 +35,35 @@
                 <time datetime="2026-05-12">May 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>When you set up a temporary sewer bypass, the rental house hands you a pump curve and asks what head you are pumping against. If you guess low, the pump can't keep up and the manhole you are protecting overflows. If you guess high, you rent a bigger pump than you need and pay for it every day it sits on site. The honest answer is a total dynamic head number: static lift plus friction loss through however many hundred feet of lay-flat hose or fused HDPE you ran down the shoulder.</p>
+            <p>Sizing a temporary bypass pump requires estimating the total dynamic head (TDH), which is the total equivalent height of water in feet (ft) the pump must overcome at the design flow rate. TDH equals static head (elevation change) plus pipe friction loss plus minor losses from fittings, valves, and connections. The <a href="/tools/bypass-tdh-calculator.html">Bypass Pumping TDH Calculator</a> computes friction loss, flow velocity, TDH in feet and pounds per square inch (psi), and a five-point system curve for single or parallel discharge lines.</p>
 
-            <p>Friction loss is where people wave their hands. It is very sensitive to diameter &mdash; the loss term goes as roughly the fifth power of the bore &mdash; so using nominal pipe size instead of the actual inside diameter, or forgetting that a DR 11 HDPE wall eats a real chunk out of a 12-inch pipe, throws the whole estimate off.</p>
+            <p>Friction loss is calculated using the US customary Hazen-Williams empirical formula [1]: <code>h_f = 0.2083 &times; (100 / C)^1.85 &times; Q^1.85 / d^4.8655</code>, where <code>h_f</code> is friction slope in feet of head per 100 ft of pipe, <code>C</code> is the dimensionless Hazen-Williams roughness coefficient (higher values indicate smoother pipe, such as 150 for new high-density polyethylene, HDPE, or 140 for rubber lay-flat hose), <code>Q</code> is flow per individual discharge line in gallons per minute (GPM), and <code>d</code> is the actual pipe inside diameter in inches (in). Total pipe friction loss is <code>h_f &times; L / 100</code> for line length <code>L</code> in feet, and average velocity in feet per second (ft/s) is <code>V = 0.4085 &times; Q / d&sup2;</code>. Because friction varies inversely with <code>d^4.8655</code>, using nominal pipe size instead of actual inside diameter can introduce large errors. For Iron Pipe Size (IPS) HDPE pipe, nominal size corresponds to the outside diameter, so wall thickness set by the Dimension Ratio (DR, outside diameter divided by wall thickness, such as DR 11 or DR 17) reduces the internal bore [2]. The calculator includes an HDPE inside-diameter reference table and preset <code>C</code> values.</p>
 
-            <h2>The Approach</h2>
-            <p>The tool runs Hazen-Williams in the customary GPM/inch form, friction slope in feet of head per 100 ft of pipe:</p>
-            <p><code>h_f = 0.2083 &times; (100/C)^1.85 &times; Q^1.85 / d^4.8655</code></p>
-            <p>with velocity as <code>V = 0.4085 &times; Q / d&sup2;</code>. Static lift and discharge static head get added on top of friction and a percentage minor-loss allowance for fittings, and the result converts to psi at 0.4331 psi/ft. The C-factor is a dropdown of the values you actually meet in the field &mdash; 150 for new HDPE, 140 for rubber discharge hose, on down &mdash; and there is a lookup of real HDPE inside diameters by DR so nobody has to type nominal-minus-the-wall from memory [2].</p>
+            <p>Total dynamic head sums suction lift (vertical height from the water surface in the manhole or wet well up to the pump, 0 ft for submersible or flooded-suction pumps), discharge static head (discharge elevation minus pump elevation, negative for downhill discharge), pipe friction loss, and a user-entered percentage minor-loss allowance (typically 10% to 15%). Head converts to pressure via <code>psi = TDH &times; 0.4331</code>. Below the design-point summary, the tool prints a five-point system-curve table recomputing velocity and TDH at 50%, 75%, 100%, 125%, and 150% of design flow. Plotting those system-curve points against a pump manufacturer's published pump curve (head versus flow) gives the operating point where the two curves intersect.</p>
 
             <figure>
-                <img src="/blog/2026-05-12/bypass-tdh-calculator.png" alt="Results panel showing velocity, friction slope, total dynamic head in feet and psi, plus a system curve table" loading="lazy">
-                <figcaption>Figure 2: TDH at design flow, with a five-point system-curve table to overlay on the rental pump's published curve.</figcaption>
+                <img src="/blog/2026-05-12/bypass-tdh-calculator.png" alt="Bypass pumping calculator results showing velocity, friction slope, total dynamic head in feet and psi, and a five-point system curve table" loading="lazy">
+                <figcaption>Figure 1: Total dynamic head at design flow and a five-point system-curve table for comparison with a pump curve.</figcaption>
             </figure>
 
-            <p>The part I find most useful on site is the system-curve table. It recomputes velocity and TDH at 50/75/100/125/150% of design flow, so instead of a single number you get five points to lay over the pump's curve. Where the two curves cross is the operating point &mdash; if the pump curve sits above the system curve at design flow, you know you have margin before you ever start the engine.</p>
+            <p>The calculator is a single offline HTML page with no external dependencies, and entered values are stored locally on your device using browser <code>localStorage</code>.</p>
 
             <details>
-                <summary>Velocity guardrails the tool warns on</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Below ~2 ft/s a sewage bypass line silts up &mdash; solids settle, grease and rags accumulate, and you get slug discharges. Many specs want 2.5&ndash;3.5 ft/s.</li>
-                    <li>Above ~8&ndash;10 ft/s friction climbs steeply, restrained fittings see high thrust, and hose whip becomes a real hazard. Usually cheaper to go up a pipe size than to buy the head.</li>
-                    <li>Systems sized for peak flow spend most of the day well below peak &mdash; check velocity at average flow, not just the design point.</li>
+                    <li><strong>Low velocity:</strong> in sewage bypass lines, velocities below about 2 ft/s allow solids, grease, and rags to settle and later flush out in concentrated slugs (many specifications require 2.5 to 3.5 ft/s). Check velocity at average daily flow as well as peak design flow.</li>
+                    <li><strong>High velocity:</strong> above about 8 to 10 ft/s, friction loss climbs steeply, restrained fittings carry higher thrust loads, and flexible discharge hose can whip at the outlet. Using a larger pipe diameter or an additional parallel line reduces both velocity and head loss.</li>
+                    <li><strong>Suction lift and siphoning:</strong> suction lift above about 20 ft approaches the practical priming limit of surface-mounted trash pumps, requiring a net positive suction head check or a submersible pump. When negative static head on a downhill run exceeds friction loss, the line may siphon and draw in air.</li>
+                    <li><strong>Formula scope:</strong> the Hazen-Williams equation applies to full-pipe, turbulent flow of clean water at ordinary temperatures [1]. It does not model heavy sludge, high solids concentrations, or air entrainment (trapped air bubbles). Always verify final pump sizing against the specific pump manufacturer's published curve and the approved bypass plan.</li>
                 </ul>
             </details>
-
-            <p>Hazen-Williams assumes full-pipe, turbulent, ordinary-temperature water. It does not model sludge, high solids, or air entrainment, so this is a sizing aid, not a substitute for the approved bypass plan or the supplier's own analysis. Single file, vanilla JS, inputs persisted in <code>localStorage</code>.</p>
 
             <p>The tool: <a href="/tools/bypass-tdh-calculator.html">Bypass Pumping TDH Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Hazen-Williams empirical formula, standard form per the Ten-State Standards and common hydraulics references (e.g. Lindeburg, <em>Civil Engineering Reference Manual</em>).</li>
-                <li>[2] Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> &mdash; HDPE dimensions and C-factor guidance. <a href="https://plasticpipe.org/">https://plasticpipe.org/</a></li>
-                <li>[3] Manufacturer pump curves &mdash; verify the operating point against the published curve for the specific rental unit.</li>
+                <li>Great Lakes-Upper Mississippi River Board of State and Provincial Public Health and Environmental Managers, <em>Recommended Standards for Wastewater Facilities</em> (Ten-State Standards), and M. R. Lindeburg, <em>Civil Engineering Reference Manual</em> (Hazen-Williams formula).</li>
+                <li>Plastics Pipe Institute, <em>Handbook of Polyethylene Pipe</em> (HDPE dimensions and Hazen-Williams C-factor guidance).</li>
             </ol>
         </article>
     </main>

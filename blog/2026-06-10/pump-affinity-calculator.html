@@ -35,39 +35,35 @@
                 <time datetime="2026-06-10">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A pump is rated at one speed and one impeller diameter, but on site you run it on a VFD at 48 Hz, or the shop trimmed the impeller half an inch. The affinity laws tell you what flow, head, and power to expect at the new condition &mdash; and just as usefully, they tell you whether a pump that seems to be underperforming is actually broken or just being asked to do something the numbers already predicted.</p>
+            <p>This calculator applies the centrifugal pump affinity laws to estimate how flow, head (pressure expressed as feet of water column), and shaft power change when a pump runs at a different speed or with a trimmed impeller (the rotating wheel inside the pump machined to a smaller outside diameter). It accepts speed as Variable Frequency Drive (VFD) electrical frequency in hertz (Hz, where full U.S. utility frequency is 60 Hz), as shaft speed in revolutions per minute (RPM), or as impeller diameter in inches.</p>
 
-            <h2>The Approach</h2>
-            <p>At constant impeller diameter, with speed ratio <code>r = N&#8322;/N&#8321;</code>:</p>
+            <p>At a fixed impeller diameter, let <code>r = N&#8322; / N&#8321;</code> be the ratio of the new operating speed <code>N&#8322;</code> to the rated speed <code>N&#8321;</code> (both in Hz or both in RPM). The affinity equations scale rated flow <code>Q&#8321;</code> (gallons per minute, gpm), rated head <code>H&#8321;</code> (feet, ft), and optional rated power <code>P&#8321;</code> (brake horsepower, BHP) to the new condition [1][2]:</p>
             <p><code>Q&#8322; = Q&#8321;&middot;r</code> &nbsp;&nbsp; <code>H&#8322; = H&#8321;&middot;r&sup2;</code> &nbsp;&nbsp; <code>P&#8322; = P&#8321;&middot;r&sup3;</code></p>
-            <p>Flow scales linearly, head with the square, power with the cube. The same ratios apply approximately to impeller trim with <code>r = D&#8322;/D&#8321;</code>, though that approximation degrades past about a 10&ndash;15% cut. Because VFD frequency tracks synchronous speed, the tool lets you enter the ratio as Hz or RPM interchangeably &mdash; the small change in induction-motor slip is in the noise [1][2].</p>
+            <p>For an AC induction motor, shaft speed follows the electrical supply frequency closely apart from a small lag called slip, so the ratio of two VFD frequencies in Hz is nearly the same as the ratio of shaft speeds in RPM. The same equations provide an approximate scaling for impeller trim at constant speed using <code>r = D&#8322; / D&#8321;</code>, where <code>D&#8321;</code> is the full diameter and <code>D&#8322;</code> is the trimmed diameter (inches), though accuracy drops when the trim exceeds roughly 10% to 15% [2]. Alongside the single scaled point, the calculator prints a speed table from 50% to 100% of rated speed or diameter.</p>
 
             <figure>
-                <img src="/blog/2026-06-10/pump-affinity-calculator.png" alt="Calculator showing rated flow, head, and power scaled to a new speed with the resulting values" loading="lazy">
-                <figcaption>Figure 1: Scaling a rated duty point down from 60 Hz to a reduced drive speed.</figcaption>
+                <img src="/blog/2026-06-10/pump-affinity-calculator.png" alt="Screenshot of the Pump Affinity Law Calculator scaling rated flow, head, and power to a reduced speed" loading="lazy">
+                <figcaption>Figure 1: Scaled flow, head, and power results with a speed table across the operating range.</figcaption>
             </figure>
 
-            <p>What I actually built the tool around is the troubleshooting pattern, not the arithmetic. The cube law on power is the tell: if a pump's amp draw is well above the <code>r&sup3;</code>-scaled expectation, you are probably fighting mechanical drag or pumping something thicker than water. If the pump underperforms at 60 Hz against its curve, the usual suspects are reversed rotation (a three-phase pump runs backward at roughly half flow and head &mdash; swap two leads), a plugged impeller, or worn wear rings.</p>
-
             <details>
-                <summary>Why low speed isn't free</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Head falls with the <em>square</em> of speed. If static head is a big share of rated head, useful flow disappears well before the drive hits its minimum.</li>
-                    <li>Shaft-mounted cooling fans slow down too &mdash; extended low-speed running reduces motor cooling.</li>
-                    <li>In wastewater, low speed can drop pipe velocity below the solids-carrying minimum. Many drives set a 40&ndash;60% floor for exactly this reason.</li>
+                    <li>The affinity laws shift the pump's own performance curve, not necessarily the operating point in a piping system. The actual operating point is where the shifted pump curve intersects the system head curve. If static head (vertical elevation lift) makes up a large share of rated head, flow drops faster than <code>r</code> as speed decreases, and flow stops once pump head falls below static head [1].</li>
+                    <li>Scaling a single point is an estimate. Use the manufacturer's published family of speed curves or trim curves when available [2].</li>
+                    <li>Running at low speed slows shaft-mounted motor cooling fans and can drop pipe velocity below solids-carrying minimums in wastewater service, so manufacturers often specify a minimum speed limit (commonly 40% to 60% of rated speed) [1].</li>
+                    <li>When checking pump performance against scaled values, verify actual output frequency on the drive keypad (not just the commanded speed setpoint). Motor current draw well above the <code>r&sup3;</code> power scaling can point to mechanical drag or a fluid thicker than water. Low output at full 60 Hz speed can indicate a clogged impeller, worn wear rings (internal sealing rings inside the casing), or reversed three-phase motor rotation (which should be checked and corrected by a qualified electrician).</li>
                 </ul>
             </details>
 
-            <p>One field reminder the tool prints: read the <em>actual</em> speed off the drive keypad, not the commanded setpoint &mdash; some drives display one and some the other depending on the parameter shown. Scaling a single point is no substitute for the manufacturer's published family of speed curves when those exist. Single file, vanilla JS, <code>localStorage</code>.</p>
+            <p>The calculator runs in the browser and stores your last inputs locally in browser storage (<code>localStorage</code>).</p>
 
             <p>The tool: <a href="/tools/pump-affinity-calculator.html">Pump Affinity Law Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] Hydraulic Institute &mdash; ANSI/HI standards on pump performance and variable speed operation. <a href="https://www.pumps.org/">https://www.pumps.org/</a></li>
-                <li>[2] Karassik et al., <em>Pump Handbook</em> &mdash; affinity law derivation and trim limitations.</li>
-                <li>[3] Manufacturer performance curves for the specific pump.</li>
+                <li>ANSI/HI 14.3, <em>Rotodynamic Pumps for Design and Application</em>, Hydraulic Institute (affinity laws and variable-speed operation).</li>
+                <li>I. J. Karassik, J. P. Messina, P. Cooper, and C. C. Heald, <em>Pump Handbook</em>, 4th ed., McGraw-Hill, 2008 (affinity law derivation and impeller trim limitations).</li>
             </ol>
         </article>
     </main>

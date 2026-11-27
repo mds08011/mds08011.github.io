@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checking Flotation Safety Before Draining a Structure | Blog | MDS</title>
+    <title>Structure Buoyancy and Flotation Check Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,44 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Checking Flotation Safety Before Draining a Structure</h1>
+                <h1>Structure Buoyancy and Flotation Check Calculator</h1>
                 <time datetime="2026-06-24">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>A concrete basin full of water is heavy. A concrete basin full of air, sitting in saturated ground, is a boat &mdash; and structures have genuinely floated out of the ground: wet wells popping after backfill, basins lifting during a rehab because the plant next door kept the groundwater high. The dangerous moment is always a decision that feels routine: draining a tank for inspection, or turning off the well points over a weekend because the excavation looked dry.</p>
+            <p>This calculator performs a flotation screening check for an empty below-grade rectangular or circular concrete structure, such as a basin, wet well (an underground chamber that holds water or wastewater for pumping), tank, or vault, when groundwater is present around the base. It compares the downward dead load (permanent weight of the structure and soil cover) against the upward hydrostatic buoyant force to compute the factor of safety (FS) against uplift [1].</p>
 
-            <h2>The Approach</h2>
-            <p>It's Archimedes, done honestly. Uplift is the footprint times the groundwater height above the base slab times 62.4 pcf; resistance is everything that actually pushes down:</p>
-            <p><code>U = A_footprint &times; h_gw &times; 62.4</code> &nbsp;&nbsp; <code>FS = W_resist / U</code></p>
-            <p>where the resisting weight sums the concrete dead load (walls as the outside-minus-inside prism, plus base and top slabs), soil cover, and any entered permanent weight. The output I use most is the inversion: the <strong>maximum groundwater height</strong> at which FS drops to the required value. That number goes straight into the dewatering plan as a trigger &mdash; &ldquo;keep the water below elevation X or the pumps stay on&rdquo; [2][3].</p>
+            <p>Buoyant uplift force and factor of safety are calculated as <code>U = A<sub>footprint</sub> &times; h<sub>gw</sub> &times; &gamma;<sub>w</sub></code> and <code>FS = W<sub>resist</sub> / U</code>, where <code>U</code> is upward buoyant force in pounds (lb), <code>A<sub>footprint</sub></code> is outside plan footprint area in square feet (ft&sup2;), <code>h<sub>gw</sub></code> is groundwater height above the bottom of the base slab in feet (capped at the total structure height), <code>&gamma;<sub>w</sub> = 62.4</code> pounds per cubic foot (pcf) is the unit weight of fresh water, and <code>W<sub>resist</sub></code> is total permanent resisting weight in pounds. The resisting weight sums concrete dead load (estimated from wall, base slab, and optional top slab dimensions, or entered directly), soil cover weight over a buried top slab, and any additional permanent weight.</p>
+
+            <p>The calculator also inverts the equation to report the maximum groundwater height for a chosen target factor of safety (commonly 1.10 to 1.25 depending on project specifications and design basis) [2]: <code>h<sub>max</sub> = W<sub>resist</sub> / (FS<sub>req</sub> &times; A<sub>footprint</sub> &times; 62.4)</code>, where <code>h<sub>max</sub></code> is the maximum groundwater height in feet above the bottom of the base slab and <code>FS<sub>req</sub></code> is the required factor of safety.</p>
 
             <figure>
-                <img src="/blog/2026-06-24/buoyancy-check-calculator.png" alt="Calculator showing uplift, resisting weight, factor of safety, and the maximum groundwater level for the required FS" loading="lazy">
-                <figcaption>Figure 1: The FS check with the max-groundwater trigger level for the dewatering plan.</figcaption>
+                <img src="/blog/2026-06-24/buoyancy-check-calculator.png" alt="Buoyancy calculator displaying footprint area, displaced volume, uplift force, resisting weight, factor of safety, and maximum groundwater height" loading="lazy">
+                <figcaption>Figure 1: Uplift force, resisting weight, factor of safety, and maximum groundwater height output.</figcaption>
             </figure>
 
-            <h3>What it deliberately leaves out</h3>
-            <p>The tool's scope-limiting is a design feature, not laziness. Side friction and adhesion are real but unreliable &mdash; especially in soft or recently disturbed backfill &mdash; so like most flotation checks it neglects them, and anything they add is silent extra margin. Tension piles and rock anchors change the whole problem into a designed system, which a field check has no business approximating. And the check assumes the structure is <em>empty</em>, because empty is exactly the condition you're about to create the moment you drain it. A basin that's safe full and unsafe empty is the situation the tool exists to catch [1].</p>
-
             <details>
-                <summary>Field scenarios where this bites</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>Draining an existing basin for rehab while the plant's other basins stay full &mdash; local groundwater at a working plant is often higher than the original borings suggest.</li>
-                    <li>New wet wells and vaults after backfill but before the equipment, top slab, or pavement the designer counted on &mdash; check the interim condition, not just the final one.</li>
-                    <li>Heavy rain filling a granular backfill zone faster than the native ground drains &mdash; a temporary perched water table right against your walls.</li>
+                    <li>The check assumes the structure is completely empty, since draining a basin or tank removes the stabilizing weight of its liquid contents [1].</li>
+                    <li>Side-wall friction and soil adhesion (shear resistance along the exterior walls) are neglected because they are unreliable in soft or recently disturbed backfill (soil placed around a buried structure).</li>
+                    <li>Tension piles, rock anchors, and hydrostatic pressure-relief valves are outside the scope of this screening check and require structural design [1].</li>
+                    <li>If soil cover over a buried top slab sits below the groundwater table, enter its buoyant unit weight (saturated unit weight minus 62.4 pcf) rather than its total unit weight.</li>
+                    <li>Interim construction conditions (for example, after backfilling a vault but before the top slab, pavement, or heavy equipment is installed) and temporary perched water tables (rainwater trapped in permeable gravel backfill around walls) can govern over the completed condition. Design groundwater levels should come from the project geotechnical report, and pumping limits for dewatering (lowering groundwater with well points or sumps) should follow the approved dewatering plan.</li>
+                    <li>The tool runs offline in the browser and stores inputs in <code>localStorage</code> (browser-side local storage).</li>
                 </ul>
             </details>
-
-            <p>Single file, vanilla JS, <code>localStorage</code> persistence.</p>
 
             <p>The tool: <a href="/tools/buoyancy-check-calculator.html">Structure Buoyancy / Flotation Check</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] ACI 350 &mdash; Code Requirements for Environmental Engineering Concrete Structures (flotation provisions and load factors). <a href="https://www.concrete.org/">https://www.concrete.org/</a></li>
-                <li>[2] Project geotechnical report &mdash; design groundwater elevations (the governing input).</li>
-                <li>[3] Approved dewatering plan &mdash; the document this check should send you back to when the FS is thin.</li>
+                <li>ACI 350-20, <em>Code Requirements for Environmental Engineering Concrete Structures</em>, American Concrete Institute (load combinations and uplift provisions).</li>
+                <li>ACI 350.4R-04, <em>Design Considerations for Environmental Engineering Concrete Structures</em>, American Concrete Institute (flotation guidance and typical factors of safety).</li>
             </ol>
         </article>
     </main>

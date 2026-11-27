@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billed vs. Received, and What Retention Does to the Cash Curve | Blog | MDS</title>
+    <title>Cash Flow Draw Curve Calculator | Blog | MDS</title>
 
     <link rel="stylesheet" href="/sakura.css" type="text/css">
     <link rel="stylesheet" href="/style.css" type="text/css">
@@ -31,42 +31,39 @@
     <main>
         <article>
             <header>
-                <h1>Billed vs. Received, and What Retention Does to the Cash Curve</h1>
+                <h1>Cash Flow Draw Curve Calculator</h1>
                 <time datetime="2026-06-29">June 2026</time>
             </header>
 
-            <h2>The Problem</h2>
-            <p>Every estimator can draw the S-curve of a job's billing. Fewer stop to draw the curve that actually matters to the checking account: the one of cash <em>received</em>, which is the billing curve pushed later by a payment lag and held back by retention. The gap between the two is money you've earned and haven't collected &mdash; the financing you're quietly providing the owner. I wanted a small model that draws both curves side by side and shows that gap without pretending to be a full treasury forecast.</p>
+            <p>This calculator compares a construction project's monthly billing schedule against the cash actually received after retention (also called retainage, a percentage held back from each progress payment until closeout) and payment lag (the delay, in months, between submitting a monthly pay application and receiving payment) [1][2]. The difference between cumulative billed revenue and cumulative cash received is the financing gap, which shows earned revenue that has not yet been collected.</p>
 
-            <h2>The Approach</h2>
-            <p>You either project the billing from a curve shape &mdash; a smoothstep S-curve, <code>3t&sup2; &minus; 2t&sup3;</code>, or front-loaded, back-loaded, or linear presets &mdash; or type in your own monthly amounts. Then the model applies the general contractor's reality: retention is withheld from each payment, the net is shifted later by the payment lag, and the accumulated retention is released as a lump sum a few months after the final billing. The chart draws monthly billing as bars with two cumulative lines over them, billed and received, and the retention release shows up as the late jump in the received line.</p>
+            <p>Monthly billing can be entered directly or generated from a cumulative fraction curve <code>f(t)</code>, where <code>t = m / T</code> is the elapsed fraction of the project duration (<code>m</code> is the month number from <code>1</code> to <code>T</code>, and <code>T</code> is total project duration in months). Four curve shapes are available: a smoothstep S-curve (a cumulative curve with a slow start, steeper middle, and slow finish) given by <code>f(t) = 3t&sup2; &minus; 2t&sup3;</code>, a front-loaded curve (higher billing early) given by <code>f(t) = 2t &minus; t&sup2;</code>, a back-loaded curve (higher billing late) given by <code>f(t) = t&sup2;</code>, and a linear curve (equal monthly amounts) given by <code>f(t) = t</code>. For each month <code>m</code>, projected billing is <code>B_m = [f(m/T) &minus; f((m &minus; 1)/T)] &middot; V</code>, where <code>B_m</code> is monthly billing in dollars and <code>V</code> is total contract value in dollars.</p>
+
+            <p>Each monthly progress payment received is <code>R = (1 &minus; r) &middot; B_m</code> (in dollars), where <code>r</code> is the retention fraction (for example, <code>0.05</code> for 5%). That net payment is recorded at month <code>m + L_p</code>, where <code>L_p</code> is the payment lag in months. Total accumulated retention, <code>r &middot; V</code> (in dollars), is released as a lump sum at month <code>T + N</code>, where <code>N</code> is the release delay in months after the final billing month. The peak financing gap is the maximum value of <code>cumulative billed &minus; cumulative received</code> (in dollars) across the timeline, which indicates the working-capital carrying cost (the cost of financing uncollected receivables) over the job.</p>
 
             <figure>
-                <img src="/blog/2026-06-29/cash-flow-draw-curve.png" alt="Monthly billing bars under a solid billed curve and a dashed received curve that lags behind and jumps up at the end when retention releases" loading="lazy">
-                <figcaption>Figure 1: Billed (solid) and received net of retention (dashed). The gap between them is the financing exposure; the late jump is the retention release.</figcaption>
+                <img src="/blog/2026-06-29/cash-flow-draw-curve.png" alt="Chart of monthly billing bars with a solid cumulative billed line and a dashed cumulative cash received line that rises at the end when retention is released" loading="lazy">
+                <figcaption>Figure 1: Monthly billing bars with cumulative billed revenue (solid) and cumulative cash received after retention and payment lag (dashed).</figcaption>
             </figure>
 
-            <h3>The retention tail is a line on the forecast, not an afterthought</h3>
-            <p>The number the picture is built to surface is the peak financing gap &mdash; the largest value of cumulative billed minus cumulative received. On a front-loaded, fast job it can be a meaningful fraction of the contract, and it's real carrying cost. The retention tail is the other half: five percent withheld across the whole job is money that sits for months after you've finished the work, and the release date belongs on the cash forecast as its own line. Watching the received curve crawl up to meet the billed curve only at the release month makes that concrete in a way a spreadsheet cell doesn't.</p>
-
             <details>
-                <summary>What this model leaves out, and the SOV negotiation</summary>
+                <summary>Assumptions and limits</summary>
                 <ul>
-                    <li>This is <em>revenue</em> timing only. Your real cash position also depends on when you pay labor (weekly), suppliers (net 30), and subs (often pay-when-paid). Retention you hold on your subs partially offsets the retention the owner holds on you &mdash; a fuller model nets the two.</li>
-                    <li>Front-loading the schedule of values is common, visible, and a negotiation with the owner's rep. Mobilization line items exist for a reason; padding early activities that aren't really done is a different thing and gets caught.</li>
-                    <li>Stored-materials billing changes both the curve and the paperwork &mdash; you can bill for material on site ahead of installation, but expect to document and insure it.</li>
-                    <li>Release terms vary by contract and by public vs. private work; some release in stages, some at substantial completion plus a punch period. Set the tool to your contract.</li>
+                    <li>This models revenue timing only. Actual project cash position also depends on outbound cost timing, such as weekly labor payroll, supplier invoices (often net 30, meaning due in 30 days), and subcontractor payments (often pay-when-paid, meaning paid after the general contractor collects from the owner). Retention held on subcontractors can partially offset retention held by the owner.</li>
+                    <li>Progress billing relies on a schedule of values (SOV), which breaks the contract sum into line items reviewed by the owner's representative before payment [1][2]. Mobilization line items cover initial project setup costs, while overstating early activities that have not been completed is typically rejected during pay-application review.</li>
+                    <li>Where a contract permits billing for materials stored on site before installation, owners typically require invoices, proof of title, and insurance documentation [1][2].</li>
+                    <li>The governing contract defines actual payment dates, retention percentages, and release conditions. Depending on public or private contract terms, retention may be reduced in stages or released after substantial completion (when the work is usable by the owner) and completion of the punch list (final minor corrections) [1][2].</li>
                 </ul>
             </details>
 
-            <p>The contract's payment and retention provisions govern the actual dates and percentages [1]; this page just lets you see the shape before the first pay application goes in. Single file, vanilla JS, everything persisted in <code>localStorage</code> and nothing leaving the browser.</p>
+            <p>The calculator runs in the browser and saves inputs in browser local storage (<code>localStorage</code>, a built-in browser store on the current device) until cleared.</p>
 
             <p>The tool: <a href="/tools/cash-flow-draw-curve.html">Cash Flow Draw Curve Calculator</a>.</p>
 
             <h3>References</h3>
             <ol>
-                <li>[1] The contract's payment and retention provisions (progress payment schedule, retention percentage, and release terms). Governing.</li>
-                <li>[2] AGC / CFMA guidance on construction cash flow and the schedule of values.</li>
+                <li>Engineers Joint Contract Documents Committee (EJCDC), <em>EJCDC C-700: Standard General Conditions of the Construction Contract</em>, Article 15 (Payments to Contractor and Completion).</li>
+                <li>American Institute of Architects (AIA), <em>AIA Document A201: General Conditions of the Contract for Construction</em>, Article 9 (Payments and Completion).</li>
             </ol>
         </article>
     </main>
