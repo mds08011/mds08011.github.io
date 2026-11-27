@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Runs site-check before every commit and refuses the commit on an error: a broken
+# internal link, a placeholder image on a listed page, or double-encoded text.
+# Warnings (heavy images, CDN stylesheets, AI tells in post prose) print but never block.
+#
+# site-check lives in Malcolm's dotfiles (shared/bin/site-check). It checks the working
+# tree, not only what is staged. Where it isn't installed, the hook says so and lets the
+# commit through.
+#
+# Enable once per clone: git config core.hooksPath .githooks
+# A refusal is fixed by fixing the page. --no-verify only for a known false positive.
+
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+if ! command -v site-check >/dev/null 2>&1; then
+    echo "pre-commit: site-check not found, skipping (it is in the dotfiles repo)" >&2
+    exit 0
+fi
+
+if ! site-check --quiet; then
+    echo "pre-commit: site-check found errors above; fix them before committing" >&2
+    exit 1
+fi
