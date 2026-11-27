@@ -32,7 +32,7 @@
         <article>
             <header>
                 <h1>Reading TIFF Orientation Tags Client-Side</h1>
-                <time datetime="2026-07-07">July 2026</time>
+                <time datetime="2026-01-17">January 2026</time>
             </header>
             
             <p>Exchangeable Image File Format (EXIF) headers appended to JPEG binaries routinely encode a Tag Image File Format (TIFF) orientation property (Tag ID <code>0x0112</code>). This parameter determines the intended visual rotation of the matrix data. Parsing this matrix prior to network transmission reduces necessary bandwidth and guarantees strict operational security over telemetry vectors.</p>
@@ -40,7 +40,7 @@
             <p>This localized implementation utilizes a <code>FileReader</code> instantiation to parse incoming file blobs as an <code>ArrayBuffer</code>. By instantiating a <code>DataView</code> wrapper, the script navigates the byte stream to isolate the specific EXIF magic bytes (<code>Exif\0\0</code>). It subsequently determines the endianness (either Little Endian <code>0x4949</code> or Big Endian) to properly decode the ensuing Image File Directory (IFD) offsets [1].</p>
             
             <figure>
-                <img src="/blog/2026-07-07/tiff-orientation.png" alt="A minimalist interface reporting an orientation value of 'Normal' alongside debug hexadecimal output" loading="lazy">
+                <img src="/blog/2026-01-17/tiff-orientation.png" alt="A minimalist interface reporting an orientation value of 'Normal' alongside debug hexadecimal output" loading="lazy">
                 <figcaption>Figure 1: The diagnostic output rendering a successfully parsed orientation tag.</figcaption>
             </figure>
 
